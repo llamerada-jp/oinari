@@ -8,9 +8,13 @@ let wasConnect = false;
 let wasGNSS    = false;
 let wasStart   = false;
 let wasMap     = false;
+let debugMode  = false;
 let geoWatchId = null;
 let map = null;
 let mapDefer = $.Deferred();
+let index = 0;
+let markers = [];
+let gmLines = [];
 
 function init() {
   $('#modal-init').modal({
@@ -30,6 +34,7 @@ function init() {
   }).done(() => {
     console.log('finish');
     wasStart = true;
+    initDebug();
     $('#modal-init').modal('hide');
   });
 }
@@ -38,14 +43,17 @@ function initGNSS() {
   let defer = $.Deferred();
   let isFirst = true;
   geoWatchId = navigator.geolocation.watchPosition((position) => {
-    lon = position.coords.longitude;
-    lat = position.coords.latitude;
-    if (wasConnect === true) {
-      let [x, y] = convertLonLat2Rad(lon, lat);
-      v.setPosition(x, y);
-    }
-    if (wasMap === true) {
-      map.panTo({lat: lat, lng: lon});
+    if (!debugMode &&
+        (lon != position.coords.longitude || lat != position.coords.latitude)) {
+      lon = position.coords.longitude;
+      lat = position.coords.latitude;
+      if (wasConnect === true) {
+        let [x, y] = convertDeg2Rad(lon, lat);
+        v.setPosition(x, y);
+      }
+      if (wasMap === true) {
+        map.panTo({lat: lat, lng: lon});
+      }
     }
     if (isFirst) {
       $('#status-gnss').html('<span class="badge badge-success">Success</span>');
@@ -71,7 +79,27 @@ function initGNSS() {
 function recvHowl(data) {
   console.log('recv ' + JSON.stringify(data));
   let message = JSON.parse(data);
-  $('<tr>' +
+
+  let indexThis = index;
+  index ++;
+
+  let marker = new google.maps.Marker({
+    icon: {
+      anchor: new google.maps.Point(16, 32),
+      scaledSize: new google.maps.Size(32, 32),
+      url:'img/h1.png'
+    },
+    map: map,
+    position: { lat: message.lat, lng: message.lon }
+  });
+
+  marker.addListener('click', function() {
+    $('#tag' + indexThis).focus();
+  });
+
+  markers[indexThis] = marker;
+
+  $('<tr id="' + indexThis + '">' +
     '<td><div style="display:none;">' + getDistance(message.lon, message.lat).toFixed(1) + 'm</div></td>' +
     '<td><div style="display:none;">' + message.message + '</div></td>' +
     '<td><div style="display:none;"><button type="button" class="btn btn-primary">Howl</button></div></td>' + 
@@ -83,8 +111,8 @@ function recvHowl(data) {
 
 function getDistance(bLon, bLat) {
   const R = 6378137;
-  let [x1, y1] = convertLonLat2Rad(lon, lat);
-  let [x2, y2] = convertLonLat2Rad(bLon, bLat);
+  let [x1, y1] = convertDeg2Rad(lon, lat);
+  let [x2, y2] = convertDeg2Rad(bLon, bLat);
   let avrX = (x1 - x2) / 2;
   let avrY = (y1 - y2) / 2;
   
@@ -96,11 +124,13 @@ function initNet() {
   let defer = $.Deferred();
   v.init().then(() => {
     console.log('vein connect');
-    return v.connect('http://veindev:8080/vein/core.json', '');
+    v.on('log', onGetLog);
+    v.on('debug', onGetDebug);
+    return v.connect('ws://veindev:8080/vein/ws', '');
 
   }).then(() => {
     if (wasGNSS === true) {
-      let [x, y] = convertLonLat2Rad(lon, lat);
+      let [x, y] = convertDeg2Rad(lon, lat);
       v.setPosition(x, y);
     }
 
@@ -112,12 +142,46 @@ function initNet() {
     $('#status-net').html('<span class="badge badge-success">Success</span>');
     defer.resolve();
 
-  }).catch(() => {
-    console.log('vein failed');
+  }).catch((e) => {
+    console.error('vein failed');
+    console.log(e);
     $('#status-net').html('<span class="badge badge-danger">Failed</span>');
     defer.reject();
   });
   return defer.promise();
+}
+
+function onGetLog(log) {
+  console.log(log);
+}
+
+function onGetDebug(event) {
+  console.log(event);
+
+  if (event.event === vein.Vein.DEBUG_EVENT_KNOWN2D) {
+    for (let line of gmLines) {
+      line.setMap(null);
+    }
+    gmLines = [];
+
+    if (debugMode) {
+      let nodes = event.content.nodes;
+      for (let link of event.content.links) {
+        let p1 = (link[0] == vein.Vein.NID_THIS ?
+                  [lon, lat] : convertRad2Deg(nodes[link[0]][0], nodes[link[0]][1]));
+        let p2 = (link[1] == vein.Vein.NID_THIS ?
+                  [lon, lat] : convertRad2Deg(nodes[link[1]][0], nodes[link[1]][1]));
+        let polyLine = new google.maps.Polyline({
+          path: [{lng: p1[0], lat: p1[1]}, {lng: p2[0], lat: p2[1]}],
+          strokeColor: '#FF0000',
+          strokeOpacity: 1.0,
+          strokeWeight: 2
+        });
+        polyLine.setMap(map);
+        gmLines.push(polyLine);
+      }
+    }
+  }
 }
 
 function initMap() {
@@ -126,12 +190,35 @@ function initMap() {
       lat: Math.random() * 180.0 -  90.0,
       lng: Math.random() * 360.0 - 180.0
     },
-    zoom: 19 // 地図のズームを指定
+    draggable: false,
+    mapTypeControl: false,
+    zoom: 18 // 地図のズームを指定
   });
 
   wasMap = true;
   $('#status-map').html('<span class="badge badge-success">Success</span>');
   mapDefer.resolve();
+}
+
+function initDebug() {
+  $('#switch-debug-mode').on('click', function() {
+    debugMode = !debugMode;
+
+    map.set('draggable', debugMode);
+  });
+
+  setInterval(function() {
+    let center = map.getCenter();
+    if (debugMode &&
+        (lon != center.lng() || lat != center.lat())) {
+      lon = center.lng();
+      lat = center.lat();
+      if (wasConnect === true) {
+        let [x, y] = convertDeg2Rad(lon, lat);
+        v.setPosition(x, y);
+      }
+    }
+  }, 1000);
 }
 
 function wait(sec) {
@@ -142,7 +229,7 @@ function wait(sec) {
   return defer.promise();
 }
 
-function convertLonLat2Rad(lon, lat) {
+function convertDeg2Rad(lon, lat) {
   while (lat < -90.0) {
     lat += 360.0;
   }
@@ -168,8 +255,13 @@ function convertLonLat2Rad(lon, lat) {
           Math.PI * lat / 180];
 }
 
+function convertRad2Deg(x, y) {
+  return [180.0 * x / Math.PI,
+          180.0 * y / Math.PI]
+}
+
 $(window).on('load resize', () => {
-  let fieldHeight = $(window).height() - $('#footer').height();
+  let fieldHeight = $(window).height() - $('#footer').height() - $('#navbar').height();
   let fieldWidth  = $(window).width();
   let $map = $('#map');
   let $lists = $('#lists');
@@ -199,7 +291,7 @@ $('#btn-howl').on('click', function() {
     lon: lon,
     lat: lat
   };
-  let [x, y] = convertLonLat2Rad(lon, lat);
+  let [x, y] = convertDeg2Rad(lon, lat);
   pubsub2d.publish('howl', x, y, 100, JSON.stringify(message));
   $message.val('');
 });
