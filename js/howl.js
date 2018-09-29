@@ -261,7 +261,7 @@ function convertRad2Deg(x, y) {
 }
 
 $(window).on('load resize', () => {
-  let fieldHeight = $(window).height() - $('#footer').height() - $('#navbar').height();
+  let fieldHeight = $(window).height() - $('header').height() - $('footer').height();
   let fieldWidth  = $(window).width();
   let $map = $('#map');
   let $lists = $('#lists');
