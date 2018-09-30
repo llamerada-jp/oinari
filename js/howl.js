@@ -1,5 +1,7 @@
 "use strict";
 
+const RADIUS = 1000;  // メッセージの送信半径[m]
+
 let v = new vein.Vein();
 let pubsub2d = null;
 let lat = null;
@@ -15,6 +17,7 @@ let mapDefer = $.Deferred();
 let index = 0;
 let markers = [];
 let gmLines = [];
+let gmCircle = null;
 
 function init() {
   $('#modal-init').modal({
@@ -203,19 +206,43 @@ function initMap() {
 function initDebug() {
   $('#switch-debug-mode').on('click', function() {
     debugMode = !debugMode;
-
+    // 地図の中心位置を変更できるように
     map.set('draggable', debugMode);
   });
 
   setInterval(function() {
     let center = map.getCenter();
-    if (debugMode &&
-        (lon != center.lng() || lat != center.lat())) {
-      lon = center.lng();
-      lat = center.lat();
-      if (wasConnect === true) {
-        let [x, y] = convertDeg2Rad(lon, lat);
-        v.setPosition(x, y);
+    if (debugMode) {
+      // 地図の中心位置をGPSの座標の代わりに利用
+      if (lon != center.lng() || lat != center.lat()) {
+        lon = center.lng();
+        lat = center.lat();
+        if (wasConnect === true) {
+          let [x, y] = convertDeg2Rad(lon, lat);
+          v.setPosition(x, y);
+        }
+      }
+
+      // メッセージ到達範囲の円を表示
+      if (gmCircle === null) {
+        gmCircle = new google.maps.Circle({
+          center: {lng: lon, lat: lat},
+          fillOpacity: 0,
+          map: map,
+          radius: RADIUS,
+          strokeColor: '#ff0000',
+          strokeOpacity: 1,
+          strokeWeight: 1
+        });
+      } else {
+        gmCircle.setCenter({lng: lon, lat: lat});
+      }
+
+    } else {
+      // 円を非表示
+      if (gmCircle !== null) {
+        gmCircle.setMap(null);
+        gmCircle = null;
       }
     }
   }, 1000);
@@ -292,6 +319,6 @@ $('#btn-howl').on('click', function() {
     lat: lat
   };
   let [x, y] = convertDeg2Rad(lon, lat);
-  pubsub2d.publish('howl', x, y, 100, JSON.stringify(message));
+  pubsub2d.publish('howl', x, y, RADIUS, JSON.stringify(message));
   $message.val('');
 });
