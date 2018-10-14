@@ -297,15 +297,19 @@ $(window).on('load resize', () => {
   let $lists = $('#lists');
 
   if (fieldWidth > fieldHeight) {
+    // 横向き
     $map.height(fieldHeight);
     $map.width(fieldHeight);
     $lists.height(fieldHeight);
     $lists.width(fieldWidth - fieldHeight);
 
   } else {
-    $map.height(fieldWidth);
+    // 縦向き
+    let mapHeight = fieldWidth;
+    if (mapHeight > fieldHeight / 2) mapHeight = fieldHeight / 2;
+    $map.height(mapHeight);
     $map.width(fieldWidth);
-    $lists.height(fieldHeight - fieldWidth);
+    $lists.height(fieldHeight - mapHeight);
     $lists.width(fieldWidth);
   }
 });
