@@ -155,11 +155,11 @@ function initNet() {
 }
 
 function onGetLog(log) {
-  console.log(log);
+  // console.log(log);
 }
 
 function onGetDebug(event) {
-  console.log(event);
+  // console.log(event);
 
   if (event.event === vein.Vein.DEBUG_EVENT_KNOWN2D) {
     for (let line of gmLines) {
@@ -287,6 +287,7 @@ function convertRad2Deg(x, y) {
           180.0 * y / Math.PI]
 }
 
+// 表示領域リサイズ時に地図の大きさなどを変更する
 $(window).on('load resize', () => {
   let fieldHeight = $(window).height() - $('header').height() - $('footer').height();
   let fieldWidth  = $(window).width();
@@ -307,10 +308,7 @@ $(window).on('load resize', () => {
   }
 });
 
-$(window).on('load', () => {
-  init();
-});
-
+// ボタンを押したらメッセージを送信
 $('#btn-howl').on('click', function() {
   let $message = $('#message');
   let message = {
@@ -321,4 +319,9 @@ $('#btn-howl').on('click', function() {
   let [x, y] = convertDeg2Rad(lon, lat);
   pubsub2d.publish('howl', x, y, RADIUS, JSON.stringify(message));
   $message.val('');
+});
+
+// start
+$(window).on('load', () => {
+  init();
 });
