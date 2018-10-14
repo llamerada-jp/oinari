@@ -195,6 +195,8 @@ function initMap() {
     },
     draggable: false,
     mapTypeControl: false,
+    disableDefaultUI: true,
+    zoomControl: true,
     zoom: 18 // 地図のズームを指定
   });
 
