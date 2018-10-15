@@ -80,7 +80,6 @@ function initGNSS() {
 }
 
 function recvHowl(data) {
-  console.log('recv ' + JSON.stringify(data));
   let message = JSON.parse(data);
 
   let indexThis = index;
@@ -102,14 +101,26 @@ function recvHowl(data) {
 
   markers[indexThis] = marker;
 
-  $('<tr id="' + indexThis + '">' +
-    '<td><div style="display:none;">' + getDistance(message.lon, message.lat).toFixed(1) + 'm</div></td>' +
-    '<td><div style="display:none;">' + message.message + '</div></td>' +
-    '<td><div style="display:none;"><button type="button" class="btn btn-primary">Howl</button></div></td>' + 
-    '</tr>').prependTo('#list tbody').find('td > div').slideDown(400, function() {
-      let $this = $(this);
-      $this.replaceWith($this.contents());
-    });
+  if (message.type === 'text') {
+    $('<tr id="' + indexThis + '">' +
+      '<td><div style="display:none;">' + getDistance(message.lon, message.lat).toFixed(1) + 'm</div></td>' +
+      '<td><div style="display:none;">' + message.message + '</div></td>' +
+      '<td><div style="display:none;"><button type="button" class="btn btn-primary">Howl</button></div></td>' + 
+      '</tr>').prependTo('#list tbody').find('td > div').slideDown(400, function() {
+        let $this = $(this);
+        $this.replaceWith($this.contents());
+      });
+
+  } else if (message.type === 'image') {
+    $('<tr id="' + indexThis + '">' +
+      '<td><div style="display:none;">' + getDistance(message.lon, message.lat).toFixed(1) + 'm</div></td>' +
+      '<td><div style="display:none;"><img src="' + message.data + '"></img></div></td>' +
+      '<td><div style="display:none;"><button type="button" class="btn btn-primary">Howl</button></div></td>' + 
+      '</tr>').prependTo('#list tbody').find('td > div').slideDown(400, function() {
+        let $this = $(this);
+        $this.replaceWith($this.contents());
+      });
+  }
 }
 
 function getDistance(bLon, bLat) {
@@ -193,9 +204,11 @@ function initMap() {
       lat: Math.random() * 180.0 -  90.0,
       lng: Math.random() * 360.0 - 180.0
     },
+    disableDefaultUI: true,
     draggable: false,
     mapTypeControl: false,
-    disableDefaultUI: true,
+    // mapTypeId: 'satellite',
+    // tilt:45,
     zoomControl: true,
     zoom: 18 // 地図のズームを指定
   });
@@ -314,10 +327,36 @@ $(window).on('load resize', () => {
   }
 });
 
+// ボタンを押したらカメラ起動
+$('#btn-camera').on('click', function() {
+  $('[name="capture"]').click();
+});
+
+// 画像が選択されたらダンプして送る
+$('[name="capture"]').on('change', function() {
+  let reader = new FileReader();
+
+  // 読み込み完了時のイベント
+  reader.onload = function() {
+    let message = {
+      type: 'image',
+      data: reader.result,
+      lon: lon,
+      lat: lat
+    };
+    let [x, y] = convertDeg2Rad(lon, lat);
+    pubsub2d.publish('howl', x, y, RADIUS, JSON.stringify(message));
+  }
+
+  // 読み込みを実行
+  reader.readAsDataURL(this.files[0]);
+});
+
 // ボタンを押したらメッセージを送信
 $('#btn-howl').on('click', function() {
   let $message = $('#message');
   let message = {
+    type: 'text',
     message: $message.val(),
     lon: lon,
     lat: lat
