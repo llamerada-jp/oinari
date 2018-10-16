@@ -13,11 +13,18 @@
         padding: 0;
       }
 
+      #pmap {
+        perspective: 500px;
+        overflow: hidden;
+      }
+
       #map {
         border: 0;
         margin: 0;
         padding: 0;
         float: left;
+        transform: rotateX(45deg);
+        transform-origin: 0 0 0;
       }
 
       #lists {
@@ -119,8 +126,10 @@
 
     <!-- Main -->
     <div class="container-fluid">
-      <div id="map">
-        <!-- Area of map -->
+      <div id="pmap">
+        <div id="map">
+          <!-- Area of map -->
+        </div>
       </div>
       <div id="lists">
         <!-- Area of lists -->

@@ -306,11 +306,14 @@ function convertRad2Deg(x, y) {
 $(window).on('load resize', () => {
   let fieldHeight = $(window).height() - $('header').height() - $('footer').height();
   let fieldWidth  = $(window).width();
+  let $pmap = $('#pmap');
   let $map = $('#map');
   let $lists = $('#lists');
 
   if (fieldWidth > fieldHeight) {
     // 横向き
+    $pmap.height(fieldHeight);
+    $pmap.width(fieldHeight);
     $map.height(fieldHeight);
     $map.width(fieldHeight);
     $lists.height(fieldHeight);
@@ -320,6 +323,8 @@ $(window).on('load resize', () => {
     // 縦向き
     let mapHeight = fieldWidth;
     if (mapHeight > fieldHeight / 2) mapHeight = fieldHeight / 2;
+    $pmap.height(mapHeight);
+    $pmap.width(fieldWidth);
     $map.height(mapHeight);
     $map.width(fieldWidth);
     $lists.height(fieldHeight - mapHeight);
