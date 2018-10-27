@@ -13,11 +13,15 @@ let wasMap     = false;
 let debugMode  = false;
 let geoWatchId = null;
 let map = null;
+let mapHeight;
+let mapWidth;
 let mapDefer = $.Deferred();
 let index = 0;
 let markers = [];
 let gmLines = [];
 let gmCircle = null;
+let resizeTimer = 0;
+let myNid = null;
 
 function init() {
   $('#modal-init').modal({
@@ -62,6 +66,10 @@ function initGNSS() {
       $('#status-gnss').html('<span class="badge badge-success">Success</span>');
       isFirst = false;
       wasGNSS = true;
+
+      $('#map .gm-style').addClass('transform-parent');
+      $($('#map .gm-style').children()[0]).addClass('transform-target');
+
       defer.resolve();
     }
 
@@ -79,47 +87,103 @@ function initGNSS() {
   return defer.promise();
 }
 
-function recvHowl(data) {
+function recv(data) {
   let message = JSON.parse(data);
+  // 格納場所がない場合は作る
+  if (!(message.id in markers)) {
+    markers[message.id] = {};
+  }
+  markers[message.id].latlng = {
+    lat: message.lat,
+    lng: message.lon
+  };
+  if ('image' in message) {
+    markers[message.id].text = '';
+    markers[message.id].image = message.image;
+  }
+  if ('text' in message) {
+    markers[message.id].text = message.text;
+    markers[message.id].image = null;
+  }
+  mark(message.id);
+}
 
-  let indexThis = index;
-  index ++;
+function send(param) {
+  if (myNid == null) return;
+  let message = {
+    id: myNid,
+    lon: lon,
+    lat: lat
+  };
+  $.extend(message, param);
+  let [x, y] = convertDeg2Rad(lon, lat);
+  pubsub2d.publish('howl', x, y, RADIUS, JSON.stringify(message));
+}
 
-  let marker = new google.maps.Marker({
-    icon: {
-      anchor: new google.maps.Point(16, 32),
-      scaledSize: new google.maps.Size(32, 32),
-      url:'img/h1.png'
-    },
-    map: map,
-    position: { lat: message.lat, lng: message.lon }
-  });
+function markAll() {
+  for (let id of Object.keys(markers)) {
+    mark(id);
+  }
+}
 
-  marker.addListener('click', function() {
-    $('#tag' + indexThis).focus();
-  });
+function mark(id) {
+  let bounds = map.getBounds();
+  if (bounds.contains(markers[id].latlng)) {
+    // marker要素がない場合は新規作背
+    if (!('tag' in markers[id]) || markers[id].tag === false) {
+      markers[id].tag = $('<div>').addClass('marker');
+      markers[id].tag.append($('<div>').addClass('balloon').attr('id', 'balloon' + id));
+      markers[id].tag.append($('<img>').addClass('image').attr('id', 'image' + id));
+      markers[id].tag.append($('<img>').attr('src', 'img/h2.png').css('margin', '0 auto'));
+      $('.transform-target').append(markers[id].tag);
+    }
+    // 画像の表示
+    let $balloon = $('#balloon' + id);
+    let $image   = $('#image' + id);
+    if ('image' in markers[id] && markers[id].image !== null) {
+      $image.show();
+      $image.attr('src', markers[id].image);
+    } else {
+      $image.hide();
+    }
+    // 吹き出しの表示
+    if ('text' in markers[id] && markers[id].text.trim() !== '') {
+      $balloon.show();
+      $balloon.text(markers[id].text);
+    } else {
+      $balloon.hide();
+    }
+    // markerの位置調整
+    let w = $('.transform-target').width();
+    let x = 0;
+    if (bounds.getNorthEast().lng() > bounds.getSouthWest().lng()) {
+      x = w * (markers[id].latlng.lng - bounds.getSouthWest().lng()) /
+      (bounds.getNorthEast().lng() - bounds.getSouthWest().lng());
+      // 1/sin(30) で補正の必要がある？
+      x = (w * 0.5) + (x - w * 0.5) * 2 - (markers[id].tag.width() * 0.5);
+    } else {
+      console.log('todo');
+    }
+    let h = $('.transform-target').height();
+    let y = 0;
+    if (bounds.getNorthEast().lat() > bounds.getSouthWest().lat()) {
+      y = h - h * (markers[id].latlng.lat - bounds.getSouthWest().lat()) /
+      (bounds.getNorthEast().lat() - bounds.getSouthWest().lat());
+      // 1/cos(30)で補正の必要がある？
+      y = (h * 0.5) + (y - h * 0.5) * 1.15 - markers[id].tag.height();
+    } else {
+      console.log('todo');
+    }
+    markers[id].tag.css('left', x + 'px');
+    markers[id].tag.css('top', y + 'px')
 
-  markers[indexThis] = marker;
-
-  if (message.type === 'text') {
-    $('<tr id="' + indexThis + '">' +
-      '<td><div style="display:none;">' + getDistance(message.lon, message.lat).toFixed(1) + 'm</div></td>' +
-      '<td><div style="display:none;">' + message.message + '</div></td>' +
-      '<td><div style="display:none;"><button type="button" class="btn btn-primary">Howl</button></div></td>' + 
-      '</tr>').prependTo('#list tbody').find('td > div').slideDown(400, function() {
-        let $this = $(this);
-        $this.replaceWith($this.contents());
-      });
-
-  } else if (message.type === 'image') {
-    $('<tr id="' + indexThis + '">' +
-      '<td><div style="display:none;">' + getDistance(message.lon, message.lat).toFixed(1) + 'm</div></td>' +
-      '<td><div style="display:none;"><img src="' + message.data + '"></img></div></td>' +
-      '<td><div style="display:none;"><button type="button" class="btn btn-primary">Howl</button></div></td>' + 
-      '</tr>').prependTo('#list tbody').find('td > div').slideDown(400, function() {
-        let $this = $(this);
-        $this.replaceWith($this.contents());
-      });
+  } else {
+    if ('tag' in markers[id] && markers[id].tag !== false) {
+      // marker要素がある場合は削除
+      console.log('remove')
+      $(markers[id].tag).remove();
+      markers[id].tag = false;
+    }
   }
 }
 
@@ -143,13 +207,15 @@ function initNet() {
     return v.connect('ws://veindev:8080/vein/ws', '');
 
   }).then(() => {
+    myNid = v.getMyNid();
+
     if (wasGNSS === true) {
       let [x, y] = convertDeg2Rad(lon, lat);
       v.setPosition(x, y);
     }
 
     pubsub2d = v.accessPubsub2D('pubsub2d');
-    pubsub2d.on('howl', recvHowl);
+    pubsub2d.on('howl', recv);
 
     wasConnect = true;
     console.log('vein success');
@@ -207,10 +273,26 @@ function initMap() {
     disableDefaultUI: true,
     draggable: false,
     mapTypeControl: false,
-    // mapTypeId: 'satellite',
-    // tilt:45,
     zoomControl: true,
     zoom: 18 // 地図のズームを指定
+  });
+
+  map.addListener('bounds_changed', function() {
+    markAll();
+  });
+
+  map.addListener('center_changed', function() {
+    if (myNid != null) {
+      if (!(myNid in markers)) {
+        markers[myNid] = {};
+      }
+      markers[myNid].latlng = {
+        lat: map.getCenter().lat(),
+        lng: map.getCenter().lng()
+      };
+      mark(myNid);
+      send();
+    }
   });
 
   wasMap = true;
@@ -304,32 +386,36 @@ function convertRad2Deg(x, y) {
 
 // 表示領域リサイズ時に地図の大きさなどを変更する
 $(window).on('load resize', () => {
-  let fieldHeight = $(window).height() - $('header').height() - $('footer').height();
-  let fieldWidth  = $(window).width();
-  let $pmap = $('#pmap');
-  let $map = $('#map');
-  let $lists = $('#lists');
-
-  if (fieldWidth > fieldHeight) {
-    // 横向き
-    $pmap.height(fieldHeight);
-    $pmap.width(fieldHeight);
-    $map.height(fieldHeight);
-    $map.width(fieldHeight);
-    $lists.height(fieldHeight);
-    $lists.width(fieldWidth - fieldHeight);
-
-  } else {
-    // 縦向き
-    let mapHeight = fieldWidth;
-    if (mapHeight > fieldHeight / 2) mapHeight = fieldHeight / 2;
-    $pmap.height(mapHeight);
-    $pmap.width(fieldWidth);
-    $map.height(mapHeight);
-    $map.width(fieldWidth);
-    $lists.height(fieldHeight - mapHeight);
-    $lists.width(fieldWidth);
+  if (resizeTimer > 0) {
+    clearTimeout(resizeTimer);
   }
+  
+  resizeTimer = setTimeout(function () {
+    let fieldHeight = $(window).height() - $('header').height() - $('footer').height();
+    let fieldWidth  = $(window).width();
+    let $map = $('#map');
+    let $lists = $('#lists');
+
+    if (fieldWidth > fieldHeight) {
+      // 横向き
+      mapHeight = fieldHeight;
+      mapWidth  = fieldHeight;
+      $map.height(mapHeight);
+      $map.width (mapWidth);
+      $lists.height(fieldHeight);
+      $lists.width (fieldWidth - mapWidth);
+
+    } else {
+      // 縦向き
+      mapHeight = fieldWidth;
+      mapWidth  = fieldWidth;
+      if (mapHeight > fieldHeight / 2) mapHeight = fieldHeight / 2;
+      $map.height(mapHeight);
+      $map.width (mapWidth);
+      $lists.height(fieldHeight - mapHeight);
+      $lists.width (fieldWidth);
+    }
+  }, 50);
 });
 
 // ボタンを押したらカメラ起動
@@ -343,14 +429,9 @@ $('[name="capture"]').on('change', function() {
 
   // 読み込み完了時のイベント
   reader.onload = function() {
-    let message = {
-      type: 'image',
-      data: reader.result,
-      lon: lon,
-      lat: lat
-    };
-    let [x, y] = convertDeg2Rad(lon, lat);
-    pubsub2d.publish('howl', x, y, RADIUS, JSON.stringify(message));
+    send({
+      image: reader.result
+    });
   }
 
   // 読み込みを実行
@@ -360,14 +441,9 @@ $('[name="capture"]').on('change', function() {
 // ボタンを押したらメッセージを送信
 $('#btn-howl').on('click', function() {
   let $message = $('#message');
-  let message = {
-    type: 'text',
-    message: $message.val(),
-    lon: lon,
-    lat: lat
-  };
-  let [x, y] = convertDeg2Rad(lon, lat);
-  pubsub2d.publish('howl', x, y, RADIUS, JSON.stringify(message));
+  send({
+    text: $message.val()
+  });
   $message.val('');
 });
 
