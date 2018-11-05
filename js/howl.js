@@ -81,6 +81,7 @@ $('#start-btn').click(() => {
 });
 
 function loop() {
+  let NOW = Math.floor(Date.now() / 1000);
   // libveinの状態確認
   if (veinStatus == STATUS_NG) {
     resetVein();
@@ -108,10 +109,10 @@ function loop() {
   let reset = false;
   if (dstLocation == null || getDistance(realLocation, dstLocation) > ROPE_RADIUS) {
     dstLocation = getRandomPoint(realLocation, ROPE_RADIUS);
-    arrivalTime  = Date.now();
+    arrivalTime = NOW;
     reset = true;
   }
-  if (arrivalTime <= Date.now()) {
+  if (arrivalTime <= NOW) {
     let srcLocation = dstLocation;
     // @todo 立ち止まる可能性
     dstLocation = getRandomPoint(srcLocation, STEP_RADIUS);
@@ -122,10 +123,11 @@ function loop() {
     // 現在のキャラクター位置を元にlibveinのネットワーク座標を更新
     let [x, y] = convertDeg2Rad(dstLocation);
     v.setPosition(x, y);
-
+    
     // 5m/sくらいを想定
     let time = getDistance(srcLocation, dstLocation) / 5;
-    arrivalTime = Date.now() + time;
+    console.log(time);
+    arrivalTime = NOW + time;
 
     
     // 更新情報を送付
@@ -133,6 +135,7 @@ function loop() {
       id: localNid,
       srcLocation: srcLocation,
       dstLocation: dstLocation,
+      nickname: nickname,
       reset: reset,
       time: time
     };
@@ -231,14 +234,14 @@ function updateMarker(data) {
     markers[id].image = null;
   }
   if ('dstLocation' in data) {
-    markers[id].srcTime = Date.now();
+    markers[id].srcTime = Math.floor(Date.now() / 1000);
     markers[id].dstTime = markers[id].srcTime + data.time;
   }
 }
 
 function rendMarkers() {
+  let NOW = Math.floor(Date.now() / 1000);
   let bounds = gmap.getBounds();
-  let now = Date.now();
 
   for (let id of Object.keys(markers)) {
     let marker = markers[id];
@@ -248,12 +251,12 @@ function rendMarkers() {
     let isWalk;
 
     // 場所の計算
-    if (marker.dstTime < now) {
+    if (marker.dstTime < NOW) {
       p = marker.dstLocation;
       isWalk = false;
 
     } else {
-      let r = (now - marker.srcTime) / (marker.dstTime - marker.srcTime);
+      let r = (NOW - marker.srcTime) / (marker.dstTime - marker.srcTime);
       p = {
         lng: marker.srcLocation.lng + (marker.dstLocation.lng - marker.srcLocation.lng) * r,
         lat: marker.srcLocation.lat + (marker.dstLocation.lat - marker.srcLocation.lat) * r
@@ -267,19 +270,22 @@ function rendMarkers() {
         marker.tag = $('<div>').addClass('marker');
         marker.tag.append($('<div>').addClass('balloon').attr('id', 'balloon' + id));
         marker.tag.append($('<img>').addClass('image').attr('id', 'image' + id));
-        marker.tag.append($('<img>').attr('src', 'img/h2.png').css('margin', '0 auto'));
+        marker.tag.append($('<div>').addClass('char').addClass('fox1b').attr('id', 'char' + id));
+        marker.tag.append($('<div>').addClass('name').text(marker.nickname));
         $('.transform-target').append(marker.tag);
       }
 
       // 画像の表示
       let $balloon = $('#balloon' + id);
       let $image   = $('#image' + id);
+      let $char    = $('#char' + id);
       if ('image' in markers[id] && markers[id].image !== null) {
         $image.show();
         $image.attr('src', markers[id].image);
       } else {
         $image.hide();
       }
+
       // 吹き出しの表示
       if ('text' in markers[id] && markers[id].text.trim() !== '') {
         $balloon.show();
@@ -310,7 +316,14 @@ function rendMarkers() {
         console.log('todo');
       }
       markers[id].tag.css('left', x + 'px');
-      markers[id].tag.css('top', y + 'px')
+      markers[id].tag.css('top',  y + 'px');
+
+      // 左右どちらを向かせるか
+      if (marker.srcLocation.lng < marker.dstLocation.lng) {
+        $char.removeClass('reverse');
+      } else {
+        $char.addClass('reverse');
+      }
 
     } else {
       if ('tag' in marker && marker.tag !== false) {
@@ -323,7 +336,7 @@ function rendMarkers() {
 }
 
 function getRandomPoint(c, r) {
-  let rLat = 2 * Math.PI * r / O;
+  let rLat = 360 * r / O;
   let rLng = 2 * rLat;
   let p = {
     lng: c.lng + (Math.random() * rLng * 2) - rLng,
@@ -483,7 +496,6 @@ $('#btn-howl').on('click', function() {
   let $message = $('#message');
   let data = {
     id: localNid,
-    nickname: nickname,
     text: $message.val()
   };
   let [x, y] = convertDeg2Rad(dstLocation);
