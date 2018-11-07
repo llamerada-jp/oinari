@@ -126,7 +126,6 @@ function loop() {
     
     // 5m/sくらいを想定
     let time = getDistance(srcLocation, dstLocation) / 5;
-    console.log(time);
     arrivalTime = NOW + time;
 
     
