@@ -8,6 +8,9 @@ const STEP_RADIUS    = 50;
 const R = 6378137;
 const O = 2 * Math.PI * R;
 
+// 切断とみなす時間[sec]
+const TIMEOUT = 60;
+
 //
 const CHANNEL_NAME = 'hoge';
 
@@ -245,6 +248,14 @@ function rendMarkers() {
 
   for (let id of Object.keys(markers)) {
     let marker = markers[id];
+    // 一定時間更新されない場合はキャラクタを削除
+    if (marker.dstTime + TIMEOUT < NOW) {
+      let $tag = $('#tag' + id);
+      $tag.remove();
+      delete markers[id];
+      continue;
+    }
+
     if (!('dstLocation' in marker)) continue;
 
     let p;
@@ -267,7 +278,7 @@ function rendMarkers() {
     if (bounds.contains(p)) {
       // 要素がないので新規作背
       if (!('tag' in marker) || marker.tag === false) {
-        marker.tag = $('<div>').addClass('marker');
+        marker.tag = $('<div>').addClass('marker').attr('id', 'tag' + id);
         marker.tag.append($('<div>').addClass('balloon').attr('id', 'balloon' + id));
         marker.tag.append($('<img>').addClass('image').attr('id', 'image' + id));
         marker.tag.append($('<div>').addClass('char').addClass('fox1b').attr('id', 'char' + id));
