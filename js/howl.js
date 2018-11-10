@@ -37,8 +37,8 @@ let markers = [];
 let gmLines = [];
 let gmCircle = null;
 
-// 
-let resizeTimer = 0;
+// ウインドウサイズ変更時利用するタイマー
+let relayoutTimer = 0;
 
 // Entry point.
 $(window).on('load', () => {
@@ -74,6 +74,7 @@ $('#start-btn').click(() => {
   $('#map .gm-style').addClass('transform-parent');
   $($('#map .gm-style').children()[0]).addClass('transform-target');
 
+  relayout();
   // メインループ用タイマ
   setInterval(loop, 1000);
   // 表示用タイマ
@@ -431,12 +432,12 @@ function convertRad2Deg(x, y) {
 }
 
 // 表示領域リサイズ時に地図の大きさなどを変更する
-$(window).on('load resize', () => {
-  if (resizeTimer != null) {
-    clearTimeout(resizeTimer);
+function relayout() {
+  if (relayoutTimer != null) {
+    clearTimeout(relayoutTimer);
   }
   
-  resizeTimer = setTimeout(function () {
+  relayoutTimer = setTimeout(function () {
     let fieldHeight = $(window).height() - $('footer').height();
     let fieldWidth  = $(window).width();
     let $map = $('#map');
@@ -462,9 +463,10 @@ $(window).on('load resize', () => {
       $lists.width (fieldWidth);
     }
 
-    resizeTimer = null;
+    relayoutTimer = null;
   }, 50);
-});
+}
+$(window).on('load resize', relayout);
 
 // ボタンを押したらカメラ起動
 $('#btn-camera').on('click', function() {
