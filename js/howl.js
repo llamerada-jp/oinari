@@ -8,6 +8,9 @@ const STEP_RADIUS    = 50;
 const R = 6378137;
 const O = 2 * Math.PI * R;
 
+// 切断とみなす時間[sec]
+const TIMEOUT = 60;
+
 //
 const CHANNEL_NAME = 'hoge';
 
@@ -37,8 +40,8 @@ let markers = [];
 let gmLines = [];
 let gmCircle = null;
 
-// 
-let resizeTimer = 0;
+// ウインドウサイズ変更時利用するタイマー
+let relayoutTimer = 0;
 
 // Entry point.
 $(window).on('load', () => {
@@ -74,6 +77,7 @@ $('#start-btn').click(() => {
   $('#map .gm-style').addClass('transform-parent');
   $($('#map .gm-style').children()[0]).addClass('transform-target');
 
+  relayout();
   // メインループ用タイマ
   setInterval(loop, 1000);
   // 表示用タイマ
@@ -126,7 +130,6 @@ function loop() {
     
     // 5m/sくらいを想定
     let time = getDistance(srcLocation, dstLocation) / 5;
-    console.log(time);
     arrivalTime = NOW + time;
 
     
@@ -245,6 +248,14 @@ function rendMarkers() {
 
   for (let id of Object.keys(markers)) {
     let marker = markers[id];
+    // 一定時間更新されない場合はキャラクタを削除
+    if (marker.dstTime + TIMEOUT < NOW) {
+      let $tag = $('#tag' + id);
+      $tag.remove();
+      delete markers[id];
+      continue;
+    }
+
     if (!('dstLocation' in marker)) continue;
 
     let p;
@@ -267,7 +278,7 @@ function rendMarkers() {
     if (bounds.contains(p)) {
       // 要素がないので新規作背
       if (!('tag' in marker) || marker.tag === false) {
-        marker.tag = $('<div>').addClass('marker');
+        marker.tag = $('<div>').addClass('marker').attr('id', 'tag' + id);
         marker.tag.append($('<div>').addClass('balloon').attr('id', 'balloon' + id));
         marker.tag.append($('<img>').addClass('image').attr('id', 'image' + id));
         marker.tag.append($('<div>').addClass('char').addClass('fox1b').attr('id', 'char' + id));
@@ -432,12 +443,12 @@ function convertRad2Deg(x, y) {
 }
 
 // 表示領域リサイズ時に地図の大きさなどを変更する
-$(window).on('load resize', () => {
-  if (resizeTimer != null) {
-    clearTimeout(resizeTimer);
+function relayout() {
+  if (relayoutTimer != null) {
+    clearTimeout(relayoutTimer);
   }
   
-  resizeTimer = setTimeout(function () {
+  relayoutTimer = setTimeout(function () {
     let fieldHeight = $(window).height() - $('footer').height();
     let fieldWidth  = $(window).width();
     let $map = $('#map');
@@ -463,9 +474,10 @@ $(window).on('load resize', () => {
       $lists.width (fieldWidth);
     }
 
-    resizeTimer = null;
+    relayoutTimer = null;
   }, 50);
-});
+}
+$(window).on('load resize', relayout);
 
 // ボタンを押したらカメラ起動
 $('#btn-camera').on('click', function() {
