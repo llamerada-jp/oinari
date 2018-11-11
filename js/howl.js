@@ -175,7 +175,7 @@ function resetVein() {
   v.init().then(() => {
     console.log('vein connect');
     // v.on('log', onGetLog);
-    // v.on('debug', onGetDebug);
+    v.on('debug', onGetDebug);
     return v.connect('wss://www.oinari.app/vein/ws', '');
 
   }).then(() => {
@@ -422,22 +422,20 @@ function onGetDebug(event) {
     }
     gmLines = [];
 
-    if (debugMode) {
-      let nodes = event.content.nodes;
-      for (let link of event.content.links) {
-        let p1 = (link[0] == vein.Vein.NID_THIS ?
-                  [lon, lat] : convertRad2Deg(nodes[link[0]][0], nodes[link[0]][1]));
-        let p2 = (link[1] == vein.Vein.NID_THIS ?
-                  [lon, lat] : convertRad2Deg(nodes[link[1]][0], nodes[link[1]][1]));
-        let polyLine = new google.maps.Polyline({
-          path: [{lng: p1[0], lat: p1[1]}, {lng: p2[0], lat: p2[1]}],
-          strokeColor: '#FF0000',
-          strokeOpacity: 1.0,
-          strokeWeight: 2
-        });
-        polyLine.setMap(map);
-        gmLines.push(polyLine);
-      }
+    let nodes = event.content.nodes;
+    for (let link of event.content.links) {
+      let p1 = (link[0] == vein.Vein.NID_THIS ?
+                dstLocation : convertRad2Deg(nodes[link[0]][0], nodes[link[0]][1]));
+      let p2 = (link[1] == vein.Vein.NID_THIS ?
+                dstLocation : convertRad2Deg(nodes[link[1]][0], nodes[link[1]][1]));
+      let polyLine = new google.maps.Polyline({
+        path: [p1, p2],
+        strokeColor: '#666',
+        strokeOpacity: 0.2,
+        strokeWeight: 2
+      });
+      polyLine.setMap(gmap);
+      gmLines.push(polyLine);
     }
   }
 }
