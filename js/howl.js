@@ -10,6 +10,8 @@ const O = 2 * Math.PI * R;
 
 // 切断とみなす時間[sec]
 const TIMEOUT = 60;
+// 発言後、吹き出しを消すまでの時間[sec]
+const EMIT_TIMEOUT = 60;
 
 //
 const CHANNEL_NAME = 'hoge';
@@ -222,23 +224,31 @@ function initGMap() {
 }
 
 function updateMarker(data) {
+  let NOW = Math.floor(Date.now() / 1000);
   let id = data.id;
+
   // 格納場所がない場合は作る
   if (!(id in markers)) {
-    markers[id] = {};
+    markers[id] = {
+      id: id
+    };
   }
   $.extend(markers[id], data);
   if ('image' in data) {
     markers[id].text = '';
     markers[id].image = data.image;
+    markers[id].emitTime = NOW;
+    addImageItem(markers[id]);
   }
   if ('text' in data) {
     markers[id].text = data.text;
     markers[id].image = null;
+    markers[id].emitTime = NOW;
+    addTextItem(markers[id]);
   }
   if ('dstLocation' in data) {
-    markers[id].srcTime = Math.floor(Date.now() / 1000);
-    markers[id].dstTime = markers[id].srcTime + data.time;
+    markers[id].srcTime = NOW;
+    markers[id].dstTime = NOW + data.time;
   }
 }
 
@@ -254,6 +264,12 @@ function rendMarkers() {
       $tag.remove();
       delete markers[id];
       continue;
+    }
+
+    // 発言後、一定時間で吹き出しを削除
+    if (marker.emitTime + EMIT_TIMEOUT < NOW) {
+      marker.text = '';
+      marker.image = null;
     }
 
     if (!('dstLocation' in marker)) continue;
@@ -344,6 +360,26 @@ function rendMarkers() {
       }
     }
   }
+}
+
+function addImageItem(marker) {
+  $('<tr>' +
+    '<td><div style="display:none;">' + marker.nickname + '</div></td>' +
+    '<td><div style="display:none;"><img src="' + marker.image + '"></img></div></td>' +
+    '</tr>').prependTo('#list tbody').find('td > div').slideDown(400, function() {
+      let $this = $(this);
+      $this.replaceWith($this.contents());
+    });
+}
+
+function addTextItem(marker) {
+  $('<tr>' +
+    '<td><div style="display:none;">' + marker.nickname + '</div></td>' +
+    '<td><div style="display:none;">' + marker.text     + '</div></td>' +
+    '</tr>').prependTo('#list tbody').find('td > div').slideDown(400, function() {
+      let $this = $(this);
+      $this.replaceWith($this.contents());
+    });
 }
 
 function getRandomPoint(c, r) {
@@ -497,6 +533,7 @@ $('[name="capture"]').on('change', function() {
     };
     let [x, y] = convertDeg2Rad(dstLocation);
     pubsub2d.publish(CHANNEL_NAME, x, y, MESSAGE_RADIUS, JSON.stringify(data));
+    updateMarker(data);
   };
 
   // 読み込みを実行
@@ -506,11 +543,16 @@ $('[name="capture"]').on('change', function() {
 // ボタンを押したらメッセージを送信
 $('#btn-howl').on('click', function() {
   let $message = $('#message');
-  let data = {
-    id: localNid,
-    text: $message.val()
-  };
-  let [x, y] = convertDeg2Rad(dstLocation);
-  pubsub2d.publish(CHANNEL_NAME, x, y, MESSAGE_RADIUS, JSON.stringify(data));
+  let text = $message.val().trim();
+  if (text != '') {
+    let data = {
+      id: localNid,
+      nickname: nickname,
+      text: $message.val()
+    };
+    let [x, y] = convertDeg2Rad(dstLocation);
+    pubsub2d.publish(CHANNEL_NAME, x, y, MESSAGE_RADIUS, JSON.stringify(data));
+    updateMarker(data);
+  }
   $message.val('');
 });
