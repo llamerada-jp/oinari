@@ -520,7 +520,8 @@ $('#btn-camera').on('click', function() {
 $('[name="capture"]').on('change', function() {
   let reader = new FileReader();
 
-  // 読み込み完了時のイベント
+  // 画像をリサイズして送る
+  // https://qiita.com/komakomako/items/8efd4184f6d7cf1363f2
   reader.onload = (e) => {
     let image = new Image();
     image.onload = () => {
