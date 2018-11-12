@@ -4,6 +4,8 @@
 const MESSAGE_RADIUS = 1000;
 const ROPE_RADIUS    = 100;
 const STEP_RADIUS    = 50;
+// 画像サイズ[px]
+const PICTURE_SIZE   = 512;
 //
 const R = 6378137;
 const O = 2 * Math.PI * R;
@@ -519,19 +521,57 @@ $('[name="capture"]').on('change', function() {
   let reader = new FileReader();
 
   // 読み込み完了時のイベント
-  reader.onload = () => {
-    let data = {
-      id: localNid,
-      nickname: nickname,
-      image: reader.result
-    };
-    let [x, y] = convertDeg2Rad(dstLocation);
-    pubsub2d.publish(CHANNEL_NAME, x, y, MESSAGE_RADIUS, JSON.stringify(data));
-    updateMarker(data);
+  reader.onload = (e) => {
+    let image = new Image();
+    image.onload = () => {
+      let width;
+      let height;
+      if (image.height <= PICTURE_SIZE && image.width <= PICTURE_SIZE) {
+        // 十分に小さいのでサイズ変更はなし
+        width = image.width;
+        height = image.height;
+      } else if(image.width > image.height){
+        // 横長の画像は横のサイズを指定値にあわせる
+        let r = image.height / image.width;
+        width = PICTURE_SIZE;
+        height = PICTURE_SIZE * r;
+      } else {
+        // 縦長の画像は縦のサイズを指定値にあわせる
+        let r = image.width / image.height;
+        width = PICTURE_SIZE * r;
+        height = PICTURE_SIZE;
+      }
+      // サムネ描画用canvasのサイズを上で算出した値に変更
+      let canvas = $('<canvas>')
+        .attr('width', width)
+        .attr('height', height);
+      let ctx = canvas[0].getContext('2d');
+      // canvasに既に描画されている画像をクリア
+      ctx.clearRect(0, 0, width, height);
+      // canvasに画像を描画
+      ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, width, height);
+
+      // canvasからbase64画像データを取得
+      let base64 = canvas.get(0).toDataURL('image/jpeg');
+
+      // 送信
+      let data = {
+        id: localNid,
+        nickname: nickname,
+        image: base64
+      };
+      let [x, y] = convertDeg2Rad(dstLocation);
+      pubsub2d.publish(CHANNEL_NAME, x, y, MESSAGE_RADIUS, JSON.stringify(data));
+      updateMarker(data);
+    }
+    image.src = e.target.result;
   };
 
-  // 読み込みを実行
-  reader.readAsDataURL(this.files[0]);
+  // 画像ファイルであった場合、読み込みを実行
+  let file = this.files[0];
+  if (file.type == 'image/jpeg' || file.type == 'image/png') {
+    reader.readAsDataURL(file);
+  }
 });
 
 // ボタンを押したらメッセージを送信
