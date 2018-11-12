@@ -535,7 +535,7 @@ $('[name="capture"]').on('change', function() {
 });
 
 // ボタンを押したらメッセージを送信
-$('#btn-howl').on('click', function() {
+$('#btn-text').on('click', function() {
   let $message = $('#message');
   let text = $message.val().trim();
   if (text != '') {

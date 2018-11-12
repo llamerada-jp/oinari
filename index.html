@@ -260,14 +260,16 @@
         </div>
       </div>
       <footer class="fixed-bottom" id="footer">
-        <div class="input-group">
-          <input id="message" type="text" class="form-control" placeholder="bowbow">
-          <div class="input-group-append">
-            <button id="btn-camera" class="btn btn-primary" type="button">&nbsp;&nbsp;<span class="oi oi-camera-slr"></span>&nbsp;&nbsp;</button>
-            <button id="btn-howl" class="btn btn-primary" type="button">&nbsp;&nbsp;<span class="oi oi-bullhorn"></span>&nbsp;&nbsp;</button>
-            <input type="file" name="capture" accept="image/*" capture="camera" style="display:none;"/>
+        <form onsubmit="return false;">
+          <div class="input-group">
+            <input id="message" type="text" class="form-control" placeholder="bowbow">
+            <div class="input-group-append">
+              <button id="btn-camera" class="btn btn-primary" type="button">&nbsp;&nbsp;<span class="oi oi-camera-slr"></span>&nbsp;&nbsp;</button>
+              <button id="btn-text" class="btn btn-primary" type="submit">&nbsp;&nbsp;<span class="oi oi-bullhorn"></span>&nbsp;&nbsp;</button>
+              <input type="file" name="capture" accept="image/*" capture="camera" style="display:none;"/>
+            </div>
           </div>
-        </div>
+        </form>
       </footer>
     </div>
     
