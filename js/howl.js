@@ -362,24 +362,20 @@ function rendMarkers() {
   }
 }
 
+function addListItem(marker, html) {
+  let now = new Date();
+  $('<li class="list-group-item">' +
+    '<div><span class="font-weight-bold">' + marker.nickname + '</span>&nbsp;&nbsp;' +
+    '<span class="text-secondary">' + ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2)  + '</span></div>' + html +
+    '</li>').prependTo('#list').hide().slideDown(400);
+}
+
 function addImageItem(marker) {
-  $('<tr>' +
-    '<td><div style="display:none;">' + marker.nickname + '</div></td>' +
-    '<td><div style="display:none;"><img src="' + marker.image + '"></img></div></td>' +
-    '</tr>').prependTo('#list tbody').find('td > div').slideDown(400, function() {
-      let $this = $(this);
-      $this.replaceWith($this.contents());
-    });
+  addListItem(marker, '<div class="card bg-dark"><img src="' + marker.image + '" class="img-fluid mx-auto d-block"></img></div>');
 }
 
 function addTextItem(marker) {
-  $('<tr>' +
-    '<td><div style="display:none;">' + marker.nickname + '</div></td>' +
-    '<td><div style="display:none;">' + marker.text     + '</div></td>' +
-    '</tr>').prependTo('#list tbody').find('td > div').slideDown(400, function() {
-      let $this = $(this);
-      $this.replaceWith($this.contents());
-    });
+  addListItem(marker, '<div><span class="font-weight-normal">' + marker.text + '</span></div>');
 }
 
 function getRandomPoint(c, r) {
