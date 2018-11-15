@@ -296,29 +296,32 @@ function rendMarkers() {
     if (bounds.contains(p)) {
       // 要素がないので新規作背
       if (!('tag' in marker) || marker.tag === false) {
-        marker.tag = $('<div>').addClass('marker').attr('id', 'tag' + id);
-        marker.tag.append($('<div>').addClass('balloon').attr('id', 'balloon' + id));
-        marker.tag.append($('<img>').addClass('image').attr('id', 'image' + id));
-        marker.tag.append($('<div>').addClass('char').addClass('fox1b').attr('id', 'char' + id));
-        marker.tag.append($('<div>').addClass('name').text(marker.nickname));
+        marker.tag = $('<div class="marker"><div class="balloon"><span class="text"></span>' +
+                       '<img class="image"></img></div><div class="char fox1b"></div>' +
+                       '<div class="nickname"></div></div>');
+        marker.tag.attr('id', 'tag' + id);
         $('.transform-target').append(marker.tag);
       }
 
-      // 画像の表示
-      let $balloon = $('#balloon' + id);
-      let $image   = $('#image' + id);
-      let $char    = $('#char' + id);
-      if ('image' in markers[id] && markers[id].image !== null) {
-        $image.show();
-        $image.attr('src', markers[id].image);
-      } else {
-        $image.hide();
-      }
+      let $tag = $('#tag' + id);
+      let $balloon = $tag.find('.balloon');
+      let $text    = $tag.find('.text');
+      let $image   = $tag.find('.image');
+      let $char    = $tag.find('.char');
 
       // 吹き出しの表示
       if ('text' in markers[id] && markers[id].text.trim() !== '') {
+        $text.text(markers[id].text);
+        $text.show();
+        $image.hide();
         $balloon.show();
-        $balloon.text(markers[id].text);
+
+      } else if ('image' in markers[id] && markers[id].image !== null) {
+        $image.attr('src', markers[id].image);
+        $text.hide();
+        $image.show();
+        $balloon.show();
+
       } else {
         $balloon.hide();
       }
@@ -364,20 +367,28 @@ function rendMarkers() {
   }
 }
 
-function addListItem(marker, html) {
+function addListItem(marker, $html) {
   let now = new Date();
-  $('<li class="list-group-item">' +
-    '<div><span class="font-weight-bold">' + marker.nickname + '</span>&nbsp;&nbsp;' +
-    '<span class="text-secondary">' + ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2)  + '</span></div>' + html +
-    '</li>').prependTo('#list').hide().slideDown(400);
+  let $elem = $('<li class="list-group-item">' +
+                '<div class="head"><span class="font-weight-bold nickname"></span>&nbsp;&nbsp;' +
+                '<span class="text-secondary">' +
+                ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) +
+                '</span></div></li>');
+  $elem.find('.head').append($html);
+  $elem.find('.nickname').text(marker.nickname);
+  $elem.prependTo('#list').hide().slideDown(400);
 }
 
 function addImageItem(marker) {
-  addListItem(marker, '<div class="card bg-dark"><img src="' + marker.image + '" class="img-fluid mx-auto d-block"></img></div>');
+  let $html = $('<div class="card bg-dark"><img class="img-fluid mx-auto d-block"></img></div>');
+  $html.find('img').attr('src', marker.image);
+  addListItem(marker, $html);
 }
 
 function addTextItem(marker) {
-  addListItem(marker, '<div><span class="font-weight-normal">' + marker.text + '</span></div>');
+  let $html = $('<div><span class="font-weight-normal"></span></div>');
+  $html.find('span').text(marker.text);
+  addListItem(marker, $html);
 }
 
 function getRandomPoint(c, r) {
