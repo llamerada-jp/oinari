@@ -218,11 +218,6 @@ function initGMap() {
   gmap.addListener('bounds_changed', function() {
     rendMarkers();
   });
-
-  /*
-  gmap.addListener('center_changed', function() {
-  });
-  //*/
 }
 
 function updateMarker(data) {
