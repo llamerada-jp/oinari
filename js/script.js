@@ -78,8 +78,8 @@ $('#start-btn').click(() => {
   resetVein();
 
   // 地図をX軸で回転(地図の要素が完全にロードされたタイミングで回転可能)
-  $('#map .gm-style').addClass('transform-parent');
-  $($('#map .gm-style').children()[0]).addClass('transform-target');
+  $('.gm-style-pbc').parent().wrap('<div class="transform-parent">');
+  $('.gm-style-pbc').parent().addClass('transform-target');
 
   relayout();
   // メインループ用タイマ
