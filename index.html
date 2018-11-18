@@ -22,12 +22,20 @@
         display: none;
       }
 
+      /* pixel scaled */
+      .pixelscaled {
+        -ms-interpolation-mode: nearest-neighbor;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: pixelated;
+      }
+
       /* splash */
       #logo {
-        image-rendering: pixelated;
         max-height: 40%;
         max-width: 40%;
-        zoom: 6;
+        height: 96px;
+        width: 96px;
       }
 
       /* main */
@@ -195,7 +203,7 @@
       <header class="mb-auto"">
       </header>
       <main role="main" class="container">
-        <img src="img/logo.png" class="mx-auto d-block" id="logo">
+        <img src="img/logo.png" class="mx-auto d-block pixelscaled" id="logo">
         <br>
         <h1 class="text-center">オイナリ</h1>
         <h6 class="text-center">oinari</h6>

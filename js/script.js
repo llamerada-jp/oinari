@@ -292,7 +292,7 @@ function rendMarkers() {
       // 要素がないので新規作背
       if (!('tag' in marker) || marker.tag === false) {
         marker.tag = $('<div class="marker"><div class="balloon"><span class="text"></span>' +
-                       '<img class="image"></img></div><div class="char fox1b"></div>' +
+                       '<img class="image"></img></div><div class="char fox1b pixelscaled"></div>' +
                        '<div class="nickname"></div></div>');
         marker.tag.attr('id', 'tag' + id);
         $('.transform-target').append(marker.tag);
