@@ -327,21 +327,19 @@ function rendMarkers() {
       if (bounds.getNorthEast().lng() > bounds.getSouthWest().lng()) {
         x = w * (p.lng - bounds.getSouthWest().lng()) /
         (bounds.getNorthEast().lng() - bounds.getSouthWest().lng());
-        // 1/sin(30) で補正の必要がある？
-        x = (w * 0.5) + (x - w * 0.5) * 2 - (marker.tag.width() * 0.5);
       } else {
-        console.log('todo');
+        x = w * (360.0 - p.lng + bounds.getSouthWest().lng()) /
+        (360.0 - bounds.getNorthEast().lng() + bounds.getSouthWest().lng());
       }
+      // 1/sin(30) で補正の必要がある？
+      x = (w * 0.5) + (x - w * 0.5) * 2 - (marker.tag.width() * 0.5);
+
       let h = $('.transform-target').height();
       let y = 0;
-      if (bounds.getNorthEast().lat() > bounds.getSouthWest().lat()) {
-        y = h - h * (p.lat - bounds.getSouthWest().lat()) /
-        (bounds.getNorthEast().lat() - bounds.getSouthWest().lat());
-        // 1/cos(30)で補正の必要がある？
-        y = (h * 0.5) + (y - h * 0.5) * 1.15 - marker.tag.height();
-      } else {
-        console.log('todo');
-      }
+      y = h - h * (p.lat - bounds.getSouthWest().lat()) /
+      (bounds.getNorthEast().lat() - bounds.getSouthWest().lat());
+      // 1/cos(30)で補正の必要がある？
+      y = (h * 0.5) + (y - h * 0.5) * 1.15 - marker.tag.height();
       markers[id].tag.css('left', x + 'px');
       markers[id].tag.css('top',  y + 'px');
 
