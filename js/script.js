@@ -218,7 +218,7 @@ function initGMap() {
     draggable: false,
     mapTypeControl: false,
     zoomControl: true,
-    zoom: 18 // 地図のズームを指定
+    zoom: 17 // 地図のズームを指定
   });
 
   gmap.addListener('bounds_changed', function() {
