@@ -14,7 +14,8 @@ const O = 2 * Math.PI * R;
 const TIMEOUT = 60;
 // 発言後、吹き出しを消すまでの時間[sec]
 const EMIT_TIMEOUT = 60;
-
+// GNSSのタイムアウト時間
+const GNSS_TIMEOUT = 30 * 1000;
 //
 const CHANNEL_NAME = 'hoge';
 
@@ -94,11 +95,6 @@ function loop() {
   if (veinStatus == STATUS_NG) {
     resetVein();
   }
-  if (veinStatus != STATUS_OK) {
-    $('.loading').show();
-  } else {
-    $('.loading').show();
-  }
 
   // GNSSの状態確認
   if (gnssStatus == STATUS_NG) {
@@ -106,7 +102,17 @@ function loop() {
   }
 
   if (veinStatus != STATUS_OK || gnssStatus != STATUS_OK) {
+    if (veinStatus != STATUS_OK && gnssStatus != STATUS_OK) {
+      $('#loading').css('border-top', '16px solid red');
+    } else if (veinStatus != STATUS_OK) {
+      $('#loading').css('border-top', '16px solid blue');
+    } else {
+      $('#loading').css('border-top', '16px solid green');
+    }
+    $('#loading').show();
     return;
+  } else {
+    $('#loading').hide();
   }
 
   // 表示位置調整
@@ -166,9 +172,9 @@ function resetGNSS() {
     navigator.geolocation.clearWatch(watchId);
 
   }, {
-	  "enableHighAccuracy": false ,
-	  "timeout": 1000000 ,
-	  "maximumAge": 0 ,
+	  "enableHighAccuracy": false,
+	  "timeout": GNSS_TIMEOUT,
+	  "maximumAge": 0,
   });
 }
 
