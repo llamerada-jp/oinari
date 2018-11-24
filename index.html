@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
     <style type="text/css">
       <!--
@@ -192,13 +193,26 @@
               <li><a href="https://webrtc.org/" target="_blank">WebRTC</a></li>
               <li><a href="https://html.spec.whatwg.org/multipage/web-sockets.html#network" target="_blank">WebSocket</a></li>
             </ul>
-            <h5>Author</h5>
+            <h5>Authors</h5>
             <ul>
-              <li>Develop : <a href="https://www.facebook.com/ito.yuuji" target="_blank">Yuji Ito</a></li>
-              <li>Graphic : <a href="https://www.facebook.com/satsuki.tanaka.79" target="_blank">Satsuki Tanaka</a></li>
+              <li>Develop : Yuji Ito &nbsp;
+                <a href="https://www.facebook.com/ito.yuuji" target="_blank" class="fb-ic mr-3" role="button"><i class="fa fa-lg fa-facebook"></i></a>
+                <a href="https://twitter.com/llamerada_jp" target="_blank" class="tw-ic mr-3" role="button"><i class="fa fa-lg fa-twitter"></i></a>
+                <a href="https://github.com/llamerada-jp" target="_blank" class="git-ic mr-3" role="button"><i class="fa fa-lg fa-github"></i></a>
+              </li>
+              <li>Graphic : Satsuki Tanaka &nbsp;
+                <a href="https://www.facebook.com/satsuki.tanaka.79" target="_blank" class="fb-ic mr-3" role="button"><i class="fa fa-lg fa-facebook"></i></a>
+              </li>
+            </ul>
+            <h5>Resources</h5>
+            <ul>
+              <li><a href="https://github.com/llamerada-jp/oinari" target="_blank">Source on github</a></li>
             </ul>
           </div>
           <div class="modal-footer">
+            <a href="https://github.com/llamerada-jp/oinari/issues" target="_blank" class="btn btn-primary" role="button">
+              <span class="lang-ja">問い合わせ</span><span class="lang-en">Inquiry</span>
+            </a>
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
           </div>
         </div>
@@ -260,10 +274,10 @@
       <footer class="fixed-bottom" id="footer">
         <form onsubmit="return false;">
           <div class="input-group">
-            <input id="message" type="text" class="form-control" placeholder="bowbow">
+            <input id="message" type="text" class="form-control" placeholder="What does the fox say?">
             <div class="input-group-append">
-              <button id="btn-camera" class="btn btn-primary" type="button">&nbsp;&nbsp;<span class="oi oi-camera-slr"></span>&nbsp;&nbsp;</button>
-              <button id="btn-text" class="btn btn-primary" type="submit">&nbsp;&nbsp;<span class="oi oi-bullhorn"></span>&nbsp;&nbsp;</button>
+              <button id="btn-text" class="btn btn-primary" type="submit">&nbsp;&nbsp;<i class="fas fa-comment"></i>&nbsp;&nbsp;</button>
+              <button id="btn-camera" class="btn btn-primary" type="button">&nbsp;&nbsp;<i class="fas fa-camera"></i>&nbsp;&nbsp;</button>
               <input type="file" name="capture" accept="image/*" capture="camera" style="display:none;"/>
             </div>
           </div>
