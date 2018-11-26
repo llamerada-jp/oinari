@@ -83,6 +83,7 @@ $('#start-btn').click(() => {
   $('.gm-style-pbc').parent().addClass('transform-target');
 
   relayout();
+  $('#loading').show();
   // メインループ用タイマ
   setInterval(loop, 1000);
   // 表示用タイマ
@@ -101,18 +102,24 @@ function loop() {
     resetGNSS();
   }
 
-  if (veinStatus != STATUS_OK || gnssStatus != STATUS_OK) {
-    if (veinStatus != STATUS_OK && gnssStatus != STATUS_OK) {
-      $('#loading').css('border-top', '16px solid red');
-    } else if (veinStatus != STATUS_OK) {
-      $('#loading').css('border-top', '16px solid blue');
-    } else {
-      $('#loading').css('border-top', '16px solid green');
-    }
-    $('#loading').show();
-    return;
-  } else {
+  if (veinStatus == STATUS_OK && gnssStatus == STATUS_OK) {
     $('#loading').hide();
+
+  } else {
+    $('#loading').show();
+
+    if (veinStatus == STATUS_OK) {
+      $('#loading-vein').hide();
+    } else {
+      $('#loading-vein').show();
+    }
+
+    if (gnssStatus == STATUS_OK) {
+      $('#loading-gnss').hide();
+    } else {
+      $('#loading-gnss').show();
+    }
+    return;
   }
 
   // 表示位置調整
