@@ -103,6 +103,7 @@ function loop() {
   }
 
   if (veinStatus == STATUS_OK && gnssStatus == STATUS_OK) {
+    relayout();
     $('#loading').hide();
 
   } else {
@@ -492,6 +493,8 @@ function convertRad2Deg(x, y) {
 }
 
 // 表示領域リサイズ時に地図の大きさなどを変更する
+let fieldHeightSaved = 0;
+let fieldWidthSaved = 0;
 function relayout() {
   if (relayoutTimer != null) {
     clearTimeout(relayoutTimer);
@@ -500,27 +503,34 @@ function relayout() {
   relayoutTimer = setTimeout(function () {
     let fieldHeight = $(window).height() - $('footer').height();
     let fieldWidth  = $(window).width();
-    let $map = $('#map');
-    let $lists = $('#lists');
 
-    if (fieldWidth > fieldHeight) {
-      // 横向き
-      let mapHeight = fieldHeight;
-      let mapWidth  = fieldHeight;
-      $map.height(mapHeight);
-      $map.width (mapWidth);
-      $lists.height(fieldHeight);
-      $lists.width (fieldWidth - mapWidth);
+    if (fieldHeight !== fieldHeightSaved ||
+        fieldWidth  !== fieldWidthSaved) {
+      fieldHeightSaved = fieldHeight;
+      fieldWidthSaved  = fieldWidth;
 
-    } else {
-      // 縦向き
-      let mapHeight = fieldWidth;
-      let mapWidth  = fieldWidth;
-      if (mapHeight > fieldHeight / 2) mapHeight = fieldHeight / 2;
-      $map.height(mapHeight);
-      $map.width (mapWidth);
-      $lists.height(fieldHeight - mapHeight);
-      $lists.width (fieldWidth);
+      let $map = $('#map');
+      let $lists = $('#lists');
+
+      if (fieldWidth > fieldHeight) {
+        // 横向き
+        let mapHeight = fieldHeight;
+        let mapWidth  = fieldHeight;
+        $map.height(mapHeight);
+        $map.width (mapWidth);
+        $lists.height(fieldHeight);
+        $lists.width (fieldWidth - mapWidth);
+
+      } else {
+        // 縦向き
+        let mapHeight = fieldWidth;
+        let mapWidth  = fieldWidth;
+        if (mapHeight > fieldHeight / 2) mapHeight = fieldHeight / 2;
+        $map.height(mapHeight);
+        $map.width (mapWidth);
+        $lists.height(fieldHeight - mapHeight);
+        $lists.width (fieldWidth);
+      }
     }
 
     relayoutTimer = null;
