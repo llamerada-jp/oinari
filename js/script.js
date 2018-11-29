@@ -40,6 +40,9 @@ let gnssStatus = STATUS_NONE;
 // 表示名
 let nickname = '';
 
+// 追尾モード
+let isFollow = false;
+
 let gmap = null;
 let markers = [];
 let gmLines = [];
@@ -127,41 +130,43 @@ function loop() {
   gmap.panTo(realLocation);
 
   // 自キャラの位置を計算
-  // 初期値 or 現在位置から遠い場合、自分の近くの場所を起点に計算し直す
-  let reset = false;
-  if (dstLocation == null || getDistance(realLocation, dstLocation) > ROPE_RADIUS) {
-    dstLocation = getRandomPoint(realLocation, ROPE_RADIUS);
-    arrivalTime = NOW;
-    reset = true;
-  }
-  if (arrivalTime <= NOW) {
-    let srcLocation = dstLocation;
-    // @todo 立ち止まる可能性
-    dstLocation = getRandomPoint(srcLocation, STEP_RADIUS);
-    while (getDistance(realLocation, dstLocation) > ROPE_RADIUS) {
-      dstLocation = getRandomPoint(srcLocation, STEP_RADIUS);
+  if (!isFollow) {
+    // 初期値 or 現在位置から遠い場合、自分の近くの場所を起点に計算し直す
+    let reset = false;
+    if (dstLocation == null || getDistance(realLocation, dstLocation) > ROPE_RADIUS) {
+      dstLocation = getRandomPoint(realLocation, ROPE_RADIUS);
+      arrivalTime = NOW;
+      reset = true;
     }
+    if (arrivalTime <= NOW) {
+      let srcLocation = dstLocation;
+      // @todo 立ち止まる可能性
+      dstLocation = getRandomPoint(srcLocation, STEP_RADIUS);
+      while (getDistance(realLocation, dstLocation) > ROPE_RADIUS) {
+        dstLocation = getRandomPoint(srcLocation, STEP_RADIUS);
+      }
 
-    // 現在のキャラクター位置を元にlibveinのネットワーク座標を更新
-    let [x, y] = convertDeg2Rad(dstLocation);
-    v.setPosition(x, y);
-    
-    // 5m/sくらいを想定
-    let time = getDistance(srcLocation, dstLocation) / 5;
-    arrivalTime = NOW + time;
+      // 現在のキャラクター位置を元にlibveinのネットワーク座標を更新
+      let [x, y] = convertDeg2Rad(dstLocation);
+      v.setPosition(x, y);
+      
+      // 5m/sくらいを想定
+      let time = getDistance(srcLocation, dstLocation) / 5;
+      arrivalTime = NOW + time;
 
-    
-    // 更新情報を送付
-    let data = {
-      id: localNid,
-      srcLocation: srcLocation,
-      dstLocation: dstLocation,
-      nickname: nickname,
-      reset: reset,
-      time: time
-    };
-    pubsub2d.publish(CHANNEL_NAME, x, y, MESSAGE_RADIUS, JSON.stringify(data));
-    updateMarker(data);
+      
+      // 更新情報を送付
+      let data = {
+        id: localNid,
+        srcLocation: srcLocation,
+        dstLocation: dstLocation,
+        nickname: nickname,
+        reset: reset,
+        time: time
+      };
+      pubsub2d.publish(CHANNEL_NAME, x, y, MESSAGE_RADIUS, JSON.stringify(data));
+      updateMarker(data);
+    }
   }
 }
 
@@ -172,6 +177,9 @@ function resetGNSS() {
     gnssStatus = STATUS_OK;
     realLocation.lng = position.coords.longitude;
     realLocation.lat = position.coords.latitude;
+    if (isFollow) {
+      sendRealLocation();
+    }
     console.log('update GNSS');
 
   }, (err) => {
@@ -619,3 +627,32 @@ $('#btn-text').on('click', function() {
   }
   $message.val('');
 });
+
+// 追尾モード切替
+$('#btn-follow').on('click', function() {
+  isFollow = !isFollow;
+  if (isFollow) {
+    $(this).addClass('btn-primary');
+    $(this).removeClass('btn-outline-dark bg-light');
+    sendRealLocation();
+  } else {
+    $(this).addClass('btn-outline-dark bg-light');
+    $(this).removeClass('btn-primary');
+  }
+});
+
+function sendRealLocation() {
+  let [x, y] = convertDeg2Rad(realLocation);
+  v.setPosition(x, y);
+
+  let data = {
+    id: localNid,
+    srcLocation: realLocation,
+    dstLocation: realLocation,
+    nickname: nickname,
+    reset: true,
+    time: 1
+  };
+  pubsub2d.publish(CHANNEL_NAME, x, y, MESSAGE_RADIUS, JSON.stringify(data));
+  updateMarker(data);
+}
