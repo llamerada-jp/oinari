@@ -309,6 +309,7 @@ function rendMarkers() {
                        '<img class="image"></img></div><div class="char fox1b pixelscaled"></div>' +
                        '<div class="nickname"></div></div>');
         marker.tag.attr('id', 'tag' + id);
+        marker.tag.find('.nickname').text(marker.nickname);
         $('.transform-target').append(marker.tag);
       }
 
