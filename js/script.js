@@ -167,6 +167,8 @@ function loop() {
       pubsub2d.publish(CHANNEL_NAME, x, y, MESSAGE_RADIUS, JSON.stringify(data));
       updateMarker(data);
     }
+  } else if (arrivalTime <= NOW) {
+    sendRealLocation();
   }
 }
 
@@ -388,7 +390,7 @@ function addListItem(marker, $html) {
   let $elem = $('<li class="list-group-item">' +
                 '<div class="head"><span class="font-weight-bold nickname"></span>&nbsp;&nbsp;' +
                 '<span class="text-secondary">' +
-                ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) +
+                   ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) +
                 '</span></div></li>');
   $elem.find('.head').append($html);
   $elem.find('.nickname').text(marker.nickname);
@@ -439,8 +441,6 @@ function onGetLog(log) {
 }
 
 function onGetDebug(event) {
-  // console.log(event);
-
   if (event.event === vein.Vein.DEBUG_EVENT_KNOWN2D) {
     for (let line of gmLines) {
       line.setMap(null);
@@ -453,14 +453,16 @@ function onGetDebug(event) {
                 dstLocation : convertRad2Deg(nodes[link[0]][0], nodes[link[0]][1]));
       let p2 = (link[1] == vein.Vein.NID_THIS ?
                 dstLocation : convertRad2Deg(nodes[link[1]][0], nodes[link[1]][1]));
-      let polyLine = new google.maps.Polyline({
-        path: [p1, p2],
-        strokeColor: '#666',
-        strokeOpacity: 0.2,
-        strokeWeight: 2
-      });
-      polyLine.setMap(gmap);
-      gmLines.push(polyLine);
+      if (p1 && p2) {
+        let polyLine = new google.maps.Polyline({
+          path: [p1, p2],
+          strokeColor: '#666',
+          strokeOpacity: 0.2,
+          strokeWeight: 2
+        });
+        polyLine.setMap(gmap);
+        gmLines.push(polyLine);
+      }
     }
   }
 }
@@ -638,10 +640,16 @@ $('#btn-follow').on('click', function() {
   } else {
     $(this).addClass('btn-outline-dark bg-light');
     $(this).removeClass('btn-primary');
+    let NOW = Math.floor(Date.now() / 1000);
+    dstLocation = realLocation;
+    arrivalTime = NOW;
   }
 });
 
 function sendRealLocation() {
+  let NOW = Math.floor(Date.now() / 1000);
+  arrivalTime = NOW + TIMEOUT / 2;
+
   let [x, y] = convertDeg2Rad(realLocation);
   v.setPosition(x, y);
 
@@ -651,7 +659,7 @@ function sendRealLocation() {
     dstLocation: realLocation,
     nickname: nickname,
     reset: true,
-    time: 1
+    time: TIMEOUT / 2
   };
   pubsub2d.publish(CHANNEL_NAME, x, y, MESSAGE_RADIUS, JSON.stringify(data));
   updateMarker(data);
