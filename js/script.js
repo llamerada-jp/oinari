@@ -19,8 +19,8 @@ const GNSS_TIMEOUT = 30 * 1000;
 //
 const CHANNEL_NAME = 'hoge';
 
-// libvein関連
-let v = new vein.Vein();
+// libcolonio関連
+let v = new colonio.Colonio();
 let pubsub2d = null;
 let localNid = null;
 
@@ -199,10 +199,10 @@ function resetGNSS() {
 // Setup/reset libvein.
 function resetVein() {
   v.init().then(() => {
-    console.log('vein connect');
+    console.log('colonio connect');
     // v.on('log', onGetLog);
     v.on('debug', onGetDebug);
-    return v.connect('wss://www.oinari.app/vein/ws', '');
+    return v.connect('wss://www.oinari.app/ws', '');
 
   }).then(() => {
     // Good
@@ -215,13 +215,13 @@ function resetVein() {
       updateMarker(JSON.parse(data));
     });
 
-    console.log('vein success');
+    console.log('colonio success');
 
   }).catch((e) => {
     // Error
     veinStatus = STATUS_NG;
 
-    console.error('vein failed');
+    console.error('colonio failed');
     console.error(e);
   });
 }
@@ -437,11 +437,11 @@ function getDistance(p1, p2) {
 }
 
 function onGetLog(log) {
-  // console.log(log);
+  console.log(log);
 }
 
 function onGetDebug(event) {
-  if (event.event === vein.Vein.DEBUG_EVENT_KNOWN2D) {
+  if (event.event === colonio.Colonio.DEBUG_EVENT_KNOWN2D) {
     for (let line of gmLines) {
       line.setMap(null);
     }
@@ -449,9 +449,9 @@ function onGetDebug(event) {
 
     let nodes = event.content.nodes;
     for (let link of event.content.links) {
-      let p1 = (link[0] == vein.Vein.NID_THIS ?
+      let p1 = (link[0] == colonio.Colonio.NID_THIS ?
                 dstLocation : convertRad2Deg(nodes[link[0]][0], nodes[link[0]][1]));
-      let p2 = (link[1] == vein.Vein.NID_THIS ?
+      let p2 = (link[1] == colonio.Colonio.NID_THIS ?
                 dstLocation : convertRad2Deg(nodes[link[1]][0], nodes[link[1]][1]));
       if (p1 && p2) {
         let polyLine = new google.maps.Polyline({
