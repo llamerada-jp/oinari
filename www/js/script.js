@@ -19,8 +19,8 @@ const GNSS_TIMEOUT = 30 * 1000;
 //
 const CHANNEL_NAME = 'hoge';
 
-// libcolonio関連
-let v = new colonio.Colonio();
+// colonio関連
+let node;
 let pubsub2d = null;
 let localNid = null;
 
@@ -32,9 +32,9 @@ let arrivalTime = null;
 
 // ステータス
 const STATUS_NONE = Symbol('none');
-const STATUS_OK   = Symbol('ok');
-const STATUS_NG   = Symbol('ng');
-let veinStatus = STATUS_NONE;
+const STATUS_OK = Symbol('ok');
+const STATUS_NG = Symbol('ng');
+let nodeStatus = STATUS_NONE;
 let gnssStatus = STATUS_NONE;
 
 // 表示名
@@ -66,6 +66,10 @@ $(window).on('load', () => {
   $('#splash').addClass('d-flex').show();
   // GNSS
   resetGNSS();
+  // colonio
+  ColonioModule().then(colonio => {
+    node = new colonio.Colonio();
+});
 });
 
 // Start button.
@@ -79,7 +83,7 @@ $('#start-btn').click(() => {
 
   // ネットワーク接続は、Startボタンを押してもらってから。
   // GNSSなどの位置情報は取得しても送信しなければ害にならないはず。
-  resetVein();
+  resetNode();
 
   // 地図をX軸で回転(地図の要素が完全にロードされたタイミングで回転可能)
   $('.gm-style-pbc').parent().wrap('<div class="transform-parent">');
@@ -95,9 +99,9 @@ $('#start-btn').click(() => {
 
 function loop() {
   let NOW = Math.floor(Date.now() / 1000);
-  // libveinの状態確認
-  if (veinStatus == STATUS_NG) {
-    resetVein();
+  // colonio nodeの状態確認
+  if (nodeStatus == STATUS_NG) {
+    resetNode();
   }
 
   // GNSSの状態確認
@@ -105,17 +109,17 @@ function loop() {
     resetGNSS();
   }
 
-  if (veinStatus == STATUS_OK && gnssStatus == STATUS_OK) {
+  if (nodeStatus == STATUS_OK && gnssStatus == STATUS_OK) {
     relayout();
     $('#loading').hide();
 
   } else {
     $('#loading').show();
 
-    if (veinStatus == STATUS_OK) {
-      $('#loading-vein').hide();
+    if (nodeStatus == STATUS_OK) {
+      $('#loading-node').hide();
     } else {
-      $('#loading-vein').show();
+      $('#loading-node').show();
     }
 
     if (gnssStatus == STATUS_OK) {
@@ -146,9 +150,9 @@ function loop() {
         dstLocation = getRandomPoint(srcLocation, STEP_RADIUS);
       }
 
-      // 現在のキャラクター位置を元にlibveinのネットワーク座標を更新
+      // 現在のキャラクター位置を元にcolonio nodeのネットワーク座標を更新
       let [x, y] = convertDeg2Rad(dstLocation);
-      v.setPosition(x, y);
+      node.setPosition(x, y);
       
       // 5m/sくらいを想定
       let time = getDistance(srcLocation, dstLocation) / 5;
@@ -196,21 +200,16 @@ function resetGNSS() {
   });
 }
 
-// Setup/reset libvein.
-function resetVein() {
-  v.init().then(() => {
-    console.log('colonio connect');
-    // v.on('log', onGetLog);
-    v.on('debug', onGetDebug);
-    return v.connect('wss://www.oinari.app/ws', '');
-
-  }).then(() => {
+// Setup/reset colonio.
+function resetNode() {
+  node.on('log', (l) => { console.log(l); });
+  node.connect('ws://localhost:8080/ws', '').then(() => {
     // Good
-    veinStatus = STATUS_OK;
+    nodeStatus = STATUS_OK;
 
-    localNid = v.getMyNid();
+    localNid = node.getLocalNid();
 
-    pubsub2d = v.accessPubsub2D('pubsub2d');
+    pubsub2d = node.accessPubsub2D('pubsub2d');
     pubsub2d.on(CHANNEL_NAME, (data) => {
       updateMarker(JSON.parse(data));
     });
@@ -219,7 +218,7 @@ function resetVein() {
 
   }).catch((e) => {
     // Error
-    veinStatus = STATUS_NG;
+    nodeStatus = STATUS_NG;
 
     console.error('colonio failed');
     console.error(e);
@@ -436,37 +435,6 @@ function getDistance(p1, p2) {
     Math.cos(y2) * Math.pow(Math.sin(avrX), 2)));
 }
 
-function onGetLog(log) {
-  console.log(log);
-}
-
-function onGetDebug(event) {
-  if (event.event === colonio.Colonio.DEBUG_EVENT_KNOWN2D) {
-    for (let line of gmLines) {
-      line.setMap(null);
-    }
-    gmLines = [];
-
-    let nodes = event.content.nodes;
-    for (let link of event.content.links) {
-      let p1 = (link[0] == colonio.Colonio.NID_THIS ?
-                dstLocation : convertRad2Deg(nodes[link[0]][0], nodes[link[0]][1]));
-      let p2 = (link[1] == colonio.Colonio.NID_THIS ?
-                dstLocation : convertRad2Deg(nodes[link[1]][0], nodes[link[1]][1]));
-      if (p1 && p2) {
-        let polyLine = new google.maps.Polyline({
-          path: [p1, p2],
-          strokeColor: '#666',
-          strokeOpacity: 0.2,
-          strokeWeight: 2
-        });
-        polyLine.setMap(gmap);
-        gmLines.push(polyLine);
-      }
-    }
-  }
-}
-
 function convertDeg2Rad(p) {
   let lng = p.lng;
   let lat = p.lat;
@@ -651,7 +619,7 @@ function sendRealLocation() {
   arrivalTime = NOW + TIMEOUT / 2;
 
   let [x, y] = convertDeg2Rad(realLocation);
-  v.setPosition(x, y);
+  node.setPosition(x, y);
 
   let data = {
     id: localNid,
