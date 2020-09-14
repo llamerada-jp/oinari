@@ -2,10 +2,10 @@
 
 // メッセージの送信半径[m]
 const MESSAGE_RADIUS = 1000;
-const ROPE_RADIUS    = 100;
-const STEP_RADIUS    = 50;
+const ROPE_RADIUS = 100;
+const STEP_RADIUS = 50;
 // 画像サイズ[px]
-const PICTURE_SIZE   = 512;
+const PICTURE_SIZE = 512;
 //
 const R = 6378137;
 const O = 2 * Math.PI * R;
@@ -56,7 +56,7 @@ $(window).on('load', () => {
   // language
   if ((window.navigator.userLanguage ||
        window.navigator.language ||
-       window.navigator.browserLanguage).substr(0,2) == 'ja') {
+    window.navigator.browserLanguage).substr(0, 2) == 'ja') {
     $('.lang-ja').show();
   } else {
     $('.lang-en').show();
@@ -228,7 +228,7 @@ function resetNode() {
 function initGMap() {
   gmap = new google.maps.Map(document.getElementById('map'), {
     center: {
-      lat: Math.random() * 180.0 -  90.0,
+      lat: Math.random() * 180.0 - 90.0,
       lng: Math.random() * 360.0 - 180.0
     },
     disableDefaultUI: true,
@@ -324,9 +324,9 @@ function rendMarkers() {
 
       let $tag = $('#tag' + id);
       let $balloon = $tag.find('.balloon');
-      let $text    = $tag.find('.text');
-      let $image   = $tag.find('.image');
-      let $char    = $tag.find('.char');
+      let $text = $tag.find('.text');
+      let $image = $tag.find('.image');
+      let $char = $tag.find('.char');
 
       // 吹き出しの表示
       if ('text' in markers[id] && markers[id].text.trim() !== '') {
@@ -365,7 +365,7 @@ function rendMarkers() {
       // 1/cos(30)で補正の必要がある？
       y = (h * 0.5) + (y - h * 0.5) * 1.15 - marker.tag.height();
       markers[id].tag.css('left', x + 'px');
-      markers[id].tag.css('top',  y + 'px');
+      markers[id].tag.css('top', y + 'px');
 
       // 左右どちらを向かせるか
       if (marker.srcLocation.lng < marker.dstLocation.lng) {
@@ -481,12 +481,12 @@ function relayout() {
   
   relayoutTimer = setTimeout(function () {
     let fieldHeight = $(window).height() - $('footer').height();
-    let fieldWidth  = $(window).width();
+    let fieldWidth = $(window).width();
 
     if (fieldHeight !== fieldHeightSaved ||
-        fieldWidth  !== fieldWidthSaved) {
+      fieldWidth !== fieldWidthSaved) {
       fieldHeightSaved = fieldHeight;
-      fieldWidthSaved  = fieldWidth;
+      fieldWidthSaved = fieldWidth;
 
       let $map = $('#map');
       let $lists = $('#lists');
@@ -494,21 +494,21 @@ function relayout() {
       if (fieldWidth > fieldHeight) {
         // 横向き
         let mapHeight = fieldHeight;
-        let mapWidth  = fieldHeight;
+        let mapWidth = fieldHeight;
         $map.height(mapHeight);
-        $map.width (mapWidth);
+        $map.width(mapWidth);
         $lists.height(fieldHeight);
-        $lists.width (fieldWidth - mapWidth);
+        $lists.width(fieldWidth - mapWidth);
 
       } else {
         // 縦向き
         let mapHeight = fieldWidth;
-        let mapWidth  = fieldWidth;
+        let mapWidth = fieldWidth;
         if (mapHeight > fieldHeight / 2) mapHeight = fieldHeight / 2;
         $map.height(mapHeight);
-        $map.width (mapWidth);
+        $map.width(mapWidth);
         $lists.height(fieldHeight - mapHeight);
-        $lists.width (fieldWidth);
+        $lists.width(fieldWidth);
       }
     }
 
@@ -537,7 +537,7 @@ $('[name="capture"]').on('change', function() {
         // 十分に小さいのでサイズ変更はなし
         width = image.width;
         height = image.height;
-      } else if(image.width > image.height){
+      } else if (image.width > image.height) {
         // 横長の画像は横のサイズを指定値にあわせる
         let r = image.height / image.width;
         width = PICTURE_SIZE;

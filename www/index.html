@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
     <style type="text/css">
       <!--
-      html, body {
+    html,
+    body {
         height: 100%;
       }
 
@@ -18,7 +19,11 @@
       }
 
       /* hidden first */
-      #splash ,#main, #loading, .lang-ja, .lang-en {
+    #splash,
+    #main,
+    #loading,
+    .lang-ja,
+    .lang-en {
         display: none;
       }
 
@@ -75,7 +80,7 @@
       }
 
       #footer {
-        z-index:5;
+      z-index: 5;
       }
 
       .marker {
@@ -106,13 +111,18 @@
         animation: kf-fox1b 1s steps(3) 0s infinite;
         background: url(/img/fox1b.png) 0 0 no-repeat;
         height: 32px;
-        width:  32px;
+      width: 32px;
       }
 
       @keyframes kf-fox1b { 
-        0%   { background-position:   0px 0; } 
-        100% { background-position: -96px 0; }
+      0% {
+        background-position: 0px 0;
       }
+
+      100% {
+        background-position: -96px 0;
+      }
+    }
 
       /* 吹き出し */
       .balloon {
@@ -152,8 +162,8 @@
         bottom: 0;
         position: absolute;
         margin: auto;
-        background-color: rgba(0,0,0,0.8);
-        z-index:10;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 10;
       }
 
       #loading-container {
@@ -169,8 +179,10 @@
         bottom: 0;
         position: absolute;
         margin: auto;
-        border: 16px solid #f3f3f3; /* Light grey */
-        border-top: 16px solid #3498db; /* Blue */
+      border: 16px solid #f3f3f3;
+      /* Light grey */
+      border-top: 16px solid #3498db;
+      /* Blue */
         border-radius: 50%;
         width: 120px;
         height: 120px;
@@ -178,18 +190,21 @@
       }
 
       @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+      0% {
+        transform: rotate(0deg);
       }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
       -->
     </style>
   </head>
   <body>
     <!-- information modal -->
-    <button type="button" class="btn btn-outline-dark bg-light rounded-circle p-0 position-absolute"
-            style="width:2rem; height:2rem; z-index:9; right:16px; top:16px;" data-toggle="modal" data-target="#info-modal"><i class="fa fa-info"></i></button>
-    <div class="modal fade" id="info-modal" tabindex="-1" role="dialog"
-         aria-labelledby="information of oinari" aria-hidden="true">
+  <button type="button" class="btn btn-outline-dark bg-light rounded-circle p-0 position-absolute" style="width:2rem; height:2rem; z-index:9; right:16px; top:16px;" data-toggle="modal" data-target="#info-modal"><i class="fa fa-info"></i></button>
+  <div class="modal fade" id="info-modal" tabindex="-1" role="dialog" aria-labelledby="information of oinari" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
           <div class="modal-header">
@@ -272,8 +287,7 @@
         <form onsubmit="return false;">
           <div class="row justify-content-center">
             <div class="input-group col-8 col-md-6">
-              <input type="text" class="form-control" name="nickname" autocomplete="on"
-                     placeholder="your nickname" aria-label="your nickname">
+            <input type="text" class="form-control" name="nickname" autocomplete="on" placeholder="your nickname" aria-label="your nickname">
               <div class="input-group-append">
                 <button type="submit" class="btn btn-primary" id="start-btn">Start</button>
               </div>
@@ -287,8 +301,7 @@
     
     <!-- Main -->
     <div class="container-fluid" id="main">
-      <button type="button" class="btn btn-outline-dark bg-light rounded-circle p-0 position-absolute" id="btn-follow"
-              style="width:2rem; height:2rem; z-index:9; right:16px; top:calc(2rem + 32px);"><i class="fa fa-magnet"></i></button>
+    <button type="button" class="btn btn-outline-dark bg-light rounded-circle p-0 position-absolute" id="btn-follow" style="width:2rem; height:2rem; z-index:9; right:16px; top:calc(2rem + 32px);"><i class="fa fa-magnet"></i></button>
       <div id="map">
         <!-- Area of map -->
       </div>
@@ -306,7 +319,7 @@
             <div class="input-group-append">
               <button id="btn-text" class="btn btn-primary" type="submit">&nbsp;&nbsp;<i class="fa fa-comment"></i>&nbsp;&nbsp;</button>
               <button id="btn-camera" class="btn btn-primary" type="button">&nbsp;&nbsp;<i class="fa fa-camera"></i>&nbsp;&nbsp;</button>
-              <input type="file" name="capture" accept="image/*" capture="camera" style="display:none;"/>
+            <input type="file" name="capture" accept="image/*" capture="camera" style="display:none;" />
             </div>
           </div>
         </form>
@@ -340,7 +353,7 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-129756820-1"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
+    function gtag() { dataLayer.push(arguments); }
       gtag('js', new Date());
       
       gtag('config', 'UA-129756820-1');
