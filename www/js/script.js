@@ -203,7 +203,7 @@ function resetGNSS() {
 // Setup/reset colonio.
 function resetNode() {
   node.on('log', (l) => { console.log(l); });
-  node.connect('ws://localhost:8080/ws', '').then(() => {
+  node.connect('wss://www.oinari.app/ws', '').then(() => {
     // Good
     nodeStatus = STATUS_OK;
 
