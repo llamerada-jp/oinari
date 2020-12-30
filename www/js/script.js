@@ -55,7 +55,7 @@ let relayoutTimer = 0;
 $(window).on('load', () => {
   // language
   if ((window.navigator.userLanguage ||
-       window.navigator.language ||
+    window.navigator.language ||
     window.navigator.browserLanguage).substr(0, 2) == 'ja') {
     $('.lang-ja').show();
   } else {
@@ -69,7 +69,7 @@ $(window).on('load', () => {
   // colonio
   ColonioModule().then(colonio => {
     node = new colonio.Colonio();
-});
+  });
 });
 
 // Start button.
@@ -153,12 +153,12 @@ function loop() {
       // 現在のキャラクター位置を元にcolonio nodeのネットワーク座標を更新
       let [x, y] = convertDeg2Rad(dstLocation);
       node.setPosition(x, y);
-      
+
       // 5m/sくらいを想定
       let time = getDistance(srcLocation, dstLocation) / 5;
       arrivalTime = NOW + time;
 
-      
+
       // 更新情報を送付
       let data = {
         id: localNid,
@@ -194,9 +194,9 @@ function resetGNSS() {
     navigator.geolocation.clearWatch(watchId);
 
   }, {
-	  "enableHighAccuracy": false,
-	  "timeout": GNSS_TIMEOUT,
-	  "maximumAge": 0,
+    "enableHighAccuracy": false,
+    "timeout": GNSS_TIMEOUT,
+    "maximumAge": 0,
   });
 }
 
@@ -238,7 +238,7 @@ function initGMap() {
     zoom: 17 // 地図のズームを指定
   });
 
-  gmap.addListener('bounds_changed', function() {
+  gmap.addListener('bounds_changed', function () {
     rendMarkers();
   });
 }
@@ -315,8 +315,8 @@ function rendMarkers() {
       // 要素がないので新規作背
       if (!('tag' in marker) || marker.tag === false) {
         marker.tag = $('<div class="marker"><div class="balloon"><span class="text"></span>' +
-                       '<img class="image"></img></div><div class="char fox1b pixelscaled"></div>' +
-                       '<div class="nickname"></div></div>');
+          '<img class="image"></img></div><div class="char fox1b pixelscaled"></div>' +
+          '<div class="nickname"></div></div>');
         marker.tag.attr('id', 'tag' + id);
         marker.tag.find('.nickname').text(marker.nickname);
         $('.transform-target').append(marker.tag);
@@ -350,10 +350,10 @@ function rendMarkers() {
       let x = 0;
       if (bounds.getNorthEast().lng() > bounds.getSouthWest().lng()) {
         x = w * (p.lng - bounds.getSouthWest().lng()) /
-        (bounds.getNorthEast().lng() - bounds.getSouthWest().lng());
+          (bounds.getNorthEast().lng() - bounds.getSouthWest().lng());
       } else {
         x = w * (360.0 - p.lng + bounds.getSouthWest().lng()) /
-        (360.0 - bounds.getNorthEast().lng() + bounds.getSouthWest().lng());
+          (360.0 - bounds.getNorthEast().lng() + bounds.getSouthWest().lng());
       }
       // 1/sin(30) で補正の必要がある？
       x = (w * 0.5) + (x - w * 0.5) * 2 - (marker.tag.width() * 0.5);
@@ -361,7 +361,7 @@ function rendMarkers() {
       let h = $('.transform-target').height();
       let y = 0;
       y = h - h * (p.lat - bounds.getSouthWest().lat()) /
-      (bounds.getNorthEast().lat() - bounds.getSouthWest().lat());
+        (bounds.getNorthEast().lat() - bounds.getSouthWest().lat());
       // 1/cos(30)で補正の必要がある？
       y = (h * 0.5) + (y - h * 0.5) * 1.15 - marker.tag.height();
       markers[id].tag.css('left', x + 'px');
@@ -378,7 +378,7 @@ function rendMarkers() {
       if ('tag' in marker && marker.tag !== false) {
         // marker要素がある場合は削除
         $(marker.tag).remove();
-        marker.tag = false;      
+        marker.tag = false;
       }
     }
   }
@@ -387,10 +387,10 @@ function rendMarkers() {
 function addListItem(marker, $html) {
   let now = new Date();
   let $elem = $('<li class="list-group-item">' +
-                '<div class="head"><span class="font-weight-bold nickname"></span>&nbsp;&nbsp;' +
-                '<span class="text-secondary">' +
-                   ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) +
-                '</span></div></li>');
+    '<div class="head"><span class="font-weight-bold nickname"></span>&nbsp;&nbsp;' +
+    '<span class="text-secondary">' +
+    ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) +
+    '</span></div></li>');
   $elem.find('.head').append($html);
   $elem.find('.nickname').text(marker.nickname);
   $elem.prependTo('#list').hide().slideDown(400);
@@ -430,7 +430,7 @@ function getDistance(p1, p2) {
   let [x2, y2] = convertDeg2Rad(p2);
   let avrX = (x1 - x2) / 2;
   let avrY = (y1 - y2) / 2;
-  
+
   return R * 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(avrY), 2) + Math.cos(y1) *
     Math.cos(y2) * Math.pow(Math.sin(avrX), 2)));
 }
@@ -461,7 +461,7 @@ function convertDeg2Rad(p) {
     lng -= 360.0;
   }
   return [Math.PI * lng / 180,
-          Math.PI * lat / 180];
+  Math.PI * lat / 180];
 }
 
 function convertRad2Deg(x, y) {
@@ -478,7 +478,7 @@ function relayout() {
   if (relayoutTimer != null) {
     clearTimeout(relayoutTimer);
   }
-  
+
   relayoutTimer = setTimeout(function () {
     let fieldHeight = $(window).height() - $('footer').height();
     let fieldWidth = $(window).width();
@@ -518,12 +518,12 @@ function relayout() {
 $(window).on('load resize', relayout);
 
 // ボタンを押したらカメラ起動
-$('#btn-camera').on('click', function() {
+$('#btn-camera').on('click', function () {
   $('[name="capture"]').click();
 });
 
 // 画像が選択されたらダンプして送る
-$('[name="capture"]').on('change', function() {
+$('[name="capture"]').on('change', function () {
   let reader = new FileReader();
 
   // 画像をリサイズして送る
@@ -582,7 +582,7 @@ $('[name="capture"]').on('change', function() {
 });
 
 // ボタンを押したらメッセージを送信
-$('#btn-text').on('click', function() {
+$('#btn-text').on('click', function () {
   let $message = $('#message');
   let text = $message.val().trim();
   if (text != '') {
@@ -599,7 +599,7 @@ $('#btn-text').on('click', function() {
 });
 
 // 追尾モード切替
-$('#btn-follow').on('click', function() {
+$('#btn-follow').on('click', function () {
   isFollow = !isFollow;
   if (isFollow) {
     $(this).addClass('btn-primary');
