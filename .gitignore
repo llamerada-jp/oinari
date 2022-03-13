@@ -1,3 +1,12 @@
 /.vscode/
-/www/js/colonio.js
-/www/js/colonio.wasm
+/bin/seed
+/build/
+/dist/colonio.wasm
+/dist/index.html
+/dist/oinari.js
+/dist/oinari.wasm
+/dist/wasm_exec.js
+/keys.json
+/node_modules
+/src/colonio.js
+/src/keys.ts

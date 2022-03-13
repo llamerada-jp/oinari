@@ -1,0 +1,5 @@
+export const Keys = {
+    googleAnalyticsTrackingID: "{{.google_analytics_tracking_id}}",
+    googleApiKey: "{{.google_api_key}}",
+    googleMapID: "{{.google_map_id}}",
+};
