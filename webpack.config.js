@@ -1,20 +1,21 @@
 module.exports = {
     mode: "development",
-  
-    entry: "./src/index.ts",
+
+    entry: {
+        index: "./src/index.ts",
+        worker: "./src/worker.ts"
+    },
     output: {
-      path: `${__dirname}/dist`,
-      filename: "oinari.js"
+        path: `${__dirname}/dist`,
+        filename: "[name].js"
     },
     module: {
-      rules: [
-        {
-          test: /\.ts$/,
-          use: "ts-loader"
-        }
-      ]
+        rules: [{
+            test: /\.ts$/,
+            use: "ts-loader"
+        }]
     },
     resolve: {
-      extensions: [".ts", ".js"]
+        extensions: [".ts", ".js"]
     }
-  };
+};

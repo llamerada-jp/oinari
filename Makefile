@@ -20,6 +20,9 @@ build: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed dist/index.html src
 	GOOS=js GOARCH=wasm go build -o dist/oinari.wasm ./cmd/agent/*.go
 	npm run build
 
+test:
+	npm t
+
 bin/seed: $(GO_FILES)
 	go build -o $@ ./cmd/seed
 

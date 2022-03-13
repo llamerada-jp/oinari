@@ -4,8 +4,7 @@ import { AmbientLight, DirectionalLight, Scene } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { ThreeJSOverlayView } from "@googlemaps/three";
 import { Keys } from "./keys";
-
-// import "../dist/wasm_exec.js";
+import * as CL from "./crosslink";
 
 let map: google.maps.Map;
 
@@ -26,13 +25,31 @@ const mapOptions = {
   keyboardShortcuts: false,
 };
 
-const wasm = fetch("./oinari.wasm");
-const go = new Go();
+const worker = new Worker("worker.js");
+const workerInterface = new class implements CL.WorkerInterface {
+  worker: Worker;
+  listener: (datum: object) => void;
 
-WebAssembly.instantiateStreaming(wasm, go.importObject).then(result => {
-  console.log("run go");
-  go.run(result.instance);
-});
+  constructor(worker: Worker) {
+    this.worker = worker;
+    this.listener = (_: object) => {
+      // dummy
+    };
+
+    this.worker.addEventListener("message", (event) => {
+      this.listener(event.data);
+    });
+  }
+
+  addEventListener(listener: (datum: object) => void): void {
+    this.listener = listener;
+  }
+
+  post(datum: object): void {
+    worker.postMessage(datum);
+  }
+}(worker);
+const crosslink = new CL.Crosslink(workerInterface);
 
 apiLoader.load().then((google) => {
   const mapDiv = document.getElementById("map") as HTMLElement;
@@ -63,6 +80,8 @@ apiLoader.load().then((google) => {
     let { tilt, heading, zoom } = mapOptions;
 
     const animate = () => {
+      worker.postMessage("do it!");
+      console.log("send");
       if (tilt < 67.5) {
         tilt += 0.5;
       } else if (heading <= 360) {
@@ -86,5 +105,4 @@ apiLoader.load().then((google) => {
     scene,
     anchor: { ...mapOptions.center, altitude: 100 },
   });
-  console.log("fin loader");
 });

@@ -1,11 +1,13 @@
 /.vscode/
 /bin/seed
 /build/
+/coverage
 /dist/colonio.wasm
 /dist/index.html
-/dist/oinari.js
+/dist/index.js
 /dist/oinari.wasm
 /dist/wasm_exec.js
+/dist/worker.js
 /keys.json
 /node_modules
 /src/colonio.js

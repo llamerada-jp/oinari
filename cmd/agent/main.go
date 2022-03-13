@@ -22,20 +22,84 @@ import (
 	"time"
 )
 
-const loaderName = "loader"
-
-var (
-	loader = js.Global().Get(loaderName)
+const (
+	gltfLoaderName = "gltfLoader"
+	fieldBinder    = "newField"
 )
 
-type model struct {
-	jsModel js.Value
+type asset struct {
+	jsAssert js.Value
+	err      error
 }
 
-func newModelGLTF(url string) *model {
-	m := &model{}
+type field struct {
+	jsField js.Value
+}
 
-	return m
+type object struct {
+	asset    *asset
+	field    *field
+	jsObject js.Value
+}
+
+func newGltfAssert(url string) *asset {
+	a := &asset{
+		jsAssert: js.Null(),
+	}
+
+	js.Global().Call(gltfLoaderName, url,
+		js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
+			// onLoad
+			a.jsAssert = args[0]
+			return nil
+		}),
+		js.Null(), // onProgress
+		js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			// onError
+			a.err = fmt.Errorf(args[0].String())
+			return nil
+		}))
+
+	return a
+}
+
+func (a *asset) hasError() error {
+	return a.err
+}
+
+func (a *asset) checkLoaded() bool {
+	return !a.jsAssert.IsNull()
+}
+
+func newField() *field {
+	return &field{
+		jsField: js.Global().Call(fieldBinder),
+	}
+}
+
+func newObject(asset *asset, field *field) *object {
+	return &object{
+		asset:    asset,
+		field:    field,
+		jsObject: js.Null(),
+	}
+}
+
+func (o *object) tryBind() bool {
+	// Already binded the object.
+	if !o.jsObject.IsNull() {
+		return true
+	}
+
+	// The asset has not loaded yet.
+	if !o.asset.checkLoaded() {
+		return false
+	}
+
+	o.jsObject = o.asset.jsAssert.Call("clone", js.ValueOf(true))
+	o.field.jsField.Call("add", o.jsObject)
+
+	return true
 }
 
 func main() {
