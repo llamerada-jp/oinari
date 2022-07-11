@@ -5,7 +5,54 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { ThreeJSOverlayView } from "@googlemaps/three";
 import { Keys } from "./keys";
 import * as CL from "./crosslink";
+import * as CM from "./command";
+import * as WB from "./webrtc_bypass";
 
+let rootMpx: CL.MultiPlexer;
+let crosslink: CL.Crosslink;
+let command: CM.Commands;
+
+function initCrosslink() {
+  const worker = new Worker("worker.js");
+  rootMpx = new CL.MultiPlexer();
+  crosslink = new CL.Crosslink(new CL.WorkerImpl(worker), rootMpx);
+}
+
+function initSystemHandler(): Promise<void> {
+  return new Promise((resolve) => {
+    let systemMpx = new CL.MultiPlexer();
+    rootMpx.setHandler("system", systemMpx);
+
+    systemMpx.setRawHandlerFunc("initializationComplete", (_1: string, _2: Map<string, string>, writer: CL.ResponseWriter) => {
+      writer.replySuccess("");
+      resolve();
+    });
+  });
+}
+
+function initColonioHandler(cl: CL.Crosslink): void {
+  let colonioMpx = new CL.MultiPlexer();
+  rootMpx.setHandler("colonio", colonioMpx);
+
+  colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(cl));
+}
+
+async function main() {
+  initCrosslink();
+  initColonioHandler(crosslink);
+  await initSystemHandler();
+  let command = new CM.Commands(crosslink);
+  await command.connect("ws://localhost:8080/seed", "");
+  await command.setPosition(35.6594945, 139.6999859);
+  let podInfo = await command.applyPod("sample", "./sample");
+  let podUuid = podInfo.uuid;
+  setTimeout(() => {
+    command.terminate(podUuid);
+  }, 60 * 1000);
+}
+main();
+
+/*
 let map: google.maps.Map;
 
 const apiLoader = new Loader({
@@ -24,32 +71,6 @@ const mapOptions = {
   gestureHandling: "none",
   keyboardShortcuts: false,
 };
-
-const worker = new Worker("worker.js");
-const workerInterface = new class implements CL.WorkerInterface {
-  worker: Worker;
-  listener: (datum: object) => void;
-
-  constructor(worker: Worker) {
-    this.worker = worker;
-    this.listener = (_: object) => {
-      // dummy
-    };
-
-    this.worker.addEventListener("message", (event) => {
-      this.listener(event.data);
-    });
-  }
-
-  addEventListener(listener: (datum: object) => void): void {
-    this.listener = listener;
-  }
-
-  post(datum: object): void {
-    worker.postMessage(datum);
-  }
-}(worker);
-const crosslink = new CL.Crosslink(workerInterface);
 
 apiLoader.load().then((google) => {
   const mapDiv = document.getElementById("map") as HTMLElement;
@@ -80,8 +101,6 @@ apiLoader.load().then((google) => {
     let { tilt, heading, zoom } = mapOptions;
 
     const animate = () => {
-      worker.postMessage("do it!");
-      console.log("send");
       if (tilt < 67.5) {
         tilt += 0.5;
       } else if (heading <= 360) {
@@ -106,3 +125,4 @@ apiLoader.load().then((google) => {
     anchor: { ...mapOptions.center, altitude: 100 },
   });
 });
+//*/

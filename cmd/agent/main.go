@@ -18,8 +18,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"syscall/js"
 	"time"
+
+	"github.com/llamerada-jp/colonio/go/colonio"
+	"github.com/llamerada-jp/oinari/agent/core"
+	"github.com/llamerada-jp/oinari/agent/crosslink"
+	"github.com/llamerada-jp/oinari/agent/global"
+	"github.com/llamerada-jp/oinari/agent/local"
 )
 
 const (
@@ -102,11 +109,47 @@ func (o *object) tryBind() bool {
 	return true
 }
 
+func initCrosslink() (crosslink.Crosslink, crosslink.MultiPlexer) {
+	mpxRoot := crosslink.NewMultiPlexer()
+	cl := crosslink.NewCrosslink("crosslink", mpxRoot)
+
+	return cl, mpxRoot
+}
+
 func main() {
 	ticker := time.NewTicker(1 * time.Second)
-	ctx, _ := context.WithTimeout(context.Background(), 100*time.Second)
-
 	defer ticker.Stop()
+
+	ctx, _ := context.WithCancel(context.Background())
+
+	cl, mpxRoot := initCrosslink()
+	col, err := colonio.NewColonio(colonio.DefaultLogger)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	gcd := global.NewCommandDriver(col)
+	lcd := local.NewCommandDriver(cl)
+	seh := newSystemEventHandler(col)
+
+	sys := core.NewSystem(col, seh, gcd, lcd)
+	go func() {
+		err := sys.Start(ctx)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}()
+
+	local.InitHandler(sys, mpxRoot)
+
+	// send a message that tell initialization complete
+	cl.Call("", map[string]string{
+		crosslink.TAG_PATH: "system/initializationComplete",
+	}, func(result string, err error) {
+		if err != nil {
+			log.Fatalln(err)
+		}
+	})
 
 	for {
 		select {
@@ -114,7 +157,6 @@ func main() {
 			return
 
 		case <-ticker.C:
-			fmt.Println("hello")
 		}
 	}
 }

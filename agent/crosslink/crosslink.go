@@ -3,27 +3,25 @@ package crosslink
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"math/rand"
 	"syscall/js"
 )
 
-type ResponseWriter interface {
-	ReplySuccess(result string)
-	ReplyError(message string)
-}
-
-type Handler interface {
-	Serve(data string, tags map[string]string, writer ResponseWriter)
-}
-
-type Crosslink interface {
-	Call(data string, tags map[string]string, cb func(result string, err error))
+type jsMessage struct {
+	isServe bool
+	id      uint32
+	data    string // for serve
+	tags    string // for serve
+	reply   string // for reply
+	message string // for reply
 }
 
 type crosslinkImpl struct {
 	jsInstance js.Value
 	handler    Handler
 	cbMap      map[uint32]func(string, error)
+	jsChan     chan jsMessage
 }
 
 type rwImpl struct {
@@ -31,39 +29,52 @@ type rwImpl struct {
 	id         uint32
 }
 
-func NewCrosslink(jsName string, handler Handler) (Crosslink, error) {
+func NewCrosslink(jsName string, handler Handler) Crosslink {
 	impl := &crosslinkImpl{
 		jsInstance: js.Global().Get(jsName),
 		handler:    handler,
+		cbMap:      make(map[uint32]func(string, error)),
+		jsChan:     make(chan jsMessage, 10),
 	}
 
+	// exec serve and replyFromJs method on a go routine to avoid blocking js thread
+	go func(impl *crosslinkImpl) {
+		for msg := range impl.jsChan {
+			if msg.isServe {
+				impl.serve(msg.id, msg.data, msg.tags)
+			} else {
+				impl.replyFromJs(msg.id, msg.reply, msg.message)
+			}
+		}
+	}(impl)
+
 	impl.jsInstance.Set("serveToGo", js.FuncOf(func(this js.Value, args []js.Value) any {
-		id := args[0].Int()
-		data := args[1].String()
-		tags := args[2].String()
-
-		impl.serve(uint32(id), data, tags)
-
+		impl.jsChan <- jsMessage{
+			isServe: true,
+			id:      uint32(args[0].Int()),
+			data:    args[1].String(),
+			tags:    args[2].String(),
+		}
 		return nil
 	}))
 
 	impl.jsInstance.Set("callReplyToGo", js.FuncOf(func(this js.Value, args []js.Value) any {
-		id := args[0].Int()
-		reply := args[1].String()
-		message := args[2].String()
-
-		impl.replyFromJs(uint32(id), reply, message)
-
+		impl.jsChan <- jsMessage{
+			isServe: false,
+			id:      uint32(args[0].Int()),
+			reply:   args[1].String(),
+			message: args[2].String(),
+		}
 		return nil
 	}))
 
-	return impl, nil
+	return impl
 }
 
 func (cl *crosslinkImpl) Call(data string, tags map[string]string, cb func(result string, err error)) {
 	tagsStr, err := json.Marshal(tags)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 
 	var id uint32
@@ -76,14 +87,14 @@ func (cl *crosslinkImpl) Call(data string, tags map[string]string, cb func(resul
 	}
 	cl.cbMap[id] = cb
 
-	cl.jsInstance.Call("callFromGo", js.ValueOf(id), js.ValueOf(data), js.ValueOf(tagsStr))
+	cl.jsInstance.Call("callFromGo", js.ValueOf(id), js.ValueOf(data), js.ValueOf(string(tagsStr)))
 }
 
 func (cl *crosslinkImpl) serve(id uint32, data, tagsStr string) {
 	var tags map[string]string
-	err := json.Unmarshal([]byte(data), &tags)
+	err := json.Unmarshal([]byte(tagsStr), &tags)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 
 	rw := &rwImpl{
@@ -97,12 +108,13 @@ func (cl *crosslinkImpl) serve(id uint32, data, tagsStr string) {
 func (cl *crosslinkImpl) replyFromJs(id uint32, reply, message string) {
 	cb, ok := cl.cbMap[id]
 	if !ok {
-		panic("call back function is not exist")
+		log.Fatalln("call back function is not exist")
 	}
-	delete(cl.cbMap, id)
+	defer delete(cl.cbMap, id)
 
 	if message != "" {
 		cb("", errors.New(message))
+		return
 	}
 	cb(reply, nil)
 }

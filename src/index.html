@@ -2,50 +2,49 @@
 <html>
 
 <head>
-    <title>oinari</title>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
-    <script src="./wasm_exec.js"></script>
-    <script src="./index.js"></script>
-    <link rel="stylesheet" type="text/css" href="./style.css" />
+  <title>oinari</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=default" crossorigin="anonymous"></script>
+  <script src="./index.js"></script>
+  <link rel="stylesheet" type="text/css" href="./style.css" />
 </head>
 
 <body>
-    <div id="map"></div>
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{.google_analytics_tracking_id}}"></script>
-    <script>
-        // debug
+  <div id="map"></div>
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{.google_analytics_tracking_id}}"></script>
+  <script>
+    // debug
+    fetch("/utime").then((res) => {
+      if (!res.ok) {
+        return null;
+      }
+      return res.text();
+    }).then(UTIME => {
+      if (UTIME === null) return;
+      console.log("autoreload on", UTIME);
+
+      setInterval(() => {
         fetch("/utime").then((res) => {
-            if (!res.ok) {
-                return null;
-            }
-            return res.text();
-        }).then(UTIME => {
-            if (UTIME === null) return;
-            console.log("autoreload on", UTIME);
-
-            setInterval(() => {
-                fetch("/utime").then((res) => {
-                    if (!res.ok) {
-                        return null;
-                    }
-                    return res.text();
-                }).then(utime => {
-                    if (utime !== null && utime !== UTIME) {
-                        location.reload();
-                    }
-                });
-            }, 1000);
+          if (!res.ok) {
+            return null;
+          }
+          return res.text();
+        }).then(utime => {
+          if (utime !== null && utime !== UTIME) {
+            location.reload();
+          }
         });
+      }, 1000);
+    });
 
-        window.dataLayer = window.dataLayer || [];
+    window.dataLayer = window.dataLayer || [];
 
-        function gtag() {
-            dataLayer.push(arguments);
-        }
-        gtag('js', new Date());
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag('js', new Date());
 
-        gtag('config', '{{.google_analytics_tracking_id}}');
-    </script>
+    gtag('config', '{{.google_analytics_tracking_id}}');
+  </script>
 </body>
 
 </html>

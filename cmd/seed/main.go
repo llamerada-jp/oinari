@@ -77,7 +77,10 @@ var cmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		mux.Handle("/seed", seed)
+		mux.Handle("/seed", &headerWrapper{
+			handler: seed,
+			headers: headers,
+		})
 		if err := seed.Start(); err != nil {
 			return err
 		}

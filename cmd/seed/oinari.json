@@ -6,7 +6,7 @@
   },
   "host": "",
   "port": 8080,
-  "path": "/ws",
+  "path": "/seed",
   "pingInterval": 10000,
   "timeout": 30000,
   "node": {
@@ -30,6 +30,10 @@
       "radius": 6378137
     },
     "modules": {
+      "resources": {
+        "channel": 255,
+        "type": "mapPaxos"
+      },
       "pubsub2d": {
         "type": "pubsub2D",
         "channel": 256

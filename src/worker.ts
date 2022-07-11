@@ -1,17 +1,15 @@
 import * as CL from "./crosslink";
+import * as WB from "./webrtc_bypass";
 
-importScripts("wasm_exec.js");
+importScripts("colonio.js", "colonio_golang.js", "wasm_exec.js");
 
-// Setup crosslink.
-const workerInterface = new class implements CL.WorkerInterface {
-  listener: (datum:object) => void;
+class CLWorker implements CL.WorkerInterface {
+  listener: (datum: object) => void;
 
   constructor() {
-    this.listener = (_:object) => {
-      // dummy
-    }
+    this.listener = (_: object) => { }; // init by temporary dummy
 
-    addEventListener("message", (event) => {
+    globalThis.addEventListener("message", (event) => {
       this.listener(event.data);
     })
   }
@@ -21,15 +19,38 @@ const workerInterface = new class implements CL.WorkerInterface {
   }
 
   post(datum: object): void {
-    postMessage(datum);
+    globalThis.postMessage(datum);
   }
-}();
-const crosslink = new CL.Crosslink(workerInterface);
+}
 
-// Start go program.
-const go = new Go();
-const wasm = fetch("./oinari.wasm");
+function main() {
+  // setup crosslink
+  let rootMpx = new CL.MultiPlexer();
+  let crosslink = new CL.Crosslink(new CLWorker(), rootMpx);
+  let goIfHandler = new CL.GoInterfaceHandler();
+  goIfHandler.bindCrosslink(crosslink);
+  (globalThis as any).crosslink = goIfHandler;
+  rootMpx.setDefaultHandler(goIfHandler);
 
-WebAssembly.instantiateStreaming(wasm, go.importObject).then(result => {
-  go.run(result.instance);
-});
+  const go = new Go();
+  const wasm = fetch("./oinari.wasm");
+
+  ColonioModule().then((colonio) => {
+    // bypass webrtc
+    let colonioMpx = new CL.MultiPlexer();
+    rootMpx.setHandler("colonio", colonioMpx);
+    let bypass = new WB.WebrtcBypass(crosslink, colonioMpx);
+    colonio.setWebrtcImpl(bypass);
+
+    // colonio for go
+    (globalThis as any).colonioSuite = new ColonioSuite(colonio);
+
+    return WebAssembly.instantiateStreaming(wasm, go.importObject);
+
+  }).then((result) => {
+    // start go program
+    go.run(result.instance);
+  });
+}
+
+main();
