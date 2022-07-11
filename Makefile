@@ -14,13 +14,14 @@ setup:
 	rm -rf build/colonio
 	git clone -b $(COLONIO_BRANCH) --depth=1 https://github.com/llamerada-jp/colonio.git build/colonio
 	$(MAKE) -C build/colonio build
-	npm install
+	npm install	
 
 build: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed dist/index.html src/keys.ts
 	GOOS=js GOARCH=wasm go build -o dist/oinari.wasm ./cmd/agent/*.go
 	npm run build
 
-test:
+test: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/keys.ts
+	GOOS=js GOARCH=wasm go build -o dist/test_js.wasm ./cmd/test_js/*.go
 	npm t
 
 bin/seed: $(GO_FILES)

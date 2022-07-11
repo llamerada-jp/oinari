@@ -5,7 +5,7 @@
 /dist/colonio.wasm
 /dist/index.html
 /dist/index.js
-/dist/oinari.wasm
+/dist/*.wasm
 /dist/wasm_exec.js
 /dist/worker.js
 /keys.json
