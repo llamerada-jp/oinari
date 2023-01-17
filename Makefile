@@ -1,6 +1,6 @@
 
 COLONIO_BRANCH := main
-COLONIO_FILES := dist/colonio.js dist/colonio_golang.js dist/colonio.wasm
+COLONIO_FILES := dist/colonio.js dist/colonio_go.js dist/colonio.wasm
 GO_FILES := $(shell find . -name *.go)
 OINARI_FILES := dist/wasm_exec.js
 
@@ -11,12 +11,12 @@ run: build
 setup:
 	mkdir -p build
 	# colonio
-	rm -rf build/colonio
-	git clone -b $(COLONIO_BRANCH) --depth=1 https://github.com/llamerada-jp/colonio.git build/colonio
-	$(MAKE) -C build/colonio build
+	# rm -rf build/colonio
+	# git clone -b $(COLONIO_BRANCH) --depth=1 https://github.com/llamerada-jp/colonio.git build/colonio
+	$(MAKE) -C build/colonio build BUILD_TYPE=Debug
 	npm install	
 
-build: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed dist/index.html src/keys.ts src/colonio_golang.d.ts
+build: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed dist/index.html src/keys.ts src/colonio.d.ts src/colonio_go.d.ts
 	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/agent/*.go
 	GOOS=js GOARCH=wasm go test -o ./dist/test_crosslink.wasm -c ./agent/crosslink/*
 	npm run build
@@ -33,7 +33,7 @@ dist/colonio.js: build/colonio/output/colonio.js
 dist/colonio.wasm: build/colonio/output/colonio.wasm
 	cp $< $@
 
-dist/colonio_golang.js: build/colonio/src/js/colonio_golang.js
+dist/colonio_go.js: build/colonio/src/js/colonio_go.js
 	cp $< $@
 
 dist/index.html: src/index.html keys.json
@@ -42,8 +42,11 @@ dist/index.html: src/index.html keys.json
 dist/wasm_exec.js: $(shell go env GOROOT)/misc/wasm/wasm_exec.js
 	cp $< $@
 
-src/colonio_golang.d.ts: dist/colonio_golang.js
-	./node_modules/typescript/bin/tsc --allowJs --declaration --emitDeclarationOnly --outDir src dist/colonio_golang.js
+src/colonio.d.ts: build/colonio/src/js/core.d.ts
+	cp $< $@
+
+src/colonio_go.d.ts: build/colonio/src/js/colonio_go.d.ts
+	cp $< $@
 
 src/keys.ts: src/keys.temp keys.json
 	go run ./cmd/tool template -i src/keys.temp -v keys.json > $@

@@ -123,7 +123,8 @@ func main() {
 	ctx, _ := context.WithCancel(context.Background())
 
 	cl, mpxRoot := initCrosslink()
-	col, err := colonio.NewColonio(colonio.DefaultLogger)
+	config := colonio.NewConfig()
+	col, err := colonio.NewColonio(config)
 	if err != nil {
 		log.Fatalln(err)
 	}

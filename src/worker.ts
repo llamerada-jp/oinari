@@ -1,7 +1,9 @@
 import * as CL from "./crosslink";
 import * as WB from "./webrtc_bypass";
 
-importScripts("colonio.js", "colonio_golang.js", "wasm_exec.js");
+importScripts("colonio.js", "colonio_go.js", "wasm_exec.js");
+
+declare function ColonioModule(): Promise<any>;
 
 class CLWorker implements CL.WorkerInterface {
   listener: (datum: object) => void;
@@ -43,7 +45,7 @@ function main() {
     colonio.setWebrtcImpl(bypass);
 
     // colonio for go
-    (globalThis as any).colonioSuite = new ColonioSuite(colonio);
+    (globalThis as any).colonioGo = new ColonioGo(colonio);
 
     return WebAssembly.instantiateStreaming(wasm, go.importObject);
 

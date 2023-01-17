@@ -24,7 +24,7 @@ func (d *driverImpl) EncouragePod(nid, uuid string) error {
 	if err != nil {
 		return err
 	}
-	_, err = d.colonio.CallByNid(nid, "encouragePod", string(js), 0)
+	_, err = d.colonio.MessagingPost(nid, "encouragePod", string(js), 0)
 	if err != nil {
 		return err
 	}

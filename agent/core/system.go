@@ -20,13 +20,12 @@ type SystemEventHandler interface {
 }
 
 type System struct {
-	online    bool
-	colonio   colonio.Colonio
-	resources colonio.Map
-	evh       SystemEventHandler
-	gcd       GlobalCommandDriver
-	lcd       LocalCommandDriver
-	pods      map[string]*PodImpl
+	online  bool
+	colonio colonio.Colonio
+	evh     SystemEventHandler
+	gcd     GlobalCommandDriver
+	lcd     LocalCommandDriver
+	pods    map[string]*PodImpl
 }
 
 func init() {
@@ -72,7 +71,7 @@ func (sys *System) loop(ctx context.Context) error {
 	}
 
 	for uuid, pod := range sys.pods {
-		effective, err := pod.Update(ctx, sys.colonio, sys.resources)
+		effective, err := pod.Update(ctx, sys.colonio)
 		if err != nil {
 			return err
 		}
@@ -91,30 +90,29 @@ func (sys *System) dealResources() error {
 	}, 0)
 
 	// to avoid dead-lock of ForeachLocalValue, don't call colonio's method in the callback func
-	sys.resources.ForeachLocalValue(func(k, v colonio.Value, attr uint32) {
-		key, err := k.GetString()
+	localData := sys.colonio.KvsGetLocalData()
+	defer localData.Free()
+	for _, key := range localData.GetKeys() {
+		v, err := localData.GetValue(key)
 		if err != nil {
-			log.Println(err)
-			return
+			return err
 		}
 		js, err := v.GetString()
 		if err != nil {
-			log.Println(err)
-			return
+			return err
 		}
-		splited := strings.Split(key, "/")
-		if len(splited) != 2 {
-			log.Println("local value key is not supported format", key)
-			return
+		resourceEntry := strings.Split(key, "/")
+		if len(resourceEntry) != 2 {
+			return fmt.Errorf("local value key is not supported format", key)
 		}
 		resources = append(resources, struct {
 			resourceType ResourceType
 			js           string
 		}{
-			resourceType: ResourceType(splited[0]),
+			resourceType: ResourceType(resourceEntry[0]),
 			js:           js,
 		})
-	})
+	}
 
 	for _, resource := range resources {
 		err := sys.dealResource(resource.resourceType, resource.js)
@@ -165,12 +163,6 @@ func (sys *System) Connect(url, token string) error {
 		return err
 	}
 
-	resources, err := sys.colonio.AccessMap("resources")
-	if err != nil {
-		return err
-	}
-	sys.resources = resources
-
 	err = sys.evh.OnConnect(sys)
 	if err != nil {
 		return err
@@ -208,7 +200,7 @@ func (sys *System) ApplyPod(name, image string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		err = sys.resources.Set(key, string(js), colonio.MapErrorWithExist)
+		err = sys.colonio.KvsSet(key, string(js), colonio.KvsProhibitOverwrite)
 		// TODO: retry only if the same uuid id exists
 		if err == nil {
 			return pod.Meta.Uuid, nil
@@ -218,7 +210,7 @@ func (sys *System) ApplyPod(name, image string) (string, error) {
 
 func (sys *System) Terminate(uuid string) error {
 	// TODO
-	log.Println("fixit")
+	log.Println("fix it")
 	return nil
 }
 
@@ -237,7 +229,7 @@ func (sys *System) EncouragePod(ctx context.Context, uuid string) error {
 	// create and update pod
 	pod := NewPod(uuid)
 	sys.pods[uuid] = pod
-	effective, err := pod.Update(ctx, sys.colonio, sys.resources)
+	effective, err := pod.Update(ctx, sys.colonio)
 	if err != nil {
 		return err
 	}

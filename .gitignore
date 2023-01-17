@@ -3,7 +3,7 @@
 /build/
 /coverage
 /dist/*.wasm
-/dist/colonio_golang.js
+/dist/colonio_go.js
 /dist/colonio.js
 /dist/colonio.wasm
 /dist/index.html
@@ -13,6 +13,7 @@
 /dist/worker.js
 /keys.json
 /node_modules
-/src/colonio_golang.d.ts
+/src/colonio_go.d.ts
+/src/colonio.d.ts
 /src/colonio.js
 /src/keys.ts

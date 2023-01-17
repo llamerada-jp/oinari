@@ -28,16 +28,6 @@
     "coordSystem2D": {
       "type": "sphere",
       "radius": 6378137
-    },
-    "modules": {
-      "resources": {
-        "channel": 255,
-        "type": "mapPaxos"
-      },
-      "pubsub2d": {
-        "type": "pubsub2D",
-        "channel": 256
-      }
     }
   }
 }

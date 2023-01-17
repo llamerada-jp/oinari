@@ -10,26 +10,25 @@ import (
 )
 
 func InitHandler(system *core.System, col colonio.Colonio) error {
-	col.OnCall("encouragePod", func(cp *colonio.CallParameter) interface{} {
-		js, err := cp.Value.GetString()
+	col.MessagingSetHandler("encouragePod", func(mr *colonio.MessagingRequest, mrw colonio.MessagingResponseWriter) {
+		js, err := mr.Message.GetString()
+		defer mrw.Write(nil)
 		if err != nil {
 			log.Println(err)
-			return nil
+			return
 		}
 		var param encouragePod
 		err = json.Unmarshal([]byte(js), &param)
 		if err != nil {
 			log.Println(err)
-			return nil
+			return
 		}
 
 		err = system.EncouragePod(context.Background(), param.Uuid)
 		if err != nil {
 			log.Println(err)
-			return nil
+			return
 		}
-
-		return nil
 	})
 	return nil
 }
