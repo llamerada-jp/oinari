@@ -11,8 +11,11 @@ run: build
 setup:
 	mkdir -p build
 	# colonio
-	# rm -rf build/colonio
-	# git clone -b $(COLONIO_BRANCH) --depth=1 https://github.com/llamerada-jp/colonio.git build/colonio
+	rm -rf build/colonio
+	if [ "$${COLONIO_DEV_PATH}" = "" ]; \
+	then git clone -b $(COLONIO_BRANCH) --depth=1 https://github.com/llamerada-jp/colonio.git build/colonio; \
+	else ln -s $${COLONIO_DEV_PATH} build/colonio; \
+	fi
 	$(MAKE) -C build/colonio build BUILD_TYPE=Debug
 	npm install	
 

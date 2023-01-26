@@ -226,7 +226,7 @@ export class Crosslink {
   }
 }
 
-const MULTI_PLEXER_SPLITER = /^\/?([^\/]*)\/?(.*)$/;
+const MULTI_PLEXOR_SPLITTER = /^\/?([^\/]*)\/?(.*)$/;
 
 export class MultiPlexer implements Handler {
   private defaultHandler: Handler;
@@ -253,7 +253,7 @@ export class MultiPlexer implements Handler {
       leaf = path
     }
 
-    let r = MULTI_PLEXER_SPLITER.exec(leaf)
+    let r = MULTI_PLEXOR_SPLITTER.exec(leaf)
 
     let dir: string | undefined;
     let newLeaf: string | undefined;

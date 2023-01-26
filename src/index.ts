@@ -4,9 +4,12 @@ import { AmbientLight, DirectionalLight, Scene } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { ThreeJSOverlayView } from "@googlemaps/three";
 import { Keys } from "./keys";
+
 import * as CL from "./crosslink";
 import * as CM from "./command";
 import * as WB from "./webrtc_bypass";
+
+declare function ColonioModule(): Promise<any>;
 
 let rootMpx: CL.MultiPlexer;
 let crosslink: CL.Crosslink;
@@ -30,18 +33,19 @@ function initSystemHandler(): Promise<void> {
   });
 }
 
-function initColonioHandler(cl: CL.Crosslink): void {
+async function initColonioHandler(cl: CL.Crosslink) {
   let colonioMpx = new CL.MultiPlexer();
   rootMpx.setHandler("colonio", colonioMpx);
-
-  colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(cl));
+  let colonio = await ColonioModule();
+  let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
+  colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(cl, webrtcImpl));
 }
 
 async function main() {
   initCrosslink();
-  initColonioHandler(crosslink);
+  await initColonioHandler(crosslink);
   await initSystemHandler();
-  let command = new CM.Commands(crosslink);
+  command = new CM.Commands(crosslink);
   await command.connect("ws://localhost:8080/seed", "");
   await command.setPosition(35.6594945, 139.6999859);
   let podInfo = await command.applyPod("sample", "./sample");
@@ -50,6 +54,7 @@ async function main() {
     command.terminate(podUuid);
   }, 60 * 1000);
 }
+
 main();
 
 /*
