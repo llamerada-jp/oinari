@@ -6,11 +6,12 @@
 /dist/colonio_go.js
 /dist/colonio.js
 /dist/colonio.wasm
+/dist/container.js
+/dist/controller.js
 /dist/index.html
 /dist/index.js
 /dist/test.js
 /dist/wasm_exec.js
-/dist/worker.js
 /keys.json
 /node_modules
 /src/colonio_go.d.ts

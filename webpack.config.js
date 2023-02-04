@@ -3,7 +3,8 @@ module.exports = {
 
   entry: {
     index: "./src/index.ts",
-    worker: "./src/worker.ts",
+    container: "./src/container/index.ts",
+    controller: "./src/controller/index.ts",
     test: "./src/test.ts"
   },
   output: {

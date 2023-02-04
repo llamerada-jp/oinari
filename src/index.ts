@@ -7,7 +7,7 @@ import { Keys } from "./keys";
 
 import * as CL from "./crosslink";
 import * as CM from "./command";
-import * as WB from "./webrtc_bypass";
+import * as WB from "./webrtc_bypass_handler";
 
 declare function ColonioModule(): Promise<any>;
 

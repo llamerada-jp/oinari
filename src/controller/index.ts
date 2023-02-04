@@ -1,4 +1,4 @@
-import * as CL from "./crosslink";
+import * as CL from "../crosslink";
 import * as WB from "./webrtc_bypass";
 
 importScripts("colonio.js", "colonio_go.js", "wasm_exec.js");

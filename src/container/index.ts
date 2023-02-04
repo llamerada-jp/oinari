@@ -1,4 +1,4 @@
-import * as CL from "./crosslink"
+import * as CL from "../crosslink"
 
 importScripts("wasm_exec.js");
 

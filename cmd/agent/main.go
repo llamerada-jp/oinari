@@ -24,6 +24,7 @@ import (
 
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/agent/core"
+	"github.com/llamerada-jp/oinari/agent/cri"
 	"github.com/llamerada-jp/oinari/agent/crosslink"
 	"github.com/llamerada-jp/oinari/agent/global"
 	"github.com/llamerada-jp/oinari/agent/local"
@@ -131,6 +132,7 @@ func main() {
 
 	gcd := global.NewCommandDriver(col)
 	lcd := local.NewCommandDriver(cl)
+	cri := cri.NewCRI(cl)
 	seh := newSystemEventHandler(col)
 
 	sys := core.NewSystem(col, seh, gcd, lcd)
