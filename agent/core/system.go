@@ -103,7 +103,7 @@ func (sys *System) dealResources() error {
 		}
 		resourceEntry := strings.Split(key, "/")
 		if len(resourceEntry) != 2 {
-			return fmt.Errorf("local value key is not supported format", key)
+			return fmt.Errorf("local value key is not supported format:%s", key)
 		}
 		resources = append(resources, struct {
 			resourceType ResourceType
@@ -137,7 +137,7 @@ func (sys *System) dealResource(t ResourceType, js string) error {
 		}
 
 	default:
-		log.Printf("debug unhandled resource %s", string(t))
+		log.Printf("debug unhandled resource:%s", string(t))
 	}
 	return nil
 }
@@ -153,7 +153,7 @@ func (sys *System) schedulePod(pod *Pod) error {
 		return err
 
 	default:
-		return fmt.Errorf("Unsupported scheduling policy:%s", pod.Spec.Scheduler.Type)
+		return fmt.Errorf("unsupported scheduling policy:%s", pod.Spec.Scheduler.Type)
 	}
 }
 

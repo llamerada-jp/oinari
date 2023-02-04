@@ -22,7 +22,6 @@ func NewPod(uuid string) *PodImpl {
 func (p *PodImpl) Update(ctx context.Context, colonio colonio.Colonio) (bool, error) {
 	log.Println("update", p.uuid)
 	key := string(ResourceTypePod) + "/" + p.uuid
-	// TODO colonio has a bug ? that the `Get`` method is blocked when it used in cb?
 	v, err := colonio.KvsGet(key)
 	if err != nil {
 		return false, err
