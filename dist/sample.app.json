@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "name": "sample"
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "main",
+        "image": "./sample.container.json"
+      }
+    ]
+  }
+}

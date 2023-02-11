@@ -3,11 +3,13 @@
 /build/
 /coverage
 /dist/*.wasm
+/dist/404.html
 /dist/colonio_go.js
 /dist/colonio.js
 /dist/colonio.wasm
 /dist/container.js
 /dist/controller.js
+/dist/error.html
 /dist/index.html
 /dist/index.js
 /dist/test.js

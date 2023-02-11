@@ -1,0 +1,4 @@
+{
+  "image": "sample.wasm",
+  "runtime": "go1.19"
+}

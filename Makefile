@@ -2,7 +2,7 @@
 COLONIO_BRANCH := main
 COLONIO_FILES := dist/colonio.js dist/colonio_go.js dist/colonio.wasm
 GO_FILES := $(shell find . -name *.go)
-OINARI_FILES := dist/wasm_exec.js
+OINARI_FILES := dist/wasm_exec.js dist/404.html dist/error.html dist/index.html
 
 run: build
 	while true; do ./bin/seed --debug -p 8080; done
@@ -19,8 +19,9 @@ setup:
 	$(MAKE) -C build/colonio build BUILD_TYPE=Debug
 	npm install	
 
-build: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed dist/index.html src/keys.ts src/colonio.d.ts src/colonio_go.d.ts
+build: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/colonio.d.ts src/colonio_go.d.ts
 	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/agent/*.go
+	GOOS=js GOARCH=wasm go build -o ./dist/sample.wasm ./cmd/sample/*.go
 	GOOS=js GOARCH=wasm go test -o ./dist/test_crosslink.wasm -c ./agent/crosslink/*
 	npm run build
 
@@ -30,6 +31,9 @@ test: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/keys.ts
 bin/seed: $(GO_FILES)
 	go build -o $@ ./cmd/seed
 
+dist/404.html: src/404.html keys.json
+  go run ./cmd/tool template -i src/404.html -v keys.json > $@
+  
 dist/colonio.js: build/colonio/output/colonio.js
 	cp $< $@
 
@@ -38,6 +42,9 @@ dist/colonio.wasm: build/colonio/output/colonio.wasm
 
 dist/colonio_go.js: build/colonio/src/js/colonio_go.js
 	cp $< $@
+
+dist/error.html: src/error.html keys.json
+  go run ./cmd/tool template -i src/error.html -v keys.json > $@
 
 dist/index.html: src/index.html keys.json
 	go run ./cmd/tool template -i src/index.html -v keys.json > $@

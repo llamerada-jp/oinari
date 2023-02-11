@@ -1,39 +1,115 @@
 import * as CL from "./crosslink";
 
+const CL_SYSTEM_PATH: string = "system";
+const CL_MANAGER_PATH: string = "pod_manager";
+
+export interface ApplicationDigest {
+  name: string
+  uuid: string
+  runningNode: string
+  owner: string
+}
+
+interface ApplicationDefinition {
+  metadata: ApplicationMetadata
+  spec: PodSpec
+}
+
+interface ApplicationMetadata {
+  name: string
+}
+
+interface ManagerRunRequest {
+  name: string
+  spec: PodSpec
+}
+
+interface ManagerRunResponse {
+  digest: ApplicationDigest
+}
+
+interface ManagerListResponse {
+  digests: Array<ApplicationDigest>
+}
+
+interface ManagerTerminateRequest {
+  uuid: string
+}
+
+interface ObjectMeta {
+  name: string
+  namespace: string | undefined
+}
+
+interface Pod {
+  meta: ObjectMeta
+  spec: PodSpec
+}
+
+interface PodSpec {
+  containers: Array<Container>
+}
+
+interface Container {
+  name: string
+  image: string
+}
+
 export class Commands {
   private cl: CL.Crosslink;
   constructor(cl: CL.Crosslink) {
     this.cl = cl;
   }
 
-  connect(url: string, token: string): Promise<any> {
-    return this.cl.call("system/connect", {
+  connect(url: string, account: string, token: string): Promise<any> {
+    return this.cl.call(CL_SYSTEM_PATH + "/connect", {
       url: url,
+      account: account,
       token: token,
     });
   }
 
-  applyPod(name: string, image: string): Promise<{ uuid: string }> {
-    return this.cl.call("system/applyPod", {
-      name: name,
-      image: image,
-    }).then((result) => {
-      return {
-        uuid: (result as any).uuid,
-      };
-    });
-  }
-
   setPosition(lat: number, lon: number): Promise<any> {
-    return this.cl.call("system/setPosition", {
+    return this.cl.call(CL_SYSTEM_PATH + "/setPosition", {
       latitude: lat,
       longitude: lon,
     });
   }
 
-  terminate(uuid: string): Promise<any> {
-    return this.cl.call("system/terminate", {
-      uuid: uuid,
+  runApplication(url: string, postfix?: string | undefined): Promise<ApplicationDigest> {
+    return fetch(url).then((response: Response) => {
+      if (!response.ok) {
+        throw new Error("Application could not start: " + response.statusText);
+      }
+      return response.json();
+
+    }).then((a) => {
+      let app = a as ApplicationDefinition;
+      let name = app.metadata.name;
+      if (postfix != null) {
+        name = name + postfix;
+      }
+      return this.cl.call(CL_MANAGER_PATH + "/run", {
+        name: name,
+        spec: app.spec
+      } as ManagerRunRequest);
+
+    }).then((r) => {
+      let result = r as ManagerRunResponse;
+      return result.digest;
     });
+  }
+
+  listApplications(): Promise<Array<ApplicationDigest>> {
+    return this.cl.call(CL_MANAGER_PATH + "/list", {}).then((r) => {
+      let result = r as ManagerListResponse;
+      return result.digests;
+    });
+  }
+
+  terminateApplication(uuid: string): Promise<any> {
+    return this.cl.call(CL_MANAGER_PATH + "/terminate", {
+      uuid: uuid,
+    } as ManagerTerminateRequest);
   }
 }

@@ -17,149 +17,135 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"syscall/js"
-	"time"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/agent/core"
 	"github.com/llamerada-jp/oinari/agent/cri"
 	"github.com/llamerada-jp/oinari/agent/crosslink"
-	"github.com/llamerada-jp/oinari/agent/global"
-	"github.com/llamerada-jp/oinari/agent/local"
+	"github.com/llamerada-jp/oinari/agent/resource"
+	"github.com/llamerada-jp/oinari/agent/resource/account"
+	"github.com/llamerada-jp/oinari/agent/resource/node"
+	"github.com/llamerada-jp/oinari/agent/resource/pod"
+	"github.com/llamerada-jp/oinari/agent/system"
 )
 
-const (
-	gltfLoaderName = "gltfLoader"
-	fieldBinder    = "newField"
-)
-
-type asset struct {
-	jsAssert js.Value
-	err      error
+type agent struct {
+	ctx context.Context
+	// crosslink
+	cl      crosslink.Crosslink
+	rootMpx crosslink.MultiPlexer
+	// colonio
+	col colonio.Colonio
+	// system
+	sys system.System
 }
 
-type field struct {
-	jsField js.Value
+func (agent *agent) initCrosslink() error {
+	agent.rootMpx = crosslink.NewMultiPlexer()
+	agent.cl = crosslink.NewCrosslink("crosslink", agent.rootMpx)
+	return nil
 }
 
-type object struct {
-	asset    *asset
-	field    *field
-	jsObject js.Value
-}
-
-func newGltfAssert(url string) *asset {
-	a := &asset{
-		jsAssert: js.Null(),
-	}
-
-	js.Global().Call(gltfLoaderName, url,
-		js.FuncOf(func(_ js.Value, args []js.Value) interface{} {
-			// onLoad
-			a.jsAssert = args[0]
-			return nil
-		}),
-		js.Null(), // onProgress
-		js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			// onError
-			a.err = fmt.Errorf(args[0].String())
-			return nil
-		}))
-
-	return a
-}
-
-func (a *asset) hasError() error {
-	return a.err
-}
-
-func (a *asset) checkLoaded() bool {
-	return !a.jsAssert.IsNull()
-}
-
-func newField() *field {
-	return &field{
-		jsField: js.Global().Call(fieldBinder),
-	}
-}
-
-func newObject(asset *asset, field *field) *object {
-	return &object{
-		asset:    asset,
-		field:    field,
-		jsObject: js.Null(),
-	}
-}
-
-func (o *object) tryBind() bool {
-	// Already binded the object.
-	if !o.jsObject.IsNull() {
-		return true
-	}
-
-	// The asset has not loaded yet.
-	if !o.asset.checkLoaded() {
-		return false
-	}
-
-	o.jsObject = o.asset.jsAssert.Call("clone", js.ValueOf(true))
-	o.field.jsField.Call("add", o.jsObject)
-
-	return true
-}
-
-func initCrosslink() (crosslink.Crosslink, crosslink.MultiPlexer) {
-	mpxRoot := crosslink.NewMultiPlexer()
-	cl := crosslink.NewCrosslink("crosslink", mpxRoot)
-
-	return cl, mpxRoot
-}
-
-func main() {
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	ctx, _ := context.WithCancel(context.Background())
-
-	cl, mpxRoot := initCrosslink()
+func (agent *agent) initColonio() error {
 	config := colonio.NewConfig()
 	col, err := colonio.NewColonio(config)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
+	agent.col = col
+	return nil
+}
 
-	gcd := global.NewCommandDriver(col)
-	lcd := local.NewCommandDriver(cl)
-	cri := cri.NewCRI(cl)
-	seh := newSystemEventHandler(col)
-
-	sys := core.NewSystem(col, seh, gcd, lcd)
+func (agent *agent) initSystem() error {
+	cd := system.NewCommandDriver(agent.cl)
+	agent.sys = system.NewSystem(agent.col, agent, cd)
 	go func() {
-		err := sys.Start(ctx)
+		err := agent.sys.Start(agent.ctx)
 		if err != nil {
 			log.Fatalln(err)
 		}
 	}()
 
-	local.InitHandler(sys, mpxRoot)
+	system.InitCommandHandler(agent.sys, agent.rootMpx)
+	return nil
+}
 
-	// send a message that tell initialization complete
-	cl.Call("", map[string]string{
-		crosslink.TAG_PATH: "system/initializationComplete",
-	}, func(result string, err error) {
+func (agent *agent) execute() error {
+	ctx, _ := context.WithCancel(context.Background())
+	agent.ctx = ctx
+
+	err := agent.initCrosslink()
+	if err != nil {
+		return err
+	}
+
+	err = agent.initColonio()
+	if err != nil {
+		return err
+	}
+
+	err = agent.initSystem()
+	if err != nil {
+		return err
+	}
+
+	err = agent.sys.TellInitComplete()
+	if err != nil {
+		return err
+	}
+
+	/*
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+
+			case <-ticker.C:
+			}
+		}
+		/*/
+	<-ctx.Done()
+	return nil
+	//*/
+}
+
+// implement system events
+func (agent *agent) OnConnect() error {
+	// node manager
+	nodeMgr := node.NewManager(agent.col.GetLocalNid())
+
+	// account manager
+	accountKvs := account.NewKvsDriver(agent.col)
+	accountMgr := account.NewManager(agent.sys.GetAccount(), accountKvs)
+
+	// pod manager
+	cri := cri.NewCRI(agent.cl)
+	podKvs := pod.NewKvsDriver(agent.col)
+	podMsg := pod.NewMessagingDriver(agent.col)
+	podMgr := pod.NewManager(cri, podKvs, podMsg, accountMgr, nodeMgr)
+	pod.InitCommandHandler(podMgr, agent.rootMpx)
+	pod.InitMessagingHandler(podMgr, agent.col)
+
+	// resource manager
+	ld := resource.NewLocalDatastore(agent.col)
+	resourceManager := resource.NewManager(ld, podMgr)
+	go func() {
+		err := resourceManager.Start(agent.ctx)
 		if err != nil {
 			log.Fatalln(err)
 		}
-	})
+	}()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
+	return nil
+}
 
-		case <-ticker.C:
-		}
+func main() {
+	agent := &agent{}
+	err := agent.execute()
+	if err != nil {
+		log.Fatalln(err)
 	}
 }

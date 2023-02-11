@@ -1,10 +1,3 @@
-import { Loader } from '@googlemaps/js-api-loader';
-import { AmbientLight, DirectionalLight, Scene } from "three";
-
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { ThreeJSOverlayView } from "@googlemaps/three";
-import { Keys } from "./keys";
-
 import * as CL from "./crosslink";
 import * as CM from "./command";
 import * as WB from "./webrtc_bypass_handler";
@@ -21,43 +14,52 @@ function initCrosslink() {
   crosslink = new CL.Crosslink(new CL.WorkerImpl(worker), rootMpx);
 }
 
-function initSystemHandler(): Promise<void> {
-  return new Promise((resolve) => {
-    let systemMpx = new CL.MultiPlexer();
-    rootMpx.setHandler("system", systemMpx);
+async function initColonio(cl: CL.Crosslink) {
+  let mpx = new CL.MultiPlexer();
+  rootMpx.setHandler("colonio", mpx);
+  let colonio = await ColonioModule();
+  let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
+  mpx.setHandler("webrtc", WB.NewWebrtcHandler(cl, webrtcImpl));
+}
 
-    systemMpx.setRawHandlerFunc("initializationComplete", (_1: string, _2: Map<string, string>, writer: CL.ResponseWriter) => {
+function initAgent(): Promise<void> {
+  return new Promise((resolve) => {
+    let mpx = new CL.MultiPlexer();
+    rootMpx.setHandler("system", mpx);
+
+    // this handler for waiting to complete initialization of golang module.
+    mpx.setRawHandlerFunc("onInitComplete", (_1: string, _2: Map<string, string>, writer: CL.ResponseWriter) => {
       writer.replySuccess("");
       resolve();
     });
   });
 }
 
-async function initColonioHandler(cl: CL.Crosslink) {
-  let colonioMpx = new CL.MultiPlexer();
-  rootMpx.setHandler("colonio", colonioMpx);
-  let colonio = await ColonioModule();
-  let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
-  colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(cl, webrtcImpl));
-}
-
 async function main() {
   initCrosslink();
-  await initColonioHandler(crosslink);
-  await initSystemHandler();
+  await initColonio(crosslink);
+  await initAgent();
   command = new CM.Commands(crosslink);
-  await command.connect("ws://localhost:8080/seed", "");
+  await command.connect("ws://localhost:8080/seed", "dummy-account", "");
+  // set a position for sample playing
   await command.setPosition(35.6594945, 139.6999859);
-  let podInfo = await command.applyPod("sample", "./sample");
-  let podUuid = podInfo.uuid;
+  // run sample application
+  let app = await command.runApplication("./sample.app.yaml");
   setTimeout(() => {
-    command.terminate(podUuid);
+    command.terminateApplication(app.uuid);
   }, 60 * 1000);
 }
 
 main();
 
 /*
+import { Loader } from '@googlemaps/js-api-loader';
+import { AmbientLight, DirectionalLight, Scene } from "three";
+
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { ThreeJSOverlayView } from "@googlemaps/three";
+import { Keys } from "./keys";
+
 let map: google.maps.Map;
 
 const apiLoader = new Loader({

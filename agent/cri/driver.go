@@ -22,38 +22,39 @@ func NewCRI(cl crosslink.Crosslink) CRI {
 }
 
 func criCallHelper[REQ any, RES any](ci *criImpl, path string, request *REQ) (*RES, error) {
-	type ResErr struct {
-		res *RES
-		err error
-	}
 
 	reqJson, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
 
-	ch := make(chan *ResErr)
+	ch := make(chan *RES)
+	defer close(ch)
+	var funcError error
 
 	ci.cl.Call(string(reqJson), map[string]string{
 		crosslink.TAG_PATH: strings.Join([]string{crosslinkPath, path}, "/"),
 	}, func(result string, err error) {
 		if err != nil {
-			ch <- &ResErr{nil, err}
-			return
+			funcError = err
+			close(ch)
 		}
 
 		var res RES
 		err = json.Unmarshal([]byte(result), &res)
 		if err != nil {
-			ch <- &ResErr{nil, err}
-			return
+			funcError = err
+			close(ch)
 		}
 
-		ch <- &ResErr{&res, nil}
+		ch <- &res
 	})
 
-	resErr := <-ch
-	return resErr.res, resErr.err
+	res, ok := <-ch
+	if !ok {
+		return nil, funcError
+	}
+	return res, nil
 }
 
 func (ci *criImpl) RunPodSandbox(request *RunPodSandboxRequest) (*RunPodSandboxResponse, error) {
