@@ -18,7 +18,6 @@ package main
 import (
 	"encoding/json"
 	htmlTemplate "html/template"
-	"io/ioutil"
 	"os"
 	"strings"
 	textTempalte "text/template"
@@ -35,7 +34,9 @@ var templateCmd = &cobra.Command{
 	Use:   "template",
 	Short: "generate output file using template and parameter files.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		valuesJson, err := ioutil.ReadFile(valuesFile)
+		cmd.SilenceUsage = true
+
+		valuesJson, err := os.ReadFile(valuesFile)
 		if err != nil {
 			return err
 		}

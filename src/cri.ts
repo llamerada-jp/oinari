@@ -481,7 +481,7 @@ function createContainer(request: CreateContainerRequest): CreateContainerRespon
 
   let image = imageByURL.get(request.config.image.image);
   if (image == null) {
-    throw new Error("image not found");
+    throw new Error("image not found:" + request.config.image.image);
   }
 
   let id = sandbox.createContainer(request.config.metadata.name, image);

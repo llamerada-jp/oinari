@@ -77,10 +77,10 @@ func (kvs *kvsDriverImpl) getOrCreate(name string) (*api.Account, error) {
 
 	account := &api.Account{
 		Meta: &api.ObjectMeta{
-			Type:    api.ResourceTypeAccount,
-			Name:    name,
-			Account: name,
-			Uuid:    kvs.getUUID(name),
+			Type:  api.ResourceTypeAccount,
+			Name:  name,
+			Owner: name,
+			Uuid:  kvs.getUUID(name),
 		},
 		Status: &api.AccountStatus{
 			Pods: make(map[string]string),

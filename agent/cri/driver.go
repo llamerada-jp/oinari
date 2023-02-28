@@ -29,22 +29,23 @@ func criCallHelper[REQ any, RES any](ci *criImpl, path string, request *REQ) (*R
 	}
 
 	ch := make(chan *RES)
-	defer close(ch)
 	var funcError error
 
 	ci.cl.Call(string(reqJson), map[string]string{
 		crosslink.TAG_PATH: strings.Join([]string{crosslinkPath, path}, "/"),
 	}, func(result string, err error) {
+		defer close(ch)
+
 		if err != nil {
 			funcError = err
-			close(ch)
+			return
 		}
 
 		var res RES
 		err = json.Unmarshal([]byte(result), &res)
 		if err != nil {
 			funcError = err
-			close(ch)
+			return
 		}
 
 		ch <- &res

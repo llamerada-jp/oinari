@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
@@ -146,6 +147,6 @@ func main() {
 	agent := &agent{}
 	err := agent.execute()
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Println(err)
 	}
 }

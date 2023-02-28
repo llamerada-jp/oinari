@@ -205,6 +205,39 @@ func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {
 		}
 
 		if len(sandboxStatus.ContainersStatuses) < len(pod.Spec.Containers) {
+			// check and pull image
+			images, err := mgr.cri.ListImages(&cri.ListImagesRequest{})
+			if err != nil {
+				return err
+			}
+
+			for idx, container := range pod.Spec.Containers {
+				// skip if container created
+				if len(sandboxStatus.ContainersStatuses) > idx {
+					continue
+				}
+
+				imageExists := false
+				for _, image := range images.Images {
+					if container.Image == image.Spec.Image {
+						imageExists = true
+						break
+					}
+				}
+				if !imageExists {
+					_, err := mgr.cri.PullImage(&cri.PullImageRequest{
+						Image: cri.ImageSpec{
+							Image: container.Image,
+						},
+					})
+					if err != nil {
+						return err
+					}
+				}
+
+			}
+
+			// create containers
 			for idx, container := range pod.Spec.Containers {
 				// skip if container created
 				if len(sandboxStatus.ContainersStatuses) > idx {

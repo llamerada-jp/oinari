@@ -32,7 +32,7 @@ bin/seed: $(GO_FILES)
 	go build -o $@ ./cmd/seed
 
 dist/404.html: src/404.html keys.json
-  go run ./cmd/tool template -i src/404.html -v keys.json > $@
+	go run ./cmd/tool template -i src/404.html -v keys.json > $@
   
 dist/colonio.js: build/colonio/output/colonio.js
 	cp $< $@
@@ -44,7 +44,7 @@ dist/colonio_go.js: build/colonio/src/js/colonio_go.js
 	cp $< $@
 
 dist/error.html: src/error.html keys.json
-  go run ./cmd/tool template -i src/error.html -v keys.json > $@
+	go run ./cmd/tool template -i src/error.html -v keys.json > $@
 
 dist/index.html: src/index.html keys.json
 	go run ./cmd/tool template -i src/index.html -v keys.json > $@

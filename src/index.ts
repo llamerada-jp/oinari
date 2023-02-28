@@ -1,6 +1,7 @@
 import * as CL from "./crosslink";
 import * as CM from "./command";
 import * as WB from "./webrtc_bypass_handler";
+import * as CRI from "./cri";
 
 declare function ColonioModule(): Promise<any>;
 
@@ -8,43 +9,51 @@ let rootMpx: CL.MultiPlexer;
 let crosslink: CL.Crosslink;
 let command: CM.Commands;
 
-function initCrosslink() {
-  const worker = new Worker("worker.js");
-  rootMpx = new CL.MultiPlexer();
-  crosslink = new CL.Crosslink(new CL.WorkerImpl(worker), rootMpx);
-}
+async function initController() {
+  // start controller worker
+  const controller = new Worker("controller.js");
 
-async function initColonio(cl: CL.Crosslink) {
-  let mpx = new CL.MultiPlexer();
-  rootMpx.setHandler("colonio", mpx);
+  // setup crosslink
+  rootMpx = new CL.MultiPlexer();
+  crosslink = new CL.Crosslink(new CL.WorkerImpl(controller), rootMpx);
+
+  // setup CRI
+  CRI.initCRI(rootMpx);
+
+  // setup colonio module handler
+  let colonioMpx = new CL.MultiPlexer();
+  rootMpx.setHandler("colonio", colonioMpx);
   let colonio = await ColonioModule();
   let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
-  mpx.setHandler("webrtc", WB.NewWebrtcHandler(cl, webrtcImpl));
-}
+  colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(crosslink, webrtcImpl));
 
-function initAgent(): Promise<void> {
-  return new Promise((resolve) => {
-    let mpx = new CL.MultiPlexer();
-    rootMpx.setHandler("system", mpx);
-
-    // this handler for waiting to complete initialization of golang module.
-    mpx.setRawHandlerFunc("onInitComplete", (_1: string, _2: Map<string, string>, writer: CL.ResponseWriter) => {
+  // setup system module handler
+  let systemMpx = new CL.MultiPlexer();
+  rootMpx.setHandler("system", systemMpx);
+  let promise = new Promise<void>((resolve) => {
+    systemMpx.setRawHandlerFunc("onInitComplete", (_1: string, _2: Map<string, string>, writer: CL.ResponseWriter) => {
       writer.replySuccess("");
       resolve();
     });
   });
+
+  // run wasm program of controller
+  crosslink.call("run", {
+    file: "oinari.wasm",
+  });
+
+  return promise;
 }
 
 async function main() {
-  initCrosslink();
-  await initColonio(crosslink);
-  await initAgent();
+  // start controller
+  await initController();
   command = new CM.Commands(crosslink);
   await command.connect("ws://localhost:8080/seed", "dummy-account", "");
   // set a position for sample playing
   await command.setPosition(35.6594945, 139.6999859);
   // run sample application
-  let app = await command.runApplication("./sample.app.yaml");
+  let app = await command.runApplication("./sample.app.json");
   setTimeout(() => {
     command.terminateApplication(app.uuid);
   }, 60 * 1000);

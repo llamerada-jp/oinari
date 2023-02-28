@@ -25,17 +25,21 @@ class CLWorker implements CL.WorkerInterface {
   }
 }
 
-function main() {
-  // setup crosslink
-  let rootMpx = new CL.MultiPlexer();
-  let crosslink = new CL.Crosslink(new CLWorker(), rootMpx);
-  let goIfHandler = new CL.GoInterfaceHandler();
-  goIfHandler.bindCrosslink(crosslink);
-  (globalThis as any).crosslink = goIfHandler;
-  rootMpx.setDefaultHandler(goIfHandler);
+
+// setup crosslink
+let rootMpx = new CL.MultiPlexer();
+let crosslink = new CL.Crosslink(new CLWorker(), rootMpx);
+
+// load method
+interface RunRequest {
+  file: string
+}
+
+function run(data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void {
+  let req = data as RunRequest;
 
   const go = new Go();
-  const wasm = fetch("./oinari.wasm");
+  const wasm = fetch(req.file);
 
   ColonioModule().then((colonio) => {
     // bypass webrtc
@@ -44,7 +48,7 @@ function main() {
     let bypass = new WB.WebrtcBypass(crosslink, colonioMpx);
     colonio.setWebrtcImpl(bypass);
 
-    // colonio for go
+    // setup colonio for go
     (globalThis as any).colonioGo = new ColonioGo(colonio);
 
     return WebAssembly.instantiateStreaming(wasm, go.importObject);
@@ -52,7 +56,16 @@ function main() {
   }).then((result) => {
     // start go program
     go.run(result.instance);
+    writer.replySuccess({});
   });
+}
+
+function main() {
+  let goIfHandler = new CL.GoInterfaceHandler();
+  goIfHandler.bindCrosslink(crosslink);
+  (globalThis as any).crosslink = goIfHandler;
+  rootMpx.setDefaultHandler(goIfHandler);
+  rootMpx.setObjHandlerFunc("run", run);
 }
 
 main();
