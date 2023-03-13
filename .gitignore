@@ -2,6 +2,7 @@
 /bin/seed
 /build/
 /coverage
+/dist/*.map
 /dist/*.wasm
 /dist/404.html
 /dist/colonio_go.js

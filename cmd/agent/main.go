@@ -95,22 +95,8 @@ func (agent *agent) execute() error {
 		return err
 	}
 
-	/*
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return nil
-
-			case <-ticker.C:
-			}
-		}
-		/*/
 	<-ctx.Done()
 	return nil
-	//*/
 }
 
 // implement system events
