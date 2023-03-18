@@ -1,3 +1,19 @@
+/*
+ * Copyright 2018 Yuji Ito <llamerada.jp@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import * as CL from "./crosslink";
 
 const crosslinkPath: string = "cri";
@@ -10,8 +26,7 @@ let sandboxes: Map<string, Sandbox> = new Map();
 // key means ContainerID
 let containers: Map<string, Container> = new Map();
 // key means image url (not image ref id)
-let imageByURL: Map<string, ImageInstance> = new Map();
-let images: Array<WeakRef<ImageInstance>> = new Array();
+let images: Map<string, ImageInstance> = new Map();
 
 function getTimestamp(): string {
   return new Date().toISOString();
@@ -230,8 +245,11 @@ function initHandler(rootMpx: CL.MultiPlexer) {
   });
 
   mpx.setObjHandlerFunc("pullImage", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
-    let res = pullImage(data as PullImageRequest);
-    writer.replySuccess(res);
+    pullImage(data as PullImageRequest).then((res) => {
+      writer.replySuccess(res);
+    }).catch((reason) => {
+      writer.replyError(reason);
+    });
   });
 
   mpx.setObjHandlerFunc("removeImage", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
@@ -479,7 +497,7 @@ function createContainer(request: CreateContainerRequest): CreateContainerRespon
     throw new Error("sandbox not found");
   }
 
-  let image = imageByURL.get(request.config.image.image);
+  let image = images.get(request.config.image.image);
   if (image == null) {
     throw new Error("image not found:" + request.config.image.image);
   }
@@ -523,20 +541,19 @@ function removeContainer(request: RemoveContainerRequest): RemoveContainerRespon
 }
 
 function listImages(request: ListImagesRequest): ListImagesResponse {
-  console.log("listImages 0", request, images, imageByURL);
-
   let buf: Array<ImageInstance | undefined> = new Array();
   if (request.filter != null && request.filter.image.image !== "") {
-    let image = imageByURL.get(request.filter.image.image);
+    let image = images.get(request.filter.image.image);
     buf.push(image);
 
   } else {
-    for (const it of images) {
-      buf.push(it.deref());
+    for (const [_, image] of images) {
+      if (image.state !== ImageState.Downloaded) {
+        continue
+      }
+      buf.push(image);
     }
   }
-
-  console.log("listImages 1", buf);
 
   let resImages = new Array<Image>();
   for (const it of buf) {
@@ -553,47 +570,87 @@ function listImages(request: ListImagesRequest): ListImagesResponse {
     });
   }
 
-  console.log("listImages 2", resImages);
-
   return { images: resImages };
 }
 
-function pullImage(request: PullImageRequest): PullImageResponse {
-  console.log("pullImage 0", request, images, imageByURL);
-  let idSet: Set<string> = new Set();
-  for (const it of images) {
-    let instance = it.deref();
-    if (instance == null) {
-      continue;
+function pullImage(request: PullImageRequest): Promise<PullImageResponse> {
+  let image = images.get(request.image.image);
+
+  if (image == null) {
+    let idSet: Set<string> = new Set();
+    for (const [_, image] of images) {
+      if (image == null) {
+        continue;
+      }
+      idSet.add(image.id);
     }
-    idSet.add(instance.id);
+
+    let id: string = (Math.floor(Math.random() * imageRefIDMax)).toString(16);
+    while (idSet.has(id)) {
+      id = (Math.floor(Math.random() * imageRefIDMax)).toString(16);
+    }
+
+    image = new ImageInstance(id, request.image.image);
+    images.set(image.url, image);
   }
 
-  let id: string = (Math.floor(Math.random() * imageRefIDMax)).toString(16);
-  while (idSet.has(id)) {
-    id = (Math.floor(Math.random() * imageRefIDMax)).toString(16);
+  console.assert(image.state !== ImageState.Created);
+
+  if (image.state === ImageState.Created ||
+    image.state === ImageState.Error) {
+    image.reload();
   }
 
-  let image = new ImageInstance(id, request.image.image);
-  imageByURL.set(image.url, image);
-  images.push(new WeakRef<ImageInstance>(image));
+  if (image.state === ImageState.Downloaded) {
+    return new Promise<PullImageResponse>((resolve, reject) => {
+      if (image == null) {
+        reject("logic error on pullImage");
+        return;
+      }
+      resolve({ image_ref: image.id });
+    });
+  }
 
-  console.log("pullImage 1", id, images, imageByURL);
+  return new Promise<PullImageResponse>((resolve, reject) => {
+    let intervalID = setInterval(() => {
+      if (image == null) {
+        clearInterval(intervalID);
+        reject("logic error on pullImage");
+        return;
+      }
 
-  return { image_ref: id };
+      switch (image.state) {
+        case ImageState.Created:
+          console.error("logic error");
+          break;
+
+        case ImageState.Downloaded:
+          resolve({ image_ref: image.id });
+          break;
+
+        case ImageState.Downloading:
+          // continue to download
+          return;
+
+        case ImageState.Error:
+          reject("download error on pullImage");
+          break;
+      }
+
+      clearInterval(intervalID);
+    }, 1000);
+  });
 }
 
 function removeImage(request: RemoveImageRequest): RemoveImageResponse {
-  let url = request.image.image;
-  imageByURL.delete(url);
+  let image = images.get(request.image.image);
+  if (image == null) {
+    return {};
+  }
 
-  images = images.filter((it): boolean => {
-    let instance = it.deref();
-    if (instance == null) {
-      return false;
-    }
-    return instance.url !== url;
-  });
+  if (image.state === ImageState.Downloaded || image.state === ImageState.Error) {
+    images.delete(request.image.image)
+  }
 
   return {};
 }

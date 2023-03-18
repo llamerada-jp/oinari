@@ -62,7 +62,7 @@ func enableDebugMode() error {
 }
 
 func build(rootPath string) error {
-	outs, err := execHelper(".", "make", []string{"build", "-C", rootPath})
+	outs, err := execHelper(".", "make", []string{"build-test", "-C", rootPath})
 	for _, out := range outs {
 		fmt.Println(out)
 	}

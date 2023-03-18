@@ -40,7 +40,7 @@
   <body>
     <!-- splash -->
     <div class="cover-container h-100 p-3 mx-auto flex-column d-flex" id="splash">
-      <header class="mb-auto"">
+      <header class="mb-auto">
       </header>
       <main role="main" class="container">
         <img src="img/logo.png" class="mx-auto d-block pixelscaled" id="logo">
@@ -52,13 +52,13 @@
     </div>
 
     <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-129756820-1"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{.google_analytics_tracking_id}}"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       
-      gtag('config', 'UA-129756820-1');
+      gtag('config', '{{.google_analytics_tracking_id}}');
     </script>
   </body>
 </html>

@@ -1,0 +1,4 @@
+{
+  "image": "test.container.wasm",
+  "runtime": "go1.18"
+}

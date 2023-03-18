@@ -5,7 +5,7 @@ GO_FILES := $(shell find . -name *.go)
 OINARI_FILES := dist/wasm_exec.js dist/404.html dist/error.html dist/index.html
 MAP_FILES := dist/colonio.wasm.map dist/colonio_go.js.map
 
-run: build test-wasm
+run: build-test test-wasm
 	while true; do ./bin/seed --debug -p 8080; done
 
 .PHONY: setup
@@ -26,8 +26,12 @@ build: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/colonio.d.ts sr
 	GOOS=js GOARCH=wasm go build -o ./dist/sample.wasm ./cmd/sample/*.go
 	npm run build
 
+.PHONY: build-test
+build-test: build # $(MAP_FILES)
+	GOOS=js GOARCH=wasm go build -o ./dist/test.container.wasm ./cmd/test_image/*.go
+
 .PHONY: test-wasm
-test-wasm: $(MAP_FILES)
+test-wasm:
 	GOOS=js GOARCH=wasm go test -o ./dist/test_crosslink.wasm -c ./agent/crosslink/*
 	GOOS=js GOARCH=wasm go test -o ./dist/test.wasm -c ./cmd/agent/*
 
