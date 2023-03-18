@@ -523,8 +523,10 @@ function removeContainer(request: RemoveContainerRequest): RemoveContainerRespon
 }
 
 function listImages(request: ListImagesRequest): ListImagesResponse {
+  console.log("listImages 0", request, images, imageByURL);
+
   let buf: Array<ImageInstance | undefined> = new Array();
-  if (request.filter != null) {
+  if (request.filter != null && request.filter.image.image !== "") {
     let image = imageByURL.get(request.filter.image.image);
     buf.push(image);
 
@@ -533,6 +535,8 @@ function listImages(request: ListImagesRequest): ListImagesResponse {
       buf.push(it.deref());
     }
   }
+
+  console.log("listImages 1", buf);
 
   let resImages = new Array<Image>();
   for (const it of buf) {
@@ -549,10 +553,13 @@ function listImages(request: ListImagesRequest): ListImagesResponse {
     });
   }
 
+  console.log("listImages 2", resImages);
+
   return { images: resImages };
 }
 
 function pullImage(request: PullImageRequest): PullImageResponse {
+  console.log("pullImage 0", request, images, imageByURL);
   let idSet: Set<string> = new Set();
   for (const it of images) {
     let instance = it.deref();
@@ -570,6 +577,8 @@ function pullImage(request: PullImageRequest): PullImageResponse {
   let image = new ImageInstance(id, request.image.image);
   imageByURL.set(image.url, image);
   images.push(new WeakRef<ImageInstance>(image));
+
+  console.log("pullImage 1", id, images, imageByURL);
 
   return { image_ref: id };
 }
