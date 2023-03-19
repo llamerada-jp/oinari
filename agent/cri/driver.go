@@ -74,6 +74,10 @@ func (ci *criImpl) PodSandboxStatus(request *PodSandboxStatusRequest) (*PodSandb
 	return criCallHelper[PodSandboxStatusRequest, PodSandboxStatusResponse](ci, "podSandboxStatus", request)
 }
 
+func (ci *criImpl) ListPodSandbox(request *ListPodSandboxRequest) (*ListPodSandboxResponse, error) {
+	return criCallHelper[ListPodSandboxRequest, ListPodSandboxResponse](ci, "listPodSandbox", request)
+}
+
 func (ci *criImpl) CreateContainer(request *CreateContainerRequest) (*CreateContainerResponse, error) {
 	return criCallHelper[CreateContainerRequest, CreateContainerResponse](ci, "createContainer", request)
 }
@@ -88,6 +92,10 @@ func (ci *criImpl) StopContainer(request *StopContainerRequest) (*StopContainerR
 
 func (ci *criImpl) RemoveContainer(request *RemoveContainerRequest) (*RemoveContainerResponse, error) {
 	return criCallHelper[RemoveContainerRequest, RemoveContainerResponse](ci, "removeContainer", request)
+}
+
+func (ci *criImpl) ListContainers(request *ListContainersRequest) (*ListContainersResponse, error) {
+	return criCallHelper[ListContainersRequest, ListContainersResponse](ci, "listContainers", request)
 }
 
 func (ci *criImpl) ListImages(request *ListImagesRequest) (*ListImagesResponse, error) {

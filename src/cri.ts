@@ -22,11 +22,11 @@ const containerIDMax: number = Math.floor(Math.pow(2, 30));
 const imageRefIDMax: number = Math.floor(Math.pow(2, 30));
 
 // key means PodSandboxID
-let sandboxes: Map<string, Sandbox> = new Map();
+let sandboxes: Map<string, SandboxImpl> = new Map();
 // key means ContainerID
-let containers: Map<string, Container> = new Map();
+let containers: Map<string, ContainerImpl> = new Map();
 // key means image url (not image ref id)
-let images: Map<string, ImageInstance> = new Map();
+let images: Map<string, ImageImpl> = new Map();
 
 function getTimestamp(): string {
   return new Date().toISOString();
@@ -39,7 +39,7 @@ enum ImageState {
   Error = 3,
 }
 
-class ImageInstance {
+class ImageImpl {
   state: ImageState
   // image ref id
   id: string
@@ -98,12 +98,12 @@ class ImageInstance {
   }
 }
 
-class Container {
+class ContainerImpl {
   id: string
   // PodSandboxID
   sandbox_id: string
   name: string
-  image: ImageInstance
+  image: ImageImpl
   worker: Worker | undefined
   link: CL.Crosslink | undefined
   service: CL.MultiPlexer
@@ -112,7 +112,7 @@ class Container {
   finished_at: string | undefined
   exit_code: number | undefined
 
-  constructor(id: string, sandbox_id: string, name: string, image: ImageInstance) {
+  constructor(id: string, sandbox_id: string, name: string, image: ImageImpl) {
     this.id = id;
     this.sandbox_id = sandbox_id;
     this.name = name;
@@ -151,18 +151,20 @@ class Container {
   }
 }
 
-class Sandbox {
+class SandboxImpl {
   name: string
   uid: string
   namespace: string
-  containers: Map<string, Container>
+  state: PodSandboxState
+  containers: Map<string, ContainerImpl>
   created_at: string
 
   constructor(name: string, uid: string, namespace: string) {
     this.name = name;
     this.uid = uid;
     this.namespace = namespace;
-    this.containers = new Map<string, Container>();
+    this.state = PodSandboxState.SandboxReady
+    this.containers = new Map<string, ContainerImpl>();
     this.created_at = getTimestamp();
   }
 
@@ -170,16 +172,19 @@ class Sandbox {
     for (const [_, container] of this.containers) {
       container.stop();
     }
-    this.containers.clear();
+    this.state = PodSandboxState.SandboxNotReady
+    // this.containers.clear();
   }
 
-  createContainer(name: string, image: ImageInstance): string {
+  createContainer(name: string, image: ImageImpl): string {
+    console.assert(this.state == PodSandboxState.SandboxReady);
+
     let id: string = (Math.floor(Math.random() * containerIDMax)).toString(16);
     while (containers.has(id)) {
       id = (Math.floor(Math.random() * containerIDMax)).toString(16);
     }
 
-    let container = new Container(id, this.uid, name, image);
+    let container = new ContainerImpl(id, this.uid, name, image);
     containers.set(id, container);
     this.containers.set(id, container);
 
@@ -219,6 +224,11 @@ function initHandler(rootMpx: CL.MultiPlexer) {
     writer.replySuccess(res);
   });
 
+  mpx.setObjHandlerFunc("listPodSandbox", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+    let res = listPodSandbox(data as ListPodSandboxRequest);
+    writer.replySuccess(res);
+  });
+
   mpx.setObjHandlerFunc("createContainer", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
     let res = createContainer(data as CreateContainerRequest);
     writer.replySuccess(res);
@@ -236,6 +246,11 @@ function initHandler(rootMpx: CL.MultiPlexer) {
 
   mpx.setObjHandlerFunc("removeContainer", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
     let res = removeContainer(data as RemoveContainerRequest);
+    writer.replySuccess(res);
+  });
+
+  mpx.setObjHandlerFunc("listContainers", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+    let res = listContainers(data as ListContainersRequest);
     writer.replySuccess(res);
   });
 
@@ -303,6 +318,14 @@ interface PodSandboxStatusResponse {
   timestamp: string
 }
 
+interface ListPodSandboxRequest {
+  filter: PodSandboxFilter
+}
+
+interface ListPodSandboxResponse {
+  items: PodSandbox[]
+}
+
 interface PodSandboxStatus {
   id: string
   metadata: PodSandboxMetadata
@@ -313,6 +336,22 @@ interface PodSandboxStatus {
 enum PodSandboxState {
   SandboxReady = 0,
   SandboxNotReady = 1,
+}
+
+interface PodSandboxFilter {
+  id: string
+  state: PodSandboxStateValue
+}
+
+interface PodSandboxStateValue {
+  state: PodSandboxState
+}
+
+interface PodSandbox {
+  id: string
+  metadata: PodSandboxMetadata
+  state: PodSandboxState
+  created_at: string
 }
 
 interface CreateContainerRequest {
@@ -358,6 +397,14 @@ interface RemoveContainerResponse {
   // empty
 }
 
+interface ListContainersRequest {
+  filter: ContainerFilter
+}
+
+interface ListContainersResponse {
+  containers: Container[]
+}
+
 interface ContainerStatus {
   id: string
   metadata: ContainerMetadata
@@ -375,6 +422,26 @@ enum ContainerState {
   ContainerRunning = 1,
   ContainerExited = 2,
   ContainerUnknown = 3,
+}
+
+interface ContainerFilter {
+  id: string
+  state: ContainerStateValue
+  pod_sandbox_id: string
+}
+
+interface ContainerStateValue {
+  state: ContainerState
+}
+
+interface Container {
+  id: string
+  pod_sandbox_id: string
+  metadata: ContainerMetadata
+  image: ImageSpec
+  image_ref: string
+  state: ContainerState
+  created_at: string
 }
 
 interface ListImagesRequest {
@@ -423,7 +490,7 @@ function runPodSandbox(request: RunPodSandboxRequest): RunPodSandboxResponse {
   }
 
   let meta: PodSandboxMetadata = request.config.metadata;
-  sandboxes.set(id, new Sandbox(meta.name, meta.uid, meta.namespace));
+  sandboxes.set(id, new SandboxImpl(meta.name, meta.uid, meta.namespace));
 
   return { pod_sandbox_id: id };
 }
@@ -491,6 +558,35 @@ function podSandboxStatus(request: PodSandboxStatusRequest): PodSandboxStatusRes
   };
 }
 
+function listPodSandbox(request: ListPodSandboxRequest): ListPodSandboxResponse {
+  let resSandboxes = new Array<PodSandbox>();
+  for (const [id, sandbox] of sandboxes) {
+    if (request.filter != null) {
+      if (request.filter.id != "" && request.filter.id != id) {
+        continue;
+      }
+
+      if (request.filter.state != null && request.filter.state.state !=
+        sandbox.state) {
+        continue;
+      }
+    }
+
+    resSandboxes.push({
+      id: id,
+      metadata: {
+        name: sandbox.name,
+        uid: sandbox.uid,
+        namespace: sandbox.namespace,
+      },
+      state: sandbox.state,
+      created_at: sandbox.created_at,
+    })
+  }
+
+  return { items: resSandboxes };
+}
+
 function createContainer(request: CreateContainerRequest): CreateContainerResponse {
   let sandbox = sandboxes.get(request.pod_sandbox_id);
   if (sandbox == null) {
@@ -540,8 +636,45 @@ function removeContainer(request: RemoveContainerRequest): RemoveContainerRespon
   return {};
 }
 
+function listContainers(request: ListContainersRequest): ListContainersResponse {
+  let resContainers = new Array<Container>();
+
+  for (const [_, container] of containers) {
+    if (request.filter != null) {
+      let filter = request.filter
+      if (filter.id != "" && filter.id !== container.id) {
+        continue;
+      }
+
+      if (filter.pod_sandbox_id != "" && filter.pod_sandbox_id !== container.sandbox_id) {
+        continue;
+      }
+
+      if (filter.state != null && filter.state.state !== container.getState()) {
+        continue;
+      }
+    }
+
+    resContainers.push({
+      id: container.id,
+      pod_sandbox_id: container.sandbox_id,
+      metadata: {
+        name: container.name,
+      },
+      image: {
+        image: container.image.url,
+      },
+      image_ref: container.image.id,
+      state: container.getState(),
+      created_at: container.created_at,
+    });
+  }
+
+  return { containers: resContainers };
+}
+
 function listImages(request: ListImagesRequest): ListImagesResponse {
-  let buf: Array<ImageInstance | undefined> = new Array();
+  let buf: Array<ImageImpl | undefined> = new Array();
   if (request.filter != null && request.filter.image.image !== "") {
     let image = images.get(request.filter.image.image);
     buf.push(image);
@@ -590,7 +723,7 @@ function pullImage(request: PullImageRequest): Promise<PullImageResponse> {
       id = (Math.floor(Math.random() * imageRefIDMax)).toString(16);
     }
 
-    image = new ImageInstance(id, request.image.image);
+    image = new ImageImpl(id, request.image.image);
     images.set(image.url, image);
   }
 

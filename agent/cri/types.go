@@ -13,12 +13,14 @@ type CRI interface {
 	StopPodSandbox(*StopPodSandboxRequest) (*StopPodSandboxResponse, error)
 	RemovePodSandbox(*RemovePodSandboxRequest) (*RemovePodSandboxResponse, error)
 	PodSandboxStatus(*PodSandboxStatusRequest) (*PodSandboxStatusResponse, error)
+	ListPodSandbox(*ListPodSandboxRequest) (*ListPodSandboxResponse, error)
 
 	// apis for container
 	CreateContainer(*CreateContainerRequest) (*CreateContainerResponse, error)
 	StartContainer(*StartContainerRequest) (*StartContainerResponse, error)
 	StopContainer(*StopContainerRequest) (*StopContainerResponse, error)
 	RemoveContainer(*RemoveContainerRequest) (*RemoveContainerResponse, error)
+	ListContainers(*ListContainersRequest) (*ListContainersResponse, error)
 
 	// apis for image
 	ListImages(*ListImagesRequest) (*ListImagesResponse, error)
@@ -72,6 +74,14 @@ type PodSandboxStatusResponse struct {
 	Timestamp          string            `json:"timestamp"`
 }
 
+type ListPodSandboxRequest struct {
+	Filter *PodSandboxFilter `json:"filter"`
+}
+
+type ListPodSandboxResponse struct {
+	Items []PodSandbox `json:"items"`
+}
+
 type PodSandboxStatus struct {
 	ID        string             `json:"id"`
 	Metadata  PodSandboxMetadata `json:"metadata"`
@@ -85,6 +95,26 @@ const (
 	SandboxReady PodSandboxState = iota
 	SandboxNotReady
 )
+
+type PodSandboxFilter struct {
+	ID    string                `json:"id"`
+	State *PodSandboxStateValue `json:"state"`
+	// LabelSelector map[string]string     `json:"label_selector"`
+}
+
+type PodSandboxStateValue struct {
+	State PodSandboxState `json:"state"`
+}
+
+type PodSandbox struct {
+	ID        string             `json:"ID"`
+	Metadata  PodSandboxMetadata `json:"metadata"`
+	State     PodSandboxState    `json:"state"`
+	CreatedAt string             `json:"created_at"`
+	// Labels      map[string]string  `json:"labels"`
+	// Annotations map[string]string  `json:"annotations"`
+	// RuntimeHandler string          `json:"runtime_handler`
+}
 
 type CreateContainerRequest struct {
 	PodSandboxID string          `json:"pod_sandbox_id"`
@@ -129,6 +159,14 @@ type RemoveContainerResponse struct {
 	// empty
 }
 
+type ListContainersRequest struct {
+	Filter *ContainerFilter `json:"filter"`
+}
+
+type ListContainersResponse struct {
+	Containers []Container `json:"containers"`
+}
+
 type ContainerStatus struct {
 	ID         string            `json:"id"`
 	Metadata   ContainerMetadata `json:"metadata"`
@@ -149,6 +187,26 @@ const (
 	ContainerExited
 	ContainerUnknown
 )
+
+type ContainerFilter struct {
+	ID           string               `json:"id"`
+	State        *ContainerStateValue `json:"state"`
+	PodSandboxID string               `json:"pod_sandbox_id"`
+}
+
+type ContainerStateValue struct {
+	State ContainerState `json:"state"`
+}
+
+type Container struct {
+	ID           string            `json:"id"`
+	PodSandboxID string            `json:"pod_sandbox_id"`
+	Metadata     ContainerMetadata `json:"metadata"`
+	Image        ImageSpec         `json:"image"`
+	ImageRef     string            `json:"image_ref"`
+	State        ContainerState    `json:"state"`
+	CreatedAt    string            `json:"created_at"`
+}
 
 type ListImagesRequest struct {
 	Filter ImageFilter `json:"filter"`
