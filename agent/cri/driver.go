@@ -98,6 +98,10 @@ func (ci *criImpl) ListContainers(request *ListContainersRequest) (*ListContaine
 	return criCallHelper[ListContainersRequest, ListContainersResponse](ci, "listContainers", request)
 }
 
+func (ci *criImpl) ContainerStatus(request *ContainerStatusRequest) (*ContainerStatusResponse, error) {
+	return criCallHelper[ContainerStatusRequest, ContainerStatusResponse](ci, "containerStatus", request)
+}
+
 func (ci *criImpl) ListImages(request *ListImagesRequest) (*ListImagesResponse, error) {
 	return criCallHelper[ListImagesRequest, ListImagesResponse](ci, "listImages", request)
 }

@@ -18,14 +18,39 @@ package main
 
 import (
 	"log"
+	"os"
+	"strconv"
 	"time"
 )
 
 func main() {
-	ticker := time.NewTicker(time.Second * 3)
-	defer ticker.Stop()
+	var durationSec int64
+	var err error
 
-	for range ticker.C {
-		log.Println("hello world")
+	if len(os.Args) == 2 {
+		durationSec, err = strconv.ParseInt(os.Args[1], 10, 32)
+		if err != nil {
+			log.Fatalln(err)
+		}
 	}
+
+	if len(os.Args) != 0 {
+		log.Fatalf("usage: %s [duration]\n  duration: duration to sleep[sec], immediate wake up when 0, never wake up when negative value", os.Args[0])
+	}
+
+	// wake up immediate if duration is 0
+	if durationSec == 0 {
+		os.Exit(0)
+	}
+
+	// never wake up if duration is negative value
+	if durationSec < 0 {
+		for {
+			time.Sleep(time.Hour)
+		}
+	}
+
+	// sleep for specified duration
+	time.Sleep(time.Second * time.Duration(durationSec))
+	os.Exit(0)
 }

@@ -1,0 +1,4 @@
+{
+  "image": "./sleep.wasm",
+  "runtime": "go1.19"
+}

@@ -11,9 +11,13 @@
 /dist/container.js
 /dist/controller.js
 /dist/error.html
+/dist/exit/exit.wasm
 /dist/index.html
 /dist/index.js
-/dist/test.js
+/dist/sleep/sleep.wasm
+/dist/test/*.map
+/dist/test/*.wasm
+/dist/test/test.js
 /dist/wasm_exec.js
 /keys.json
 /node_modules

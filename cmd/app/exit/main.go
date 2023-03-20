@@ -18,14 +18,24 @@ package main
 
 import (
 	"log"
-	"time"
+	"os"
+	"strconv"
 )
 
 func main() {
-	ticker := time.NewTicker(time.Second * 3)
-	defer ticker.Stop()
+	var code int64
+	var err error
 
-	for range ticker.C {
-		log.Println("hello world")
+	if len(os.Args) == 2 {
+		code, err = strconv.ParseInt(os.Args[1], 10, 8)
+		if err != nil {
+			log.Fatalln(err)
+		}
 	}
+
+	if len(os.Args) != 0 {
+		log.Fatalf("usage: %s [code]\n  code: exit code, default 0", os.Args[0])
+	}
+
+	os.Exit(int(code))
 }

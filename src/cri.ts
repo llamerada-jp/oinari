@@ -75,7 +75,7 @@ class ImageImpl {
       // TODO check runtime
       this.runtime = param.runtime;
 
-      return fetch(param.image);
+      return fetch(new URL(param.image, this.url).toString());
 
     }).then((response: Response) => {
       if (!response.ok || response.status !== 200) {
@@ -172,7 +172,7 @@ class SandboxImpl {
     for (const [_, container] of this.containers) {
       container.stop();
     }
-    this.state = PodSandboxState.SandboxNotReady
+    this.state = PodSandboxState.SandboxNotReady;
     // this.containers.clear();
   }
 
@@ -251,6 +251,11 @@ function initHandler(rootMpx: CL.MultiPlexer) {
 
   mpx.setObjHandlerFunc("listContainers", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
     let res = listContainers(data as ListContainersRequest);
+    writer.replySuccess(res);
+  });
+
+  mpx.setObjHandlerFunc("containerStatus", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+    let res = containerStatus(data as ContainerStatusRequest);
     writer.replySuccess(res);
   });
 
@@ -405,6 +410,14 @@ interface ListContainersResponse {
   containers: Container[]
 }
 
+interface ContainerStatusRequest {
+  container_id: string
+}
+
+interface ContainerStatusResponse {
+  status: ContainerStatus
+}
+
 interface ContainerStatus {
   id: string
   metadata: ContainerMetadata
@@ -484,11 +497,24 @@ interface RemoveImageResponse {
 }
 
 function runPodSandbox(request: RunPodSandboxRequest): RunPodSandboxResponse {
+  // check duplication of name/namespace or uid
+  for (const [_, sandbox] of sandboxes) {
+    if (sandbox.name === request.config.metadata.name &&
+      sandbox.namespace === request.config.metadata.namespace) {
+      throw new Error("already exists a sandbox with duplicate name/namespace");
+    }
+    if (sandbox.uid === request.config.metadata.uid) {
+      throw new Error("already exists a sandbox with duplicate uid");
+    }
+  }
+
+  // assign id of sandbox
   let id: string = (Math.floor(Math.random() * podSandboxIDMax)).toString(16);
   while (sandboxes.has(id)) {
     id = (Math.floor(Math.random() * podSandboxIDMax)).toString(16);
   }
 
+  // allocate new sandbox instance
   let meta: PodSandboxMetadata = request.config.metadata;
   sandboxes.set(id, new SandboxImpl(meta.name, meta.uid, meta.namespace));
 
@@ -510,6 +536,14 @@ function removePodSandbox(request: RemovePodSandboxRequest): RemovePodSandboxRes
 
   if (sandbox != null) {
     sandbox.stop();
+
+    // remove all containers of the sandbox
+    for (const [_, container] of sandbox.containers) {
+      removeContainer({
+        container_id: container.id,
+      });
+    }
+
     sandboxes.delete(request.pod_sandbox_id);
   }
 
@@ -544,13 +578,13 @@ function podSandboxStatus(request: PodSandboxStatusRequest): PodSandboxStatusRes
 
   return {
     status: {
-      id: sandbox.uid,
+      id: request.pod_sandbox_id,
       metadata: {
         name: sandbox.name,
         namespace: sandbox.namespace,
         uid: sandbox.uid,
       },
-      state: PodSandboxState.SandboxReady,
+      state: sandbox.state,
       created_at: sandbox.created_at,
     },
     containers_statuses: containers_statuses,
@@ -633,6 +667,8 @@ function removeContainer(request: RemoveContainerRequest): RemoveContainerRespon
     sandbox.removeContainer(container.id);
   }
 
+  containers.delete(container.id);
+
   return {};
 }
 
@@ -671,6 +707,31 @@ function listContainers(request: ListContainersRequest): ListContainersResponse 
   }
 
   return { containers: resContainers };
+}
+
+function containerStatus(request: ContainerStatusRequest): ContainerStatusResponse {
+  let container = containers.get(request.container_id);
+  if (container == null) {
+    throw new Error("specified container not found");
+  }
+
+  return {
+    status: {
+      id: container.id,
+      metadata: {
+        name: container.name,
+      },
+      state: container.getState(),
+      created_at: container.created_at,
+      started_at: container.started_at || "",
+      finished_at: container.finished_at || "",
+      exit_code: container.exit_code || 0,
+      image: {
+        image: container.image.url,
+      },
+      image_ref: container.image.id,
+    }
+  };
 }
 
 function listImages(request: ListImagesRequest): ListImagesResponse {

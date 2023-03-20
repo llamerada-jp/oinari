@@ -16,7 +16,7 @@ async function testCrossLinkGo() {
 async function testUsingController() {
   console.log("start tests implements by WASM");
   // start controller worker
-  const controller = new Worker("controller.js");
+  const controller = new Worker("./controller.js");
 
   // setup crosslink
   let rootMpx = new CL.MultiPlexer();
@@ -27,7 +27,7 @@ async function testUsingController() {
 
   // run wasm test program
   await crosslink.call("run", {
-    file: "test.wasm",
+    file: "test/test.wasm",
   });
 }
 

@@ -21,6 +21,7 @@ type CRI interface {
 	StopContainer(*StopContainerRequest) (*StopContainerResponse, error)
 	RemoveContainer(*RemoveContainerRequest) (*RemoveContainerResponse, error)
 	ListContainers(*ListContainersRequest) (*ListContainersResponse, error)
+	ContainerStatus(*ContainerStatusRequest) (*ContainerStatusResponse, error)
 
 	// apis for image
 	ListImages(*ListImagesRequest) (*ListImagesResponse, error)
@@ -70,7 +71,7 @@ type PodSandboxStatusRequest struct {
 
 type PodSandboxStatusResponse struct {
 	Status             PodSandboxStatus  `json:"status"`
-	ContainersStatuses []ContainerStatus `json:"containers_statuses "`
+	ContainersStatuses []ContainerStatus `json:"containers_statuses"`
 	Timestamp          string            `json:"timestamp"`
 }
 
@@ -165,6 +166,16 @@ type ListContainersRequest struct {
 
 type ListContainersResponse struct {
 	Containers []Container `json:"containers"`
+}
+
+type ContainerStatusRequest struct {
+	ContainerID string `json:"container_id"`
+	// Verbose bool `json:"verbose"`
+}
+
+type ContainerStatusResponse struct {
+	Status ContainerStatus `json:"status"`
+	// Info map[string]string `json:"info"`
 }
 
 type ContainerStatus struct {

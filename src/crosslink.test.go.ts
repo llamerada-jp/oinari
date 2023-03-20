@@ -46,7 +46,7 @@ export class Tester {
 
       // start go program
       const go = new Go();
-      const wasm = fetch("./test_crosslink.wasm");
+      const wasm = fetch("./test/test_crosslink.wasm");
       const instance = await WebAssembly.instantiateStreaming(wasm, go.importObject)
       await go.run(instance.instance);
 

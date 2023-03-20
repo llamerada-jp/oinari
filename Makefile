@@ -5,7 +5,7 @@ GO_FILES := $(shell find . -name *.go)
 OINARI_FILES := dist/wasm_exec.js dist/404.html dist/error.html dist/index.html
 MAP_FILES := dist/colonio.wasm.map dist/colonio_go.js.map
 
-run: build-test test-wasm
+run: build-test test-wasm # test-ts
 	while true; do ./bin/seed --debug -p 8080; done
 
 .PHONY: setup
@@ -23,17 +23,18 @@ setup:
 .PHONY: build
 build: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/colonio.d.ts src/colonio_go.d.ts
 	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/agent/*.go
-	GOOS=js GOARCH=wasm go build -o ./dist/sample.wasm ./cmd/sample/*.go
 	npm run build
+	mv ./dist/test.js ./dist/test/test.js
 
 .PHONY: build-test
 build-test: build # $(MAP_FILES)
-	GOOS=js GOARCH=wasm go build -o ./dist/test.container.wasm ./cmd/test_image/*.go
+	GOOS=js GOARCH=wasm go build -o ./dist/exit/exit.wasm ./cmd/app/exit/*.go
+	GOOS=js GOARCH=wasm go build -o ./dist/sleep/sleep.wasm ./cmd/app/sleep/*.go
 
 .PHONY: test-wasm
 test-wasm:
-	GOOS=js GOARCH=wasm go test -o ./dist/test_crosslink.wasm -c ./agent/crosslink/*
-	GOOS=js GOARCH=wasm go test -o ./dist/test.wasm -c ./cmd/agent/*
+	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./agent/crosslink/*
+	GOOS=js GOARCH=wasm go test -o ./dist/test/test.wasm -c ./cmd/agent/*
 
 test-ts: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/keys.ts
 	npm t
