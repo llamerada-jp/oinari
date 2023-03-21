@@ -20,7 +20,7 @@ type jsMessage struct {
 type crosslinkImpl struct {
 	jsInstance js.Value
 	handler    Handler
-	cbMap      map[uint32]func(string, error)
+	cbMap      map[uint32]func([]byte, error)
 	jsChan     chan jsMessage
 }
 
@@ -33,7 +33,7 @@ func NewCrosslink(jsName string, handler Handler) Crosslink {
 	impl := &crosslinkImpl{
 		jsInstance: js.Global().Get(jsName),
 		handler:    handler,
-		cbMap:      make(map[uint32]func(string, error)),
+		cbMap:      make(map[uint32]func([]byte, error)),
 		jsChan:     make(chan jsMessage, 10),
 	}
 
@@ -71,7 +71,7 @@ func NewCrosslink(jsName string, handler Handler) Crosslink {
 	return impl
 }
 
-func (cl *crosslinkImpl) Call(data string, tags map[string]string, cb func(result string, err error)) {
+func (cl *crosslinkImpl) Call(path string, data []byte, tags map[string]string, cb func(result []byte, err error)) {
 	tagsStr, err := json.Marshal(tags)
 	if err != nil {
 		log.Fatalln(err)
@@ -87,7 +87,7 @@ func (cl *crosslinkImpl) Call(data string, tags map[string]string, cb func(resul
 	}
 	cl.cbMap[id] = cb
 
-	cl.jsInstance.Call("callFromGo", js.ValueOf(id), js.ValueOf(data), js.ValueOf(string(tagsStr)))
+	cl.jsInstance.Call("callFromGo", js.ValueOf(id), js.ValueOf(path), js.ValueOf(string(data)), js.ValueOf(string(tagsStr)))
 }
 
 func (cl *crosslinkImpl) serve(id uint32, data, tagsStr string) {
@@ -113,10 +113,10 @@ func (cl *crosslinkImpl) replyFromJs(id uint32, reply, message string) {
 	defer delete(cl.cbMap, id)
 
 	if message != "" {
-		cb("", errors.New(message))
+		cb(nil, errors.New(message))
 		return
 	}
-	cb(reply, nil)
+	cb([]byte(reply), nil)
 }
 
 func (rw *rwImpl) ReplySuccess(result string) {

@@ -1,5 +1,21 @@
 import * as CL from "./crosslink";
-import * as misc from "./crosslink.test.misc";
+
+class WorkerMock implements CL.WorkerInterface {
+  pair!: WorkerMock;
+  listener!: (datum: any) => void;
+
+  addEventListener(listener: (datum: any) => void): void {
+    this.listener = listener;
+  }
+
+  post(datum: object): void {
+    this.pair.listener(datum);
+  }
+
+  setPair(pair: WorkerMock) {
+    this.pair = pair;
+  }
+}
 
 export class Tester {
   private crosslink: CL.Crosslink;
@@ -8,8 +24,8 @@ export class Tester {
 
   // setup modules
   constructor() {
-    const workerMock1 = new misc.workerMock();
-    const workerMock2 = new misc.workerMock();
+    const workerMock1 = new WorkerMock();
+    const workerMock2 = new WorkerMock();
 
     workerMock1.setPair(workerMock2);
     workerMock2.setPair(workerMock1);
@@ -23,7 +39,7 @@ export class Tester {
     this.crosslinkGo = goIfHandler;
 
     // setup handlers
-    mpx.setRawHandlerFunc("jsFunc", (data: string, tags: Map<string, string>, writer: CL.ResponseWriter) => {
+    mpx.setHandlerFunc("jsFunc", (data: any, tags: Map<string, string>, writer: CL.ResponseWriter) => {
       this.called++;
       console.assert(data === "request js");
       console.assert(tags.get(CL.TAG_PATH) === "jsFunc");
@@ -62,7 +78,7 @@ export class Tester {
 
   // called by go
   runByGo() {
-    this.crosslink.callRaw("request go", misc.makeTags("goFunc")).then((value: string) => {
+    this.crosslink.call("goFunc", "request go").then((value: string) => {
       console.assert(value === "result go func1");
       this.finToGo(true);
     }).catch(() => {

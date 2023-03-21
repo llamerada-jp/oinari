@@ -84,14 +84,14 @@ export function initPodManagerService(manager: PodManager, rootService: CL.Multi
   let mpx = new CL.MultiPlexer();
   rootService.setHandler("podManager", mpx);
 
-  mpx.setObjHandlerFunc("create", (data: any, tags: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("create", (data: any, tags: Map<string, string>, writer: CL.ResponseWriter) => {
     let pi = manager.create();
     writer.replySuccess({
       localPodId: pi.getLocalId(),
     });
   });
 
-  mpx.setObjHandlerFunc("delete", (data: any, tags: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("delete", (data: any, tags: Map<string, string>, writer: CL.ResponseWriter) => {
     let param = (data as {
       localPodId: string
     });
@@ -100,7 +100,7 @@ export function initPodManagerService(manager: PodManager, rootService: CL.Multi
 }
 
 export function initPodService(manager: PodManager, rootService: CL.MultiPlexer) {
-  rootService.setRawHandlerFunc("pod", (data: string, tags: Map<string, string>, writer: CL.ResponseWriter) => {
+  rootService.setHandlerFunc("pod", (data: any, tags: Map<string, string>, writer: CL.ResponseWriter) => {
     let localPodId = tags.get("localPodId");
     if (localPodId === undefined) {
       writer.replyError("should specify `localPodId`");
@@ -121,7 +121,7 @@ export function initPodService(manager: PodManager, rootService: CL.MultiPlexer)
     tags.set(CL.TAG_PATH, path);
     tags.delete(CL.TAG_LEAF);
 
-    pi.getLink()?.callRaw(data, tags).then((reply) => {
+    pi.getLink()?.call(tags.get(CL.TAG_PATH) || "", data, tags).then((reply) => {
       writer.replySuccess(reply);
     }).catch((reason) => {
       writer.replyError(reason);

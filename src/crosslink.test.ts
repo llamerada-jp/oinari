@@ -1,59 +1,115 @@
 import * as CL from "./crosslink";
-import * as misc from "./crosslink.test.misc";
 
-class handlerMock implements CL.Handler {
-  serve(data: string, tags: Map<string, string>, writer: CL.ResponseWriter): void {
-    switch (tags.get("func")) {
-      case "success":
-        writer.replySuccess("success reply");
-        break;
+class WorkerMock implements CL.WorkerInterface {
+  pair!: WorkerMock;
+  listener!: (datum: any) => void;
 
-      case "failure":
-        writer.replyError("failure reply");
-        break;
+  addEventListener(listener: (datum: any) => void): void {
+    this.listener = listener;
+  }
 
-      case "exception":
-        throw "exception reply";
+  post(datum: object): void {
+    this.pair.listener(datum);
+  }
 
-      default:
-        throw "unreachable";
-
-    }
+  setPair(pair: WorkerMock) {
+    this.pair = pair;
   }
 }
 
-describe('crosslink', () => {
-  const mock1 = new misc.workerMock();
-  const mock2 = new misc.workerMock();
+class HandlerMock implements CL.Handler {
+  data: any;
+  tags: Map<string, string>;
+
+  constructor() {
+    this.tags = new Map();
+  }
+
+  serve(data: any, tags: Map<string, string>, writer: CL.ResponseWriter): void {
+    this.data = data;
+    this.tags = tags;
+    writer.replySuccess("reply");
+  }
+}
+
+test("handler", () => {
+  const mock1 = new WorkerMock();
+  const mock2 = new WorkerMock();
   mock1.setPair(mock2);
   mock2.setPair(mock1);
 
-  const crosslink1 = new CL.Crosslink(mock1, new handlerMock());
-  const crosslink2 = new CL.Crosslink(mock2, new handlerMock());
+  const crosslink1 = new CL.Crosslink(mock1, new HandlerMock());
+  let handler = new HandlerMock();
+  const crosslink2 = new CL.Crosslink(mock2, handler);
+
+  crosslink1.call(
+    "test_path",
+    { key: "value" },
+    new Map<string, string>([["tag", "tag content"]])
+
+  ).then((reply: any) => {
+    expect(reply).toBe("reply");
+    expect(handler.data.key).toBe("value");
+    expect(handler.tags.size).toBe(2);
+    expect(handler.tags.get(CL.TAG_PATH)).toBe("test_path");
+    expect(handler.tags.get("tag")).toBe("tag content");
+  });
+});
+
+describe("response", () => {
+  const mock1 = new WorkerMock();
+  const mock2 = new WorkerMock();
+  mock1.setPair(mock2);
+  mock2.setPair(mock1);
+
+  const mpx = new CL.MultiPlexer();
+  const crosslink1 = new CL.Crosslink(mock1, mpx);
+  const crosslink2 = new CL.Crosslink(mock2, new HandlerMock());
+
+  mpx.setHandlerFunc("success", (data: any, tags: Map<string, string>, writer: CL.ResponseWriter) => {
+    let o = data as {
+      request: string,
+    };
+    expect(o.request).toBe("request success");
+    expect(tags.get("tag")).toBe("tag success");
+    writer.replySuccess({
+      res: "reply success"
+    });
+  });
+
+  mpx.setHandlerFunc("failure", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
+    writer.replyError("reply failure");
+  });
+
+  mpx.setHandlerFunc("exception", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
+    throw "exception reply";
+  });
 
   test("func with success reply", () => {
-    return crosslink1.callRaw("success", new Map<string, string>([["func", "success"]])).then((reply) => {
-      expect(reply).toBe("success reply");
+    return crosslink2.call("success", {
+      request: "request success",
+    }, new Map<string, string>([["tag", "tag success"]])).then((reply: any) => {
+      let r = reply as { res: string };
+      expect(r.res).toBe("reply success");
     });
   });
 
   test("func with error message", () => {
-    return crosslink2.callRaw("failure", new Map<string, string>([["func", "failure"]])).catch((message) => {
-      expect(message).toBe("failure reply");
+    return crosslink2.call("failure", null, new Map<string, string>()).catch((message) => {
+      expect(message).toBe("reply failure");
     });
   });
 
   test("func with exception", () => {
-    return crosslink2.callRaw("exception", new Map<string, string>([["func", "exception"]])).catch((message) => {
+    return crosslink2.call("exception", null, new Map<string, string>()).catch((message) => {
       expect(message).toBe("exception: exception reply");
     });
   });
 });
 
-
-describe("multiplexer", () => {
-  const mock1 = new misc.workerMock();
-  const mock2 = new misc.workerMock();
+test("multiplexer", () => {
+  const mock1 = new WorkerMock();
+  const mock2 = new WorkerMock();
   mock1.setPair(mock2);
   mock2.setPair(mock1);
 
@@ -75,7 +131,7 @@ describe("multiplexer", () => {
     }
   });
 
-  mpxRoot.setRawHandlerFunc("func1", (data: string, tags: Map<string, string>, writer: CL.ResponseWriter) => {
+  mpxRoot.setHandlerFunc("func1", (data: any, tags: Map<string, string>, writer: CL.ResponseWriter) => {
     expect(data).toBe("request func1");
     expect(tags.get(CL.TAG_PATH)).toBe("func1");
     writer.replyError("reply func1");
@@ -83,7 +139,7 @@ describe("multiplexer", () => {
 
   mpxRoot.setHandler("branch", mpxBranch);
 
-  mpxBranch.setObjHandlerFunc("func2", (data: any, tags: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpxBranch.setHandlerFunc("func2", (data: any, tags: Map<string, string>, writer: CL.ResponseWriter) => {
     let param = data as {
       message: string
     }
@@ -94,22 +150,22 @@ describe("multiplexer", () => {
     });
   });
 
-  crosslink1.callRaw("request default", misc.makeTags("notexist")).then((reply) => {
+  crosslink1.call("notexist", "request default").then((reply) => {
     expect(reply).toBe("reply default");
   }).catch(() => {
     throw "unreachable";
   });
 
-  crosslink1.callRaw("request func1", misc.makeTags("func1")).then(() => {
+  crosslink1.call("func1", "request func1").then(() => {
     throw "unreachable";
   }).catch((reply) => {
     expect(reply).toBe("reply func1");
   })
 
-  crosslink1.callRaw(JSON.stringify({
+  crosslink1.call("branch/func2", {
     message: "request func2"
-  }), misc.makeTags("branch/func2")).then((reply) => {
-    let r = JSON.parse(reply) as {
+  }).then((reply) => {
+    let r = reply as {
       message: string
     };
     expect(r.message).toBe("reply func2");
@@ -117,13 +173,13 @@ describe("multiplexer", () => {
     throw "unreachable";
   });
 
-  crosslink1.callRaw("", misc.makeTags("branch/func2/dummy")).then(() => {
+  crosslink1.call("branch/func2/dummy", "").then(() => {
     throw "unreachable";
   }).catch((message) => {
     expect(message).toBe("handler not found. path:branch/func2/dummy");
   })
 
-  crosslink1.callRaw("", misc.makeTags("branch/dummy")).then(() => {
+  crosslink1.call("branch/dummy", "").then(() => {
     throw "unreachable";
   }).catch((message) => {
     expect(message).toBe("handler not found. path:branch/dummy");

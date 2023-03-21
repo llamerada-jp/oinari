@@ -14,7 +14,7 @@ interface RunRequest {
   file: string
 }
 
-function run(data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void {
+function run(data: any, _: Map<string, string>, writer: CL.ResponseWriter): void {
   let req = data as RunRequest;
 
   const go = new Go();
@@ -44,7 +44,7 @@ function main() {
   goIfHandler.bindCrosslink(crosslink);
   (globalThis as any).crosslink = goIfHandler;
   rootMpx.setDefaultHandler(goIfHandler);
-  rootMpx.setObjHandlerFunc("run", run);
+  rootMpx.setHandlerFunc("run", run);
 }
 
 main();

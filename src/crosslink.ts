@@ -64,7 +64,7 @@ export class ResponseWriter {
     this.replied = false;
   }
 
-  replySuccess(result: string): void {
+  replySuccess(result: any): void {
     if (this.replied) {
       console.error("response replied yet.");
       return;
@@ -99,28 +99,8 @@ export class ResponseWriter {
   }
 }
 
-export class ResponseObjWriter {
-  private writer: ResponseWriter;
-
-  constructor(writer: ResponseWriter) {
-    this.writer = writer;
-  }
-
-  replySuccess(result: any): void {
-    this.writer.replySuccess(JSON.stringify(result));
-  }
-
-  replyError(message: string): void {
-    this.writer.replyError(message);
-  }
-
-  isReplied(): boolean {
-    return this.writer.isReplied();
-  }
-}
-
 export interface Handler {
-  serve(data: string, tags: Map<string, string>, writer: ResponseWriter): void;
+  serve(data: any, tags: Map<string, string>, writer: ResponseWriter): void;
 }
 
 export class Crosslink {
@@ -134,7 +114,7 @@ export class Crosslink {
       type: string;
       id: number;
       tags: Map<string, string>, // for call
-      data: string, // for call
+      data: any, // for call
       result: any, // for reply
       message: string, // for error
     }) => {
@@ -162,8 +142,17 @@ export class Crosslink {
     this.waitings = new Map<number, Waiting>();
   }
 
-  callRaw(data: string, tags: Map<string, string>): Promise<string> {
+  call(path: string, param: any, tags?: Map<string, string>): Promise<any> {
     return new Promise((resolve, reject) => {
+      let copyTag: Map<string, string> = new Map<string, string>();
+      // copy tags to avoid changing original object
+      if (tags != null) {
+        for (const [key, value] of tags) {
+          copyTag.set(key, value);
+        }
+      }
+      copyTag.set(TAG_PATH, path);
+
       let id = this.assignId();
       this.waitings.set(id, {
         resolve: resolve,
@@ -171,27 +160,10 @@ export class Crosslink {
       });
       this.worker.post({
         type: "call",
-        data: data,
-        tags: tags,
+        data: param,
+        tags: copyTag,
         id: id,
       });
-    });
-  }
-
-  call(path: string, param: object): Promise<object> {
-    return new Promise((resolve, reject) => {
-      let tags: Map<string, string> = new Map<string, string>();
-      tags.set(TAG_PATH, path);
-
-      this.callRaw(JSON.stringify(param), tags).then((result) => {
-        if (result === "") {
-          resolve({})
-        } else {
-          resolve(JSON.parse(result));
-        }
-      }).catch((e) => {
-        reject(e);
-      })
     });
   }
 
@@ -203,7 +175,7 @@ export class Crosslink {
     return id;
   }
 
-  private receiveCall(data: string, tags: Map<string, string>, id: number): void {
+  private receiveCall(data: any, tags: Map<string, string>, id: number): void {
     let writer = new ResponseWriter(id, this.worker);
 
     try {
@@ -221,7 +193,7 @@ export class Crosslink {
     }
   }
 
-  private receiveReply(result: object, id: number): void {
+  private receiveReply(result: any, id: number): void {
     let waiting = this.waitings.get(id);
 
     if (waiting === undefined) {
@@ -254,14 +226,14 @@ export class MultiPlexer implements Handler {
 
   constructor() {
     this.defaultHandler = new class implements Handler {
-      serve(_: string, tags: Map<string, string>, writer: ResponseWriter): void {
+      serve(_: any, tags: Map<string, string>, writer: ResponseWriter): void {
         writer.replyError("handler not found. path:" + tags.get(TAG_PATH));
       }
     };
     this.handlers = new Map<string, Handler>();
   }
 
-  serve(data: string, tags: Map<string, string>, writer: ResponseWriter): void {
+  serve(data: any, tags: Map<string, string>, writer: ResponseWriter): void {
     let path = tags.get(TAG_PATH);
     if (path === undefined) {
       writer.replyError("`path` tag should be set.");
@@ -303,23 +275,15 @@ export class MultiPlexer implements Handler {
     this.handlers.set(pattern, handler);
   }
 
-  setRawHandlerFunc(pattern: string, f: (data: string, tags: Map<string, string>, writer: ResponseWriter) => void) {
+  setHandlerFunc(pattern: string, f: (data: any, tags: Map<string, string>, writer: ResponseWriter) => void) {
     this.handlers.set(pattern, new class implements Handler {
-      serve(data: string, tags: Map<string, string>, writer: ResponseWriter): void {
-        f(data, tags, writer);
-      }
-    });
-  }
-
-  setObjHandlerFunc(pattern: string, f: (data: any, tags: Map<string, string>, writer: ResponseObjWriter) => void) {
-    this.handlers.set(pattern, new class implements Handler {
-      serve(data: string, tags: Map<string, string>, writer: ResponseWriter): void {
+      serve(data: any, tags: Map<string, string>, writer: ResponseWriter): void {
         if (!tags.has(TAG_LEAF) || tags.get(TAG_LEAF) !== "") {
           writer.replyError("handler not found. path:" + tags.get(TAG_PATH));
           return;
         }
 
-        f(JSON.parse(data), tags, new ResponseObjWriter(writer));
+        f(data, tags, writer);
       }
     });
   }
@@ -345,7 +309,7 @@ export class GoInterfaceHandler implements Handler {
     this.cl = cl;
   }
 
-  serve(data: string, tags: Map<string, string>, writer: ResponseWriter): void {
+  serve(data: any, tags: Map<string, string>, writer: ResponseWriter): void {
     const ID_MAX: number = Math.pow(2, 31)
     let id: number = 0;
     const rwMap = this.rwMap;
@@ -363,7 +327,7 @@ export class GoInterfaceHandler implements Handler {
       }
     }
 
-    this.serveToGo(id, data, JSON.stringify(jsTags));
+    this.serveToGo(id, JSON.stringify(data), JSON.stringify(jsTags));
   }
 
   serveToGo(id: number, data: string, tags: string): void {
@@ -382,11 +346,11 @@ export class GoInterfaceHandler implements Handler {
     if (message !== "") {
       rw.replyError(message);
     } else {
-      rw.replySuccess(result);
+      rw.replySuccess(JSON.parse(result));
     }
   }
 
-  callFromGo(id: number, data: string, tags: string) {
+  callFromGo(id: number, path:string, data: string, tags: string) {
     if (this.cl === undefined) {
       console.error("Crosslink should be bind on setup.");
       return;
@@ -399,8 +363,8 @@ export class GoInterfaceHandler implements Handler {
       mapTags.set(key, jsTags[key]);
     }
 
-    this.cl.callRaw(data, mapTags).then((reply) => {
-      this.callReplyToGo(id, reply, "");
+    this.cl.call(path, JSON.parse(data), mapTags).then((reply) => {
+      this.callReplyToGo(id, JSON.stringify(reply), "");
     }).catch((message: string) => {
       this.callReplyToGo(id, "", message);
     });

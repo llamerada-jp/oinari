@@ -39,7 +39,7 @@ function initHandler(rootMpx: CL.MultiPlexer): void {
   let mpx = new CL.MultiPlexer();
   rootMpx.setHandler(Types.CrosslinkPath, mpx);
 
-  mpx.setObjHandlerFunc("term", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("term", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     // let _ = data as Types.TermRequest;
     // go wasm module can not process term signal, so ignore this
     writer.replySuccess({});

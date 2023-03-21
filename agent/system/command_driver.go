@@ -22,12 +22,11 @@ func NewCommandDriver(cl crosslink.Crosslink) CommandDriver {
 }
 
 func (cd *commandDriver) TellInitComplete() error {
-	cd.cl.Call("", map[string]string{
-		crosslink.TAG_PATH: "system/onInitComplete",
-	}, func(result string, err error) {
-		if err != nil {
-			log.Fatalln(err)
-		}
-	})
+	cd.cl.Call("system/onInitComplete", nil, nil,
+		func(result []byte, err error) {
+			if err != nil {
+				log.Fatalln(err)
+			}
+		})
 	return nil
 }

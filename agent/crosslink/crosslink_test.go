@@ -19,17 +19,15 @@ func TestCrosslink(t *testing.T) {
 		g.Expect(tags[TAG_PATH]).Should(Equal("goFunc"))
 		g.Expect(tags[TAG_LEAF]).Should(Equal(""))
 
-		crosslink.Call("request js", map[string]string{
-			TAG_PATH: "jsFunc",
-			"type":   "success",
-		}, func(result string, err error) {
+		crosslink.Call("jsFunc", []byte("request js"), map[string]string{
+			"type": "success",
+		}, func(result []byte, err error) {
 			g.Expect(result).Should(Equal("result js success"))
 			g.Expect(err).ShouldNot(HaveOccurred())
 
-			crosslink.Call("request js", map[string]string{
-				TAG_PATH: "jsFunc",
-				"type":   "failure",
-			}, func(result string, err error) {
+			crosslink.Call("jsFunc", []byte("request js"), map[string]string{
+				"type": "failure",
+			}, func(result []byte, err error) {
 				g.Expect(result).Should(BeEmpty())
 				g.Expect(err).Should(HaveOccurred())
 

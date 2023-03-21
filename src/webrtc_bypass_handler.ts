@@ -8,47 +8,47 @@ export function NewWebrtcHandler(cl: CL.Crosslink, wi: WebrtcImplement): CL.Mult
 
   wi.setCb(cb);
 
-  mpx.setObjHandlerFunc("contextInitialize", (_1: object, _2: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("contextInitialize", (_1: object, _2: Map<string, string>, writer: CL.ResponseWriter) => {
     wi.contextInitialize();
     writer.replySuccess({});
   });
 
-  mpx.setObjHandlerFunc("contextAddIceServer", (param: any, _: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("contextAddIceServer", (param: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
     wi.contextAddIceServer(param.iceServer);
     writer.replySuccess({});
   });
 
-  mpx.setObjHandlerFunc("linkInitialize", (param: any, _: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("linkInitialize", (param: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
     wi.linkInitialize(param.webrtcLink, param.isCreateDc);
     writer.replySuccess({});
   });
 
-  mpx.setObjHandlerFunc("linkFinalize", (param: any, _: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("linkFinalize", (param: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
     wi.linkFinalize(param.webrtcLink);
     writer.replySuccess({});
   });
 
-  mpx.setObjHandlerFunc("linkDisconnect", (param: any, _: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("linkDisconnect", (param: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
     wi.linkDisconnect(param.webrtcLink);
     writer.replySuccess({});
   });
 
-  mpx.setObjHandlerFunc("linkGetLocalSdp", (param: any, _: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("linkGetLocalSdp", (param: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
     wi.linkGetLocalSdp(param.webrtcLink, param.isRemoteSdpSet);
     writer.replySuccess({});
   });
 
-  mpx.setObjHandlerFunc("linkSend", (param: any, _: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("linkSend", (param: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
     wi.linkSend(param.webrtcLink, new TextEncoder().encode(param.data));
     writer.replySuccess({});
   });
 
-  mpx.setObjHandlerFunc("linkSetRemoteSdp", (param: any, _: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("linkSetRemoteSdp", (param: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
     wi.linkSetRemoteSdp(param.webrtcLink, param.sdpStr, param.isOffer);
     writer.replySuccess({});
   });
 
-  mpx.setObjHandlerFunc("linkUpdateIce", (param: any, _: Map<string, string>, writer: CL.ResponseObjWriter) => {
+  mpx.setHandlerFunc("linkUpdateIce", (param: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
     wi.linkUpdateIce(param.webrtcLink, param.iceStr);
     writer.replySuccess({});
   });

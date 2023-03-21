@@ -47,7 +47,7 @@ async function initController() {
   let systemMpx = new CL.MultiPlexer();
   rootMpx.setHandler("system", systemMpx);
   let promise = new Promise<void>((resolve) => {
-    systemMpx.setRawHandlerFunc("onInitComplete", (_1: string, _2: Map<string, string>, writer: CL.ResponseWriter) => {
+    systemMpx.setHandlerFunc("onInitComplete", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
       writer.replySuccess("");
       resolve();
     });

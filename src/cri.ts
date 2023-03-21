@@ -176,12 +176,12 @@ class ContainerImpl {
     let mpx = new CL.MultiPlexer();
     rootMpx.setHandler(CT.CrosslinkPath, mpx);
 
-    mpx.setObjHandlerFunc("ready", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+    mpx.setHandlerFunc("ready", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
       let res = this._onReady(data as CT.ReadyRequest);
       writer.replySuccess(res);
     });
 
-    mpx.setObjHandlerFunc("finished", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+    mpx.setHandlerFunc("finished", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
       let res = this._onFinished(data as CT.FinishedRequest);
       writer.replySuccess(res);
     });
@@ -276,67 +276,67 @@ function initHandler(rootMpx: CL.MultiPlexer) {
   let mpx = new CL.MultiPlexer();
   rootMpx.setHandler(crosslinkPath, mpx);
 
-  mpx.setObjHandlerFunc("runPodSandbox", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("runPodSandbox", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = runPodSandbox(data as RunPodSandboxRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("stopPodSandbox", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("stopPodSandbox", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = stopPodSandbox(data as StopPodSandboxRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("removePodSandbox", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("removePodSandbox", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = removePodSandbox(data as RemovePodSandboxRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("podSandboxStatus", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("podSandboxStatus", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = podSandboxStatus(data as PodSandboxStatusRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("listPodSandbox", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("listPodSandbox", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = listPodSandbox(data as ListPodSandboxRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("createContainer", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("createContainer", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = createContainer(data as CreateContainerRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("startContainer", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("startContainer", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = startContainer(data as StartContainerRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("stopContainer", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("stopContainer", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = stopContainer(data as StopContainerRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("removeContainer", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("removeContainer", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = removeContainer(data as RemoveContainerRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("listContainers", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("listContainers", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = listContainers(data as ListContainersRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("containerStatus", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("containerStatus", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = containerStatus(data as ContainerStatusRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("listImages", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("listImages", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = listImages(data as ListImagesRequest);
     writer.replySuccess(res);
   });
 
-  mpx.setObjHandlerFunc("pullImage", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("pullImage", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     pullImage(data as PullImageRequest).then((res) => {
       writer.replySuccess(res);
     }).catch((reason) => {
@@ -344,7 +344,7 @@ function initHandler(rootMpx: CL.MultiPlexer) {
     });
   });
 
-  mpx.setObjHandlerFunc("removeImage", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+  mpx.setHandlerFunc("removeImage", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = removeImage(data as RemoveImageRequest);
     writer.replySuccess(res);
   });

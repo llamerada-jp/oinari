@@ -24,7 +24,7 @@ type Handler interface {
 }
 
 type Crosslink interface {
-	Call(data string, tags map[string]string, cb func(result string, err error))
+	Call(path string, data []byte, tags map[string]string, cb func(result []byte, err error))
 }
 
 type MultiPlexer interface {
