@@ -1,7 +1,6 @@
 package cri
 
 import (
-	"log"
 	"time"
 
 	"github.com/llamerada-jp/oinari/agent/crosslink"
@@ -70,7 +69,7 @@ func (suite *CriSuite) TestImage() {
 	listRes, err = suite.cri.ListImages(&ListImagesRequest{})
 	suite.NoError(err)
 	suite.Len(listRes.Images, 1)
-	suite.True(checkImage(&listRes.Images[0], "http://localhost:8080/exit/container.json", "go1.19", test1ID))
+	suite.checkImage(&listRes.Images[0], "http://localhost:8080/exit/container.json", "go1.19", test1ID)
 
 	// expect there to be two images after pull another image
 	pullRes, err = suite.cri.PullImage(&PullImageRequest{
@@ -86,11 +85,11 @@ func (suite *CriSuite) TestImage() {
 	suite.Len(listRes.Images, 2)
 
 	if listRes.Images[0].Spec.Image == "http://localhost:8080/exit/container.json" {
-		suite.True(checkImage(&listRes.Images[0], "http://localhost:8080/exit/container.json", "go1.19", test1ID))
-		suite.True(checkImage(&listRes.Images[1], "http://localhost:8080/sleep/container.json", "go1.19", test2ID))
+		suite.checkImage(&listRes.Images[0], "http://localhost:8080/exit/container.json", "go1.19", test1ID)
+		suite.checkImage(&listRes.Images[1], "http://localhost:8080/sleep/container.json", "go1.19", test2ID)
 	} else {
-		suite.True(checkImage(&listRes.Images[0], "http://localhost:8080/sleep/container.json", "go1.19", test2ID))
-		suite.True(checkImage(&listRes.Images[1], "http://localhost:8080/exit/container.json", "go1.19", test1ID))
+		suite.checkImage(&listRes.Images[0], "http://localhost:8080/sleep/container.json", "go1.19", test2ID)
+		suite.checkImage(&listRes.Images[1], "http://localhost:8080/exit/container.json", "go1.19", test1ID)
 	}
 	suite.NotEqual(listRes.Images[0].ID, listRes.Images[1].ID)
 
@@ -118,7 +117,7 @@ func (suite *CriSuite) TestImage() {
 	listRes, err = suite.cri.ListImages(&ListImagesRequest{})
 	suite.NoError(err)
 	suite.Len(listRes.Images, 1)
-	suite.True(checkImage(&listRes.Images[0], "http://localhost:8080/sleep/container.json", "go1.19", test2ID))
+	suite.checkImage(&listRes.Images[0], "http://localhost:8080/sleep/container.json", "go1.19", test2ID)
 }
 
 func (suite *CriSuite) TestSandbox() {
@@ -153,9 +152,9 @@ func (suite *CriSuite) TestSandbox() {
 	suite.Len(listRes.Items, 1)
 
 	suite.Equal(listRes.Items[0].ID, sandboxId1)
-	suite.True(checkSandboxMeta(&listRes.Items[0].Metadata, "sandbox1", "uid1", "ns1"))
+	suite.checkSandboxMeta(&listRes.Items[0].Metadata, "sandbox1", "uid1", "ns1")
 	suite.Equal(listRes.Items[0].State, SandboxReady)
-	suite.True(checkTimestampFormat(listRes.Items[0].CreatedAt))
+	suite.checkTimestampFormat(listRes.Items[0].CreatedAt)
 
 	// expect an error when create duplicate sandbox and there is only one sandbox
 	_, err = suite.cri.RunPodSandbox(&RunPodSandboxRequest{
@@ -203,13 +202,13 @@ func (suite *CriSuite) TestSandbox() {
 	suite.Len(listRes.Items, 2)
 
 	if listRes.Items[0].ID == sandboxId1 {
-		suite.True(checkSandboxMeta(&listRes.Items[0].Metadata, "sandbox1", "uid1", "ns1"))
+		suite.checkSandboxMeta(&listRes.Items[0].Metadata, "sandbox1", "uid1", "ns1")
 		suite.Equal(listRes.Items[1].ID, sandboxId2)
-		suite.True(checkSandboxMeta(&listRes.Items[1].Metadata, "sandbox2", "uid2", "ns1"))
+		suite.checkSandboxMeta(&listRes.Items[1].Metadata, "sandbox2", "uid2", "ns1")
 	} else {
 		suite.Equal(listRes.Items[0].ID, sandboxId2)
-		suite.True(checkSandboxMeta(&listRes.Items[0].Metadata, "sandbox2", "uid2", "ns1"))
-		suite.True(checkSandboxMeta(&listRes.Items[1].Metadata, "sandbox1", "uid1", "ns1"))
+		suite.checkSandboxMeta(&listRes.Items[0].Metadata, "sandbox2", "uid2", "ns1")
+		suite.checkSandboxMeta(&listRes.Items[1].Metadata, "sandbox1", "uid1", "ns1")
 	}
 
 	// expect an error when call PodSandboxStatus for pod not exist
@@ -238,19 +237,19 @@ func (suite *CriSuite) TestSandbox() {
 	})
 	suite.NoError(err)
 	suite.Equal(sandboxId1, statusRes.Status.ID)
-	suite.True(checkSandboxMeta(&statusRes.Status.Metadata, "sandbox1", "uid1", "ns1"))
+	suite.checkSandboxMeta(&statusRes.Status.Metadata, "sandbox1", "uid1", "ns1")
 	suite.Equal(statusRes.Status.State, SandboxReady)
-	suite.True(checkTimestampFormat(statusRes.Status.CreatedAt))
+	suite.checkTimestampFormat(statusRes.Status.CreatedAt)
 	suite.Len(statusRes.ContainersStatuses, 1)
 	suite.Equal(statusRes.ContainersStatuses[0].ID, container1)
 	suite.Equal(statusRes.ContainersStatuses[0].Metadata.Name, "containerName")
 	suite.Equal(statusRes.ContainersStatuses[0].State, ContainerCreated)
-	suite.True(checkTimestampFormat(statusRes.ContainersStatuses[0].CreatedAt))
+	suite.checkTimestampFormat(statusRes.ContainersStatuses[0].CreatedAt)
 	suite.Len(statusRes.ContainersStatuses[0].StartedAt, 0)
 	suite.Len(statusRes.ContainersStatuses[0].FinishedAt, 0)
 	suite.Equal(statusRes.ContainersStatuses[0].Image.Image, "http://localhost:8080/exit/container.json")
 	suite.NotEmpty(statusRes.ContainersStatuses[0].ImageRef)
-	suite.True(checkTimestampFormat(statusRes.Timestamp))
+	suite.checkTimestampFormat(statusRes.Timestamp)
 
 	// start container
 	_, err = suite.cri.StartContainer(&StartContainerRequest{
@@ -269,13 +268,13 @@ func (suite *CriSuite) TestSandbox() {
 	})
 	suite.NoError(err)
 	suite.Equal(statusRes.Status.State, SandboxNotReady)
-	suite.True(checkTimestampFormat(statusRes.Status.CreatedAt))
+	suite.checkTimestampFormat(statusRes.Status.CreatedAt)
 	suite.Len(statusRes.ContainersStatuses, 1)
 	suite.Equal(statusRes.ContainersStatuses[0].State, ContainerExited)
-	suite.True(checkTimestampFormat(statusRes.ContainersStatuses[0].CreatedAt))
-	suite.True(checkTimestampFormat(statusRes.ContainersStatuses[0].StartedAt))
-	suite.True(checkTimestampFormat(statusRes.ContainersStatuses[0].FinishedAt))
-	suite.True(checkTimestampFormat(statusRes.Timestamp))
+	suite.checkTimestampFormat(statusRes.ContainersStatuses[0].CreatedAt)
+	suite.checkTimestampFormat(statusRes.ContainersStatuses[0].StartedAt)
+	suite.checkTimestampFormat(statusRes.ContainersStatuses[0].FinishedAt)
+	suite.checkTimestampFormat(statusRes.Timestamp)
 
 	// StopPodSandbox is idempotent
 	_, err = suite.cri.StopPodSandbox(&StopPodSandboxRequest{
@@ -293,7 +292,7 @@ func (suite *CriSuite) TestSandbox() {
 	suite.NoError(err)
 	suite.Len(listRes.Items, 1)
 	suite.Equal(listRes.Items[0].ID, sandboxId2)
-	suite.True(checkSandboxMeta(&listRes.Items[0].Metadata, "sandbox2", "uid2", "ns1"))
+	suite.checkSandboxMeta(&listRes.Items[0].Metadata, "sandbox2", "uid2", "ns1")
 
 	// RemovePodSandbox is idempotent
 	_, err = suite.cri.RemovePodSandbox(&RemovePodSandboxRequest{
@@ -410,7 +409,7 @@ func (suite *CriSuite) TestContainer() {
 	suite.Equal(container1, statusRes.Status.ID)
 	suite.Equal("container1", statusRes.Status.Metadata.Name)
 	suite.Equal(ContainerCreated, statusRes.Status.State)
-	suite.True(checkTimestampFormat(statusRes.Status.CreatedAt))
+	suite.checkTimestampFormat(statusRes.Status.CreatedAt)
 	suite.Empty(statusRes.Status.StartedAt)
 	suite.Empty(statusRes.Status.FinishedAt)
 	suite.Equal(0, statusRes.Status.ExitCode)
@@ -428,7 +427,7 @@ func (suite *CriSuite) TestContainer() {
 	})
 	suite.NoError(err)
 	suite.Equal(ContainerRunning, statusRes.Status.State)
-	suite.True(checkTimestampFormat(statusRes.Status.StartedAt))
+	suite.checkTimestampFormat(statusRes.Status.StartedAt)
 
 	// expect finish program eventually
 	suite.Eventually(func() bool {
@@ -436,10 +435,10 @@ func (suite *CriSuite) TestContainer() {
 			ContainerID: container1,
 		})
 		suite.NoError(err)
-		return statusRes.Status.State == ContainerExited &&
-			checkTimestampFormat(statusRes.Status.FinishedAt) &&
-			statusRes.Status.ExitCode == 0
+		return statusRes.Status.State == ContainerExited
 	}, 15*time.Second, time.Second)
+	suite.checkTimestampFormat(statusRes.Status.FinishedAt)
+	suite.Equal(0, statusRes.Status.ExitCode)
 
 	// expect an error when try to create container with existing name on the same sandbox
 	_, err = suite.cri.CreateContainer(&CreateContainerRequest{
@@ -465,10 +464,18 @@ func (suite *CriSuite) TestContainer() {
 			Image: ImageSpec{
 				Image: "http://localhost:8080/exit/container.json",
 			},
+			Args: []string{
+				"1",
+			},
 		},
 	})
 	suite.NoError(err)
 	container2 := createRes.ContainerID
+
+	_, err = suite.cri.StartContainer(&StartContainerRequest{
+		ContainerID: container2,
+	})
+	suite.NoError(err)
 
 	// expect finish program eventually and set exit code
 	suite.Eventually(func() bool {
@@ -476,10 +483,10 @@ func (suite *CriSuite) TestContainer() {
 			ContainerID: container2,
 		})
 		suite.NoError(err)
-		return statusRes.Status.State == ContainerExited &&
-			checkTimestampFormat(statusRes.Status.FinishedAt) &&
-			statusRes.Status.ExitCode == 1
+		return statusRes.Status.State == ContainerExited
 	}, 15*time.Second, time.Second)
+	suite.checkTimestampFormat(statusRes.Status.FinishedAt)
+	suite.Equal(1, statusRes.Status.ExitCode)
 
 	// can run container with the same name from existing one on the different sandbox
 	createRes, err = suite.cri.CreateContainer(&CreateContainerRequest{
@@ -496,6 +503,11 @@ func (suite *CriSuite) TestContainer() {
 	suite.NoError(err)
 	container3 := createRes.ContainerID
 
+	_, err = suite.cri.StartContainer(&StartContainerRequest{
+		ContainerID: container3,
+	})
+	suite.NoError(err)
+
 	// stop container force and get error code eventually
 	_, err = suite.cri.StopContainer(&StopContainerRequest{
 		ContainerID: container3,
@@ -507,45 +519,156 @@ func (suite *CriSuite) TestContainer() {
 			ContainerID: container3,
 		})
 		suite.NoError(err)
-		return statusRes.Status.State == ContainerExited &&
-			checkTimestampFormat(statusRes.Status.FinishedAt) &&
-			statusRes.Status.ExitCode == 137
+		return statusRes.Status.State == ContainerExited
 	}, 15*time.Second, time.Second)
+	suite.checkTimestampFormat(statusRes.Status.FinishedAt)
+	suite.Equal(137, statusRes.Status.ExitCode)
 
-	log.Fatal("TODO")
 	// StopContainer is idempotent
-	// check result of list container
-	// start a container with sleep infinity
-	// check result of list container with specify id
-	// check result of list container with specify state
-	// check result of list container with specify sandbox
-	// check result of list container with specify state & sandbox
-	// check result of list container after remove a container
-	// RemoveContainer is idempotent
-}
+	_, err = suite.cri.StopContainer(&StopContainerRequest{
+		ContainerID: container3,
+	})
+	suite.NoError(err)
 
-func checkImage(image *Image, url, runtime, id string) bool {
-	if len(image.ID) == 0 || image.ID != id ||
-		len(image.Spec.Image) == 0 || image.Spec.Image != url ||
-		len(image.Runtime) == 0 || image.Runtime != runtime {
-		return false
+	// check result of list container
+	listRes, err = suite.cri.ListContainers(&ListContainersRequest{})
+	suite.NoError(err)
+	suite.Len(listRes.Containers, 3)
+	for _, container := range listRes.Containers {
+		switch container.ID {
+		case container1:
+			suite.checkContainer(&container, container1, sandbox1, "container1", "http://localhost:8080/sleep/container.json", ContainerExited)
+		case container2:
+			suite.checkContainer(&container, container2, sandbox1, "container2", "http://localhost:8080/exit/container.json", ContainerExited)
+		case container3:
+			suite.checkContainer(&container, container1, sandbox2, "container1", "http://localhost:8080/sleep/container.json", ContainerExited)
+		}
 	}
 
-	return true
+	// check result of list container with specify id
+	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
+		Filter: &ContainerFilter{
+			ID: container1,
+		},
+	})
+	suite.NoError(err)
+	suite.Len(listRes.Containers, 1)
+	suite.Equal(container1, listRes.Containers[0].ID)
+
+	// start a container with sleep infinity
+	createRes, err = suite.cri.CreateContainer(&CreateContainerRequest{
+		PodSandboxID: sandbox2,
+		Config: ContainerConfig{
+			Metadata: ContainerMetadata{
+				Name: "container2",
+			},
+			Image: ImageSpec{
+				Image: "http://localhost:8080/sleep/container.json",
+			},
+			Args: []string{
+				"-1",
+			},
+		},
+	})
+	suite.NoError(err)
+	container4 := createRes.ContainerID
+
+	_, err = suite.cri.StartContainer(&StartContainerRequest{
+		ContainerID: container4,
+	})
+	suite.NoError(err)
+
+	// check result of list container with specify state
+	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
+		Filter: &ContainerFilter{
+			State: &ContainerStateValue{
+				State: ContainerRunning,
+			},
+		},
+	})
+	suite.NoError(err)
+	suite.Len(listRes.Containers, 1)
+	suite.Equal(container4, listRes.Containers[0].ID)
+
+	// check result of list container with specify sandbox
+	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
+		Filter: &ContainerFilter{
+			PodSandboxID: sandbox1,
+		},
+	})
+	suite.NoError(err)
+	suite.Len(listRes.Containers, 2)
+	if listRes.Containers[0].ID == container1 {
+		suite.Equal(container1, listRes.Containers[0].ID)
+		suite.Equal(container2, listRes.Containers[1].ID)
+	} else {
+		suite.Equal(container1, listRes.Containers[1].ID)
+		suite.Equal(container2, listRes.Containers[0].ID)
+	}
+	suite.Equal(sandbox1, listRes.Containers[0].PodSandboxID)
+	suite.Equal(sandbox1, listRes.Containers[1].PodSandboxID)
+
+	// check result of list container with specify state & sandbox
+	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
+		Filter: &ContainerFilter{
+			State: &ContainerStateValue{
+				State: ContainerExited,
+			},
+			PodSandboxID: sandbox2,
+		},
+	})
+	suite.NoError(err)
+	suite.Len(listRes.Containers, 1)
+	suite.Equal(container3, listRes.Containers[0].ID)
+
+	// check result of list container after remove a container
+	_, err = suite.cri.RemoveContainer(&RemoveContainerRequest{
+		ContainerID: container4,
+	})
+	suite.NoError(err)
+
+	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
+		Filter: &ContainerFilter{
+			PodSandboxID: sandbox2,
+		},
+	})
+	suite.NoError(err)
+	suite.Len(listRes.Containers, 1)
+	suite.Equal(container3, listRes.Containers[0].ID)
+
+	// RemoveContainer is idempotent
+	_, err = suite.cri.RemoveContainer(&RemoveContainerRequest{
+		ContainerID: container4,
+	})
+	suite.NoError(err)
+}
+
+func (suite *CriSuite) checkImage(image *Image, url, runtime, id string) {
+	suite.NotEmpty(image.ID)
+	suite.Equal(id, image.ID)
+	suite.Equal(url, image.Spec.Image)
+	suite.Equal(runtime, image.Runtime)
 }
 
 // check timestamp format (ISO8601/RFC3339)
-func checkTimestampFormat(timestamp string) bool {
+func (suite *CriSuite) checkTimestampFormat(timestamp string) {
 	_, err := time.Parse(time.RFC3339, timestamp)
-	return err == nil
+	suite.NoError(err)
 }
 
-func checkSandboxMeta(meta *PodSandboxMetadata, name, uid, namespace string) bool {
-	if len(meta.Name) == 0 || meta.Name != name ||
-		len(meta.UID) == 0 || meta.UID != uid ||
-		len(meta.Namespace) == 0 || meta.Namespace != namespace {
-		return false
-	}
+func (suite *CriSuite) checkSandboxMeta(meta *PodSandboxMetadata, name, uid, namespace string) {
+	suite.Equal(name, meta.Name)
+	suite.NotEmpty(meta.UID)
+	suite.Equal(uid, meta.UID)
+	suite.Equal(namespace, meta.Namespace)
+}
 
-	return true
+func (suite *CriSuite) checkContainer(container *Container, id, sandbox, name, url string, state ContainerState) {
+	suite.Equal(id, container.ID)
+	suite.Equal(sandbox, container.PodSandboxID)
+	suite.Equal(name, container.Metadata.Name)
+	suite.Equal(url, container.Image.Image)
+	suite.NotEmpty(container.ImageRef)
+	suite.Equal(state, container.State)
+	suite.checkTimestampFormat(container.CreatedAt)
 }

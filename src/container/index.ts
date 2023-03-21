@@ -1,36 +1,31 @@
+/*
+ * Copyright 2018 Yuji Ito <llamerada.jp@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import * as CL from "../crosslink"
+import * as MGR from "./manager"
 
 importScripts("wasm_exec.js");
 
-let rootService: CL.MultiPlexer = new CL.MultiPlexer();
-let link: CL.Crosslink = new CL.Crosslink(new class implements CL.WorkerInterface {
-  listener: (datum: object) => void;
-
-  constructor() {
-    this.listener = (_: object) => { }; // init by temporary dummy
-
-    globalThis.addEventListener("message", (event) => {
-      this.listener(event.data);
-    })
-  }
-
-  addEventListener(listener: (datum: object) => void): void {
-    this.listener = listener;
-  }
-
-  post(datum: object): void {
-    globalThis.postMessage(datum);
-  }
-}(), rootService);
-
-function initService() {
-  rootService.setRawHandlerFunc("ping", (_1: string, _2: Map<string, string>, writer: CL.ResponseWriter) => {
-    writer.replySuccess("pod");
-  });
-}
+// setup crosslink
+let rootMpx = new CL.MultiPlexer();
+let crosslink = new CL.Crosslink(new CL.CoWorkerImpl(), rootMpx);
 
 function main() {
-  initService();
+  MGR.initManager(crosslink, rootMpx);
+  MGR.ready();
 }
 
 main();

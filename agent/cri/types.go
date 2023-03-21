@@ -126,6 +126,8 @@ type CreateContainerRequest struct {
 type ContainerConfig struct {
 	Metadata ContainerMetadata `json:"metadata"`
 	Image    ImageSpec         `json:"image"`
+	Args     []string          `json:"args"`
+	Envs     []KeyValue        `json:"envs"`
 }
 
 type ContainerMetadata struct {
@@ -178,6 +180,11 @@ type ContainerStatusResponse struct {
 	// Info map[string]string `json:"info"`
 }
 
+type KeyValue struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type ContainerStatus struct {
 	ID         string            `json:"id"`
 	Metadata   ContainerMetadata `json:"metadata"`
@@ -185,7 +192,7 @@ type ContainerStatus struct {
 	CreatedAt  string            `json:"created_at"`
 	StartedAt  string            `json:"started_at"`
 	FinishedAt string            `json:"finished_at"`
-	ExitCode   int32             `json:"exit_code"`
+	ExitCode   int               `json:"exit_code"`
 	Image      ImageSpec         `json:"image"`
 	ImageRef   string            `json:"image_ref"`
 }

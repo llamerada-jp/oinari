@@ -33,6 +33,26 @@ export class WorkerImpl implements WorkerInterface {
   }
 }
 
+export class CoWorkerImpl implements WorkerInterface {
+  listener: (datum: object) => void;
+
+  constructor() {
+    this.listener = (_: object) => { }; // init by temporary dummy
+
+    globalThis.addEventListener("message", (event) => {
+      this.listener(event.data);
+    })
+  }
+
+  addEventListener(listener: (datum: object) => void): void {
+    this.listener = listener;
+  }
+
+  post(datum: object): void {
+    globalThis.postMessage(datum);
+  }
+}
+
 export class ResponseWriter {
   private id: number;
   private worker: WorkerInterface;

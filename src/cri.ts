@@ -15,11 +15,13 @@
  */
 
 import * as CL from "./crosslink";
+import * as CT from "./container/types";
 
 const crosslinkPath: string = "cri";
 const podSandboxIDMax: number = Math.floor(Math.pow(2, 30));
 const containerIDMax: number = Math.floor(Math.pow(2, 30));
 const imageRefIDMax: number = Math.floor(Math.pow(2, 30));
+const containerStopTimeout: number = 10 * 1000;
 
 // key means PodSandboxID
 let sandboxes: Map<string, SandboxImpl> = new Map();
@@ -52,10 +54,10 @@ class ImageImpl {
     this.id = id;
     this.url = url;
     this.runtime = "";
-    this.reload();
+    this.pull();
   }
 
-  reload() {
+  pull() {
     console.assert(this.state !== ImageState.Downloading, "duplicate download");
 
     this.state = ImageState.Downloading;
@@ -106,18 +108,20 @@ class ContainerImpl {
   image: ImageImpl
   worker: Worker | undefined
   link: CL.Crosslink | undefined
-  service: CL.MultiPlexer
+  args: string[]
+  envs: Record<string, string>
   created_at: string
   started_at: string | undefined
   finished_at: string | undefined
   exit_code: number | undefined
 
-  constructor(id: string, sandbox_id: string, name: string, image: ImageImpl) {
+  constructor(id: string, sandbox_id: string, name: string, image: ImageImpl, args: string[], envs: Record<string, string>) {
     this.id = id;
     this.sandbox_id = sandbox_id;
     this.name = name;
     this.image = image;
-    this.service = new CL.MultiPlexer();
+    this.args = args;
+    this.envs = envs;
     this.created_at = getTimestamp();
   }
 
@@ -134,10 +138,11 @@ class ContainerImpl {
   start() {
     console.assert(this.worker == null);
 
+    let rootMpx = new CL.MultiPlexer();
     this.worker = new Worker("container.js");
-    this.link = new CL.Crosslink(new CL.WorkerImpl(this.worker), this.service);
+    this.link = new CL.Crosslink(new CL.WorkerImpl(this.worker), rootMpx);
 
-    console.error("implement to start program!");
+    this._initHandler(rootMpx);
   }
 
   stop() {
@@ -145,9 +150,76 @@ class ContainerImpl {
       return;
     }
 
+    this.link?.call(CT.CrosslinkPath + "/term", {});
+    setTimeout(()=>{
+      if (this.finished_at != null) {
+        this.finished_at = getTimestamp();
+        // 137 meaning 128 + sig kill(9)
+        this.exit_code = 137;
+      }
+
+      this.cleanup();
+    }, containerStopTimeout);
+  }
+
+  cleanup() {
+    if (this.worker == null) {
+      return;
+    }
+
     this.worker.terminate();
     this.worker = undefined;
     this.link = undefined;
+  }
+
+  _initHandler(rootMpx: CL.MultiPlexer) {
+    let mpx = new CL.MultiPlexer();
+    rootMpx.setHandler(CT.CrosslinkPath, mpx);
+
+    mpx.setObjHandlerFunc("ready", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+      let res = this._onReady(data as CT.ReadyRequest);
+      writer.replySuccess(res);
+    });
+
+    mpx.setObjHandlerFunc("finished", (data: any, _: Map<string, string>, writer: CL.ResponseObjWriter): void => {
+      let res = this._onFinished(data as CT.FinishedRequest);
+      writer.replySuccess(res);
+    });
+  }
+
+  _onReady(_: CT.ReadyRequest): CT.ReadyResponse {
+    // set error code and finished timestamp immediately if image isn't exist
+    if (this.image.image == null) {
+      console.error("can not start container without the image");
+
+      this.exit_code = -1;
+      this.started_at = getTimestamp();
+      this.finished_at = getTimestamp();
+
+      return {
+        image: new ArrayBuffer(0),
+        args: [],
+        envs: {},
+      };
+    }
+
+    // set started timestamp and pass image to run for web worker
+    this.started_at = getTimestamp();
+    console.log(this.image.image);
+    return {
+      image: this.image.image.slice(0),
+      args: this.args,
+      envs: this.envs,
+    };
+  }
+
+  _onFinished(request: CT.FinishedRequest): CT.FinishedResponse {
+    console.assert(this.finished_at == null);
+
+    this.exit_code = request.code;
+    this.finished_at = getTimestamp();
+
+    return {};
   }
 }
 
@@ -176,7 +248,7 @@ class SandboxImpl {
     // this.containers.clear();
   }
 
-  createContainer(name: string, image: ImageImpl): string {
+  createContainer(name: string, image: ImageImpl, args: string[], envs: Record<string, string>): string {
     console.assert(this.state == PodSandboxState.SandboxReady);
 
     let id: string = (Math.floor(Math.random() * containerIDMax)).toString(16);
@@ -184,7 +256,7 @@ class SandboxImpl {
       id = (Math.floor(Math.random() * containerIDMax)).toString(16);
     }
 
-    let container = new ContainerImpl(id, this.uid, name, image);
+    let container = new ContainerImpl(id, this.uid, name, image, args, envs);
     containers.set(id, container);
     this.containers.set(id, container);
 
@@ -278,6 +350,8 @@ function initHandler(rootMpx: CL.MultiPlexer) {
   });
 }
 
+// interfaces for CRI
+
 interface RunPodSandboxRequest {
   config: PodSandboxConfig
 }
@@ -368,6 +442,8 @@ interface CreateContainerRequest {
 interface ContainerConfig {
   metadata: ContainerMetadata
   image: ImageSpec
+  args: string[]
+  envs: KeyValue[]
 }
 
 interface ContainerMetadata {
@@ -416,6 +492,11 @@ interface ContainerStatusRequest {
 
 interface ContainerStatusResponse {
   status: ContainerStatus
+}
+
+interface KeyValue {
+  key: string
+  value: string
 }
 
 interface ContainerStatus {
@@ -495,6 +576,10 @@ interface RemoveImageRequest {
 interface RemoveImageResponse {
   // nothing
 }
+
+// interfaces for communicate with worker 
+
+
 
 function runPodSandbox(request: RunPodSandboxRequest): RunPodSandboxResponse {
   // check duplication of name/namespace or uid
@@ -632,7 +717,19 @@ function createContainer(request: CreateContainerRequest): CreateContainerRespon
     throw new Error("image not found:" + request.config.image.image);
   }
 
-  let id = sandbox.createContainer(request.config.metadata.name, image);
+  let args = request.config.args;
+  if (args == null) {
+    args = new Array<string>();
+  }
+
+  let envs: Record<string, string> = {};
+  if (request.config.envs != null) {
+    for (const env of request.config.envs) {
+      envs[env.key] = env.value;
+    }
+  }
+
+  let id = sandbox.createContainer(request.config.metadata.name, image, args, envs);
   return { container_id: id };
 }
 
@@ -661,6 +758,7 @@ function removeContainer(request: RemoveContainerRequest): RemoveContainerRespon
   }
 
   container.stop();
+  container.cleanup();
 
   let sandbox = sandboxes.get(container.sandbox_id);
   if (sandbox != null) {
@@ -792,7 +890,7 @@ function pullImage(request: PullImageRequest): Promise<PullImageResponse> {
 
   if (image.state === ImageState.Created ||
     image.state === ImageState.Error) {
-    image.reload();
+    image.pull();
   }
 
   if (image.state === ImageState.Downloaded) {

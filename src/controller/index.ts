@@ -5,30 +5,9 @@ importScripts("colonio.js", "colonio_go.js", "wasm_exec.js");
 
 declare function ColonioModule(): Promise<any>;
 
-class CLWorker implements CL.WorkerInterface {
-  listener: (datum: object) => void;
-
-  constructor() {
-    this.listener = (_: object) => { }; // init by temporary dummy
-
-    globalThis.addEventListener("message", (event) => {
-      this.listener(event.data);
-    })
-  }
-
-  addEventListener(listener: (datum: object) => void): void {
-    this.listener = listener;
-  }
-
-  post(datum: object): void {
-    globalThis.postMessage(datum);
-  }
-}
-
-
 // setup crosslink
 let rootMpx = new CL.MultiPlexer();
-let crosslink = new CL.Crosslink(new CLWorker(), rootMpx);
+let crosslink = new CL.Crosslink(new CL.CoWorkerImpl(), rootMpx);
 
 // load method
 interface RunRequest {
