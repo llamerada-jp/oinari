@@ -23,6 +23,13 @@ import (
 	"time"
 )
 
+func showHelp(err error) {
+	if err != nil {
+		log.Println(err)
+	}
+	log.Fatalf("usage: %s [duration]\n  duration: duration to sleep[sec], immediate wake up when 0, never wake up when negative value", os.Args[0])
+}
+
 func main() {
 	var durationSec int64
 	var err error
@@ -30,12 +37,11 @@ func main() {
 	if len(os.Args) == 2 {
 		durationSec, err = strconv.ParseInt(os.Args[1], 10, 32)
 		if err != nil {
-			log.Fatalln(err)
+			showHelp(err)
 		}
-	}
 
-	if len(os.Args) != 0 {
-		log.Fatalf("usage: %s [duration]\n  duration: duration to sleep[sec], immediate wake up when 0, never wake up when negative value", os.Args[0])
+	} else if len(os.Args) != 1 {
+		showHelp(nil)
 	}
 
 	// wake up immediate if duration is 0

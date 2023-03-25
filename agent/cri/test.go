@@ -263,14 +263,17 @@ func (suite *CriSuite) TestSandbox() {
 	})
 	suite.NoError(err)
 
-	statusRes, err = suite.cri.PodSandboxStatus(&PodSandboxStatusRequest{
-		PodSandboxID: sandboxId1,
-	})
-	suite.NoError(err)
+	suite.Eventually(func() bool {
+		statusRes, err = suite.cri.PodSandboxStatus(&PodSandboxStatusRequest{
+			PodSandboxID: sandboxId1,
+		})
+		suite.NoError(err)
+		return statusRes.ContainersStatuses[0].State == ContainerExited
+	}, 15*time.Second, time.Second)
+
 	suite.Equal(statusRes.Status.State, SandboxNotReady)
 	suite.checkTimestampFormat(statusRes.Status.CreatedAt)
 	suite.Len(statusRes.ContainersStatuses, 1)
-	suite.Equal(statusRes.ContainersStatuses[0].State, ContainerExited)
 	suite.checkTimestampFormat(statusRes.ContainersStatuses[0].CreatedAt)
 	suite.checkTimestampFormat(statusRes.ContainersStatuses[0].StartedAt)
 	suite.checkTimestampFormat(statusRes.ContainersStatuses[0].FinishedAt)
@@ -498,6 +501,7 @@ func (suite *CriSuite) TestContainer() {
 			Image: ImageSpec{
 				Image: "http://localhost:8080/sleep/container.json",
 			},
+			Args: []string{"-1"},
 		},
 	})
 	suite.NoError(err)
@@ -541,7 +545,7 @@ func (suite *CriSuite) TestContainer() {
 		case container2:
 			suite.checkContainer(&container, container2, sandbox1, "container2", "http://localhost:8080/exit/container.json", ContainerExited)
 		case container3:
-			suite.checkContainer(&container, container1, sandbox2, "container1", "http://localhost:8080/sleep/container.json", ContainerExited)
+			suite.checkContainer(&container, container3, sandbox2, "container1", "http://localhost:8080/sleep/container.json", ContainerExited)
 		}
 	}
 

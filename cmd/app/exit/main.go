@@ -22,6 +22,13 @@ import (
 	"strconv"
 )
 
+func showHelp(err error) {
+	if err != nil {
+		log.Println(err)
+	}
+	log.Fatalf("usage: %s [code]\n  code: exit code, default 0", os.Args[0])
+}
+
 func main() {
 	var code int64
 	var err error
@@ -29,12 +36,12 @@ func main() {
 	if len(os.Args) == 2 {
 		code, err = strconv.ParseInt(os.Args[1], 10, 8)
 		if err != nil {
-			log.Fatalln(err)
+			showHelp(err)
 		}
-	}
 
-	if len(os.Args) != 0 {
-		log.Fatalf("usage: %s [code]\n  code: exit code, default 0", os.Args[0])
+	} else if len(os.Args) != 1 {
+		showHelp(nil)
+
 	}
 
 	os.Exit(int(code))

@@ -55,7 +55,7 @@ function start(config: Types.ReadyResponse): void {
   const go = new Go();
   let finFlg = false;
 
-  go.argv = config.args;
+  go.argv = [config.name].concat(config.args);
   go.env = config.envs;
   go.exit = (code: number) => {
     finFlg = true;

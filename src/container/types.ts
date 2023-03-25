@@ -23,7 +23,7 @@ export interface ReadyRequest {
 
 // ReadyReply informs the started worker of the program to run
 export interface ReadyResponse {
-  // name: string
+  name: string
   // container_id: string
   // pod_sandbox_id: string
   image: ArrayBuffer

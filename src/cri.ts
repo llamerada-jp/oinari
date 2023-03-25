@@ -138,6 +138,7 @@ class ContainerImpl {
   start() {
     console.assert(this.worker == null);
 
+    this.started_at = getTimestamp();
     let rootMpx = new CL.MultiPlexer();
     this.worker = new Worker("container.js");
     this.link = new CL.Crosslink(new CL.WorkerImpl(this.worker), rootMpx);
@@ -146,13 +147,13 @@ class ContainerImpl {
   }
 
   stop() {
-    if (this.worker == null) {
+    if (this.worker == null || this.link == null) {
       return;
     }
 
-    this.link?.call(CT.CrosslinkPath + "/term", {});
-    setTimeout(()=>{
-      if (this.finished_at != null) {
+    this.link.call(CT.CrosslinkPath + "/term", {});
+    setTimeout(() => {
+      if (this.finished_at == null) {
         this.finished_at = getTimestamp();
         // 137 meaning 128 + sig kill(9)
         this.exit_code = 137;
@@ -193,20 +194,19 @@ class ContainerImpl {
       console.error("can not start container without the image");
 
       this.exit_code = -1;
-      this.started_at = getTimestamp();
       this.finished_at = getTimestamp();
 
       return {
+        name: this.image.url,
         image: new ArrayBuffer(0),
         args: [],
         envs: {},
       };
     }
 
-    // set started timestamp and pass image to run for web worker
-    this.started_at = getTimestamp();
-    console.log(this.image.image);
+    // pass image to run for web worker
     return {
+      name: this.image.url,
       image: this.image.image.slice(0),
       args: this.args,
       envs: this.envs,
@@ -219,19 +219,26 @@ class ContainerImpl {
     this.exit_code = request.code;
     this.finished_at = getTimestamp();
 
+    setTimeout(() => {
+      this.cleanup();
+    }, containerStopTimeout);
     return {};
   }
 }
 
 class SandboxImpl {
+  // PodSandboxID
+  id: string
   name: string
+  // pod.metadata.uid
   uid: string
   namespace: string
   state: PodSandboxState
   containers: Map<string, ContainerImpl>
   created_at: string
 
-  constructor(name: string, uid: string, namespace: string) {
+  constructor(id: string, name: string, uid: string, namespace: string) {
+    this.id = id;
     this.name = name;
     this.uid = uid;
     this.namespace = namespace;
@@ -252,11 +259,18 @@ class SandboxImpl {
     console.assert(this.state == PodSandboxState.SandboxReady);
 
     let id: string = (Math.floor(Math.random() * containerIDMax)).toString(16);
-    while (containers.has(id)) {
+    while (this.containers.has(id)) {
       id = (Math.floor(Math.random() * containerIDMax)).toString(16);
     }
 
-    let container = new ContainerImpl(id, this.uid, name, image, args, envs);
+    // raise error when there is a container having duplicate name
+    for (const [_, container] of this.containers) {
+      if (container.name === name) {
+        throw new Error("the container having a duplicate name exists");
+      }
+    }
+
+    let container = new ContainerImpl(id, this.id, name, image, args, envs);
     containers.set(id, container);
     this.containers.set(id, container);
 
@@ -264,7 +278,7 @@ class SandboxImpl {
   }
 
   removeContainer(id: string) {
-    containers.delete(id);
+    this.containers.delete(id);
   }
 }
 
@@ -601,7 +615,7 @@ function runPodSandbox(request: RunPodSandboxRequest): RunPodSandboxResponse {
 
   // allocate new sandbox instance
   let meta: PodSandboxMetadata = request.config.metadata;
-  sandboxes.set(id, new SandboxImpl(meta.name, meta.uid, meta.namespace));
+  sandboxes.set(id, new SandboxImpl(id, meta.name, meta.uid, meta.namespace));
 
   return { pod_sandbox_id: id };
 }
