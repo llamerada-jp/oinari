@@ -23,7 +23,7 @@ func NewCommandDriver(cl crosslink.Crosslink) CommandDriver {
 
 func (cd *commandDriver) TellInitComplete() error {
 	cd.cl.Call("system/onInitComplete", nil, nil,
-		func(result []byte, err error) {
+		func(_ []byte, err error) {
 			if err != nil {
 				log.Fatalln(err)
 			}

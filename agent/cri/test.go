@@ -530,7 +530,7 @@ func (suite *CriSuite) TestContainer() {
 	})
 	suite.NoError(err)
 
-	// check result of list container
+	// check response of list container
 	listRes, err = suite.cri.ListContainers(&ListContainersRequest{})
 	suite.NoError(err)
 	suite.Len(listRes.Containers, 3)
@@ -545,7 +545,7 @@ func (suite *CriSuite) TestContainer() {
 		}
 	}
 
-	// check result of list container with specify id
+	// check response of list container with specify id
 	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
 		Filter: &ContainerFilter{
 			ID: container1,
@@ -578,7 +578,7 @@ func (suite *CriSuite) TestContainer() {
 	})
 	suite.NoError(err)
 
-	// check result of list container with specify state
+	// check response of list container with specify state
 	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
 		Filter: &ContainerFilter{
 			State: &ContainerStateValue{
@@ -590,7 +590,7 @@ func (suite *CriSuite) TestContainer() {
 	suite.Len(listRes.Containers, 1)
 	suite.Equal(container4, listRes.Containers[0].ID)
 
-	// check result of list container with specify sandbox
+	// check response of list container with specify sandbox
 	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
 		Filter: &ContainerFilter{
 			PodSandboxID: sandbox1,
@@ -608,7 +608,7 @@ func (suite *CriSuite) TestContainer() {
 	suite.Equal(sandbox1, listRes.Containers[0].PodSandboxID)
 	suite.Equal(sandbox1, listRes.Containers[1].PodSandboxID)
 
-	// check result of list container with specify state & sandbox
+	// check response of list container with specify state & sandbox
 	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
 		Filter: &ContainerFilter{
 			State: &ContainerStateValue{
@@ -621,7 +621,7 @@ func (suite *CriSuite) TestContainer() {
 	suite.Len(listRes.Containers, 1)
 	suite.Equal(container3, listRes.Containers[0].ID)
 
-	// check result of list container after remove a container
+	// check response of list container after remove a container
 	_, err = suite.cri.RemoveContainer(&RemoveContainerRequest{
 		ContainerID: container4,
 	})

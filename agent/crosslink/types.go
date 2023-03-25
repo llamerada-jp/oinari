@@ -10,21 +10,16 @@ const (
 )
 
 type ResponseWriter interface {
-	ReplySuccess(result string)
-	ReplyError(message string)
-}
-
-type ResponseObjWriter interface {
-	ReplySuccess(result any)
+	ReplySuccess(response any)
 	ReplyError(message string)
 }
 
 type Handler interface {
-	Serve(data string, tags map[string]string, writer ResponseWriter)
+	Serve(dataRaw []byte, tags map[string]string, writer ResponseWriter)
 }
 
 type Crosslink interface {
-	Call(path string, data []byte, tags map[string]string, cb func(result []byte, err error))
+	Call(path string, obj any, tags map[string]string, cb func([]byte, error))
 }
 
 type MultiPlexer interface {

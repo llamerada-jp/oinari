@@ -95,15 +95,15 @@ export class Commands {
       } as ManagerRunRequest);
 
     }).then((r) => {
-      let result = r as ManagerRunResponse;
-      return result.digest;
+      let response = r as ManagerRunResponse;
+      return response.digest;
     });
   }
 
   listApplications(): Promise<Array<ApplicationDigest>> {
     return this.cl.call(CL_MANAGER_PATH + "/list", {}).then((r) => {
-      let result = r as ManagerListResponse;
-      return result.digests;
+      let response = r as ManagerListResponse;
+      return response.digests;
     });
   }
 

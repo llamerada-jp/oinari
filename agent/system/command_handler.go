@@ -17,7 +17,7 @@ func InitCommandHandler(sys System, rootMpx crosslink.MultiPlexer) error {
 	mpx := crosslink.NewMultiPlexer()
 	rootMpx.SetHandler("system", mpx)
 
-	mpx.SetHandler("connect", crosslink.NewFuncObjHandler(func(request *connectRequest, tags map[string]string, writer crosslink.ResponseObjWriter) {
+	mpx.SetHandler("connect", crosslink.NewFuncHandler(func(request *connectRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		err := sys.connect(request.Url, request.Account, request.Token)
 		if err != nil {
 			writer.ReplyError(err.Error())
@@ -26,7 +26,7 @@ func InitCommandHandler(sys System, rootMpx crosslink.MultiPlexer) error {
 		writer.ReplySuccess(nil)
 	}))
 
-	mpx.SetHandler("setPosition", crosslink.NewFuncObjHandler(func(request *setPositionRequest, tags map[string]string, writer crosslink.ResponseObjWriter) {
+	mpx.SetHandler("setPosition", crosslink.NewFuncHandler(func(request *setPositionRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		err := sys.setPosition(request.Latitude, request.Longitude)
 		if err != nil {
 			writer.ReplyError(err.Error())

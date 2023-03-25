@@ -1,6 +1,7 @@
 package crosslink
 
 import (
+	"encoding/json"
 	"syscall/js"
 	"testing"
 	"time"
@@ -15,46 +16,50 @@ func TestCrosslink(t *testing.T) {
 	mpxRoot := NewMultiPlexer()
 	crosslink := NewCrosslink("crosslinkGo", mpxRoot)
 
-	mpxRoot.SetHandler("goFunc", NewFuncHandler(func(data string, tags map[string]string, writer ResponseWriter) {
+	mpxRoot.SetHandler("goFunc", NewFuncHandler(func(data *string, tags map[string]string, writer ResponseWriter) {
 		g.Expect(tags[TAG_PATH]).Should(Equal("goFunc"))
 		g.Expect(tags[TAG_LEAF]).Should(Equal(""))
 
-		crosslink.Call("jsFunc", []byte("request js"), map[string]string{
+		crosslink.Call("jsFunc", "request js1", map[string]string{
 			"type": "success",
-		}, func(result []byte, err error) {
-			g.Expect(result).Should(Equal("result js success"))
+		}, func(responseRaw []byte, err error) {
 			g.Expect(err).ShouldNot(HaveOccurred())
 
-			crosslink.Call("jsFunc", []byte("request js"), map[string]string{
+			var response string
+			err = json.Unmarshal(responseRaw, &response)
+			g.Expect(err).ShouldNot(HaveOccurred())
+			g.Expect(response).Should(Equal("response js success"))
+
+			crosslink.Call("jsFunc", "request js2", map[string]string{
 				"type": "failure",
-			}, func(result []byte, err error) {
-				g.Expect(result).Should(BeEmpty())
+			}, func(responseRaw []byte, err error) {
+				g.Expect(responseRaw).Should(BeEmpty())
 				g.Expect(err).Should(HaveOccurred())
 
-				writer.ReplySuccess("result go func1")
+				writer.ReplySuccess("response go func1")
 			})
 		})
 	}))
 
-	// get result async
-	resultChan := make(chan bool)
+	// get response async
+	responseChan := make(chan bool)
 	js.Global().Get("crosslinkGoTest").Set("finToGo", js.FuncOf(func(this js.Value, args []js.Value) any {
-		resultChan <- args[0].Bool()
+		responseChan <- args[0].Bool()
 		return nil
 	}))
 
 	// run js test module
 	go js.Global().Get("crosslinkGoTest").Call("runByGo")
 
-	// wait result
+	// wait response
 	ti := time.NewTicker(time.Second)
 	defer ti.Stop()
 	for {
 		select {
 		case <-ti.C:
 			// wait loop
-		case result := <-resultChan:
-			g.Expect(result).Should(BeTrue())
+		case response := <-responseChan:
+			g.Expect(response).Should(BeTrue())
 			return
 		}
 	}

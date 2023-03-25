@@ -121,8 +121,8 @@ export function initPodService(manager: PodManager, rootService: CL.MultiPlexer)
     tags.set(CL.TAG_PATH, path);
     tags.delete(CL.TAG_LEAF);
 
-    pi.getLink()?.call(tags.get(CL.TAG_PATH) || "", data, tags).then((reply) => {
-      writer.replySuccess(reply);
+    pi.getLink()?.call(tags.get(CL.TAG_PATH) || "", data, tags).then((response) => {
+      writer.replySuccess(response);
     }).catch((reason) => {
       writer.replyError(reason);
     })

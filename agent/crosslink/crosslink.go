@@ -9,12 +9,12 @@ import (
 )
 
 type jsMessage struct {
-	isServe bool
-	id      uint32
-	data    string // for serve
-	tags    string // for serve
-	reply   string // for reply
-	message string // for reply
+	isServe     bool
+	id          uint32
+	dataRaw     []byte // for serve
+	tagsRaw     []byte // for serve
+	responseRaw []byte // for response
+	message     string // for response
 }
 
 type crosslinkImpl struct {
@@ -41,9 +41,9 @@ func NewCrosslink(jsName string, handler Handler) Crosslink {
 	go func(impl *crosslinkImpl) {
 		for msg := range impl.jsChan {
 			if msg.isServe {
-				impl.serve(msg.id, msg.data, msg.tags)
+				impl.serve(msg.id, msg.dataRaw, msg.tagsRaw)
 			} else {
-				impl.replyFromJs(msg.id, msg.reply, msg.message)
+				impl.replyFromJs(msg.id, msg.responseRaw, msg.message)
 			}
 		}
 	}(impl)
@@ -52,18 +52,18 @@ func NewCrosslink(jsName string, handler Handler) Crosslink {
 		impl.jsChan <- jsMessage{
 			isServe: true,
 			id:      uint32(args[0].Int()),
-			data:    args[1].String(),
-			tags:    args[2].String(),
+			dataRaw: []byte(args[1].String()),
+			tagsRaw: []byte(args[2].String()),
 		}
 		return nil
 	}))
 
-	impl.jsInstance.Set("callReplyToGo", js.FuncOf(func(this js.Value, args []js.Value) any {
+	impl.jsInstance.Set("replyToGo", js.FuncOf(func(this js.Value, args []js.Value) any {
 		impl.jsChan <- jsMessage{
-			isServe: false,
-			id:      uint32(args[0].Int()),
-			reply:   args[1].String(),
-			message: args[2].String(),
+			isServe:     false,
+			id:          uint32(args[0].Int()),
+			responseRaw: []byte(args[1].String()),
+			message:     args[2].String(),
 		}
 		return nil
 	}))
@@ -71,10 +71,23 @@ func NewCrosslink(jsName string, handler Handler) Crosslink {
 	return impl
 }
 
-func (cl *crosslinkImpl) Call(path string, data []byte, tags map[string]string, cb func(result []byte, err error)) {
-	tagsStr, err := json.Marshal(tags)
-	if err != nil {
-		log.Fatalln(err)
+func (cl *crosslinkImpl) Call(path string, obj any, tags map[string]string, cb func([]byte, error)) {
+	objStr := ""
+	if obj != nil {
+		objBin, err := json.Marshal(obj)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		objStr = string(objBin)
+	}
+
+	tagsStr := ""
+	if tags != nil {
+		tagsBin, err := json.Marshal(tags)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		tagsStr = string(tagsBin)
 	}
 
 	var id uint32
@@ -87,12 +100,12 @@ func (cl *crosslinkImpl) Call(path string, data []byte, tags map[string]string, 
 	}
 	cl.cbMap[id] = cb
 
-	cl.jsInstance.Call("callFromGo", js.ValueOf(id), js.ValueOf(path), js.ValueOf(string(data)), js.ValueOf(string(tagsStr)))
+	cl.jsInstance.Call("callFromGo", js.ValueOf(id), js.ValueOf(path), js.ValueOf(objStr), js.ValueOf(tagsStr))
 }
 
-func (cl *crosslinkImpl) serve(id uint32, data, tagsStr string) {
+func (cl *crosslinkImpl) serve(id uint32, dtaRaw, tagRaw []byte) {
 	var tags map[string]string
-	err := json.Unmarshal([]byte(tagsStr), &tags)
+	err := json.Unmarshal(tagRaw, &tags)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -102,10 +115,10 @@ func (cl *crosslinkImpl) serve(id uint32, data, tagsStr string) {
 		id:         id,
 	}
 
-	cl.handler.Serve(data, tags, rw)
+	cl.handler.Serve(dtaRaw, tags, rw)
 }
 
-func (cl *crosslinkImpl) replyFromJs(id uint32, reply, message string) {
+func (cl *crosslinkImpl) replyFromJs(id uint32, responseRaw []byte, message string) {
 	cb, ok := cl.cbMap[id]
 	if !ok {
 		log.Fatalln("call back function is not exist")
@@ -116,13 +129,17 @@ func (cl *crosslinkImpl) replyFromJs(id uint32, reply, message string) {
 		cb(nil, errors.New(message))
 		return
 	}
-	cb([]byte(reply), nil)
+	cb(responseRaw, nil)
 }
 
-func (rw *rwImpl) ReplySuccess(result string) {
-	rw.jsInstance.Call("serveReplyFromGo", js.ValueOf(rw.id), js.ValueOf(result), js.ValueOf(""))
+func (rw *rwImpl) ReplySuccess(response any) {
+	responseJson, err := json.Marshal(response)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	rw.jsInstance.Call("replyFromGo", js.ValueOf(rw.id), js.ValueOf(string(responseJson)), js.ValueOf(""))
 }
 
 func (rw *rwImpl) ReplyError(message string) {
-	rw.jsInstance.Call("serveReplyFromGo", js.ValueOf(rw.id), js.ValueOf(""), js.ValueOf(message))
+	rw.jsInstance.Call("replyFromGo", js.ValueOf(rw.id), js.ValueOf(""), js.ValueOf(message))
 }

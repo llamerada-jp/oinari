@@ -33,8 +33,8 @@ func InitCommandHandler(podMgr Manager, rootHandler crosslink.MultiPlexer) error
 	mpx := crosslink.NewMultiPlexer()
 	rootHandler.SetHandler("pod_manager", mpx)
 
-	mpx.SetHandler("run", crosslink.NewFuncObjHandler(
-		func(request *runRequest, tags map[string]string, writer crosslink.ResponseObjWriter) {
+	mpx.SetHandler("run", crosslink.NewFuncHandler(
+		func(request *runRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 			digest, err := podMgr.run(request.Name, request.Spec)
 			if err != nil {
 				writer.ReplyError(err.Error())
@@ -45,8 +45,8 @@ func InitCommandHandler(podMgr Manager, rootHandler crosslink.MultiPlexer) error
 			})
 		}))
 
-	mpx.SetHandler("list", crosslink.NewFuncObjHandler(
-		func(request *interface{}, tags map[string]string, writer crosslink.ResponseObjWriter) {
+	mpx.SetHandler("list", crosslink.NewFuncHandler(
+		func(request *interface{}, tags map[string]string, writer crosslink.ResponseWriter) {
 			list, err := podMgr.list()
 			if err != nil {
 				writer.ReplyError(err.Error())
@@ -57,8 +57,8 @@ func InitCommandHandler(podMgr Manager, rootHandler crosslink.MultiPlexer) error
 			})
 		}))
 
-	mpx.SetHandler("terminate", crosslink.NewFuncObjHandler(
-		func(param *terminateRequest, tags map[string]string, writer crosslink.ResponseObjWriter) {
+	mpx.SetHandler("terminate", crosslink.NewFuncHandler(
+		func(param *terminateRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 			err := podMgr.terminate(param.Uuid)
 			if err != nil {
 				writer.ReplyError(err.Error())

@@ -22,17 +22,11 @@ func NewCRI(cl crosslink.Crosslink) CRI {
 }
 
 func criCallHelper[REQ any, RES any](ci *criImpl, path string, request *REQ) (*RES, error) {
-
-	reqJson, err := json.Marshal(request)
-	if err != nil {
-		return nil, err
-	}
-
 	ch := make(chan *RES)
 	var funcError error
 
-	ci.cl.Call(strings.Join([]string{crosslinkPath, path}, "/"), reqJson, nil,
-		func(result []byte, err error) {
+	ci.cl.Call(strings.Join([]string{crosslinkPath, path}, "/"), request, nil,
+		func(response []byte, err error) {
 			defer close(ch)
 
 			if err != nil {
@@ -41,7 +35,7 @@ func criCallHelper[REQ any, RES any](ci *criImpl, path string, request *REQ) (*R
 			}
 
 			var res RES
-			err = json.Unmarshal(result, &res)
+			err = json.Unmarshal(response, &res)
 			if err != nil {
 				funcError = err
 				return

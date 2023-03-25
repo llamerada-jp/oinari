@@ -13,14 +13,14 @@ type mpxImpl struct {
 
 func NewMultiPlexer() MultiPlexer {
 	return &mpxImpl{
-		defaultHandler: NewFuncHandler(func(data string, tags map[string]string, writer ResponseWriter) {
+		defaultHandler: NewFuncHandler(func(_ *interface{}, tags map[string]string, writer ResponseWriter) {
 			writer.ReplyError(fmt.Sprintf("handler for %s is not defined", tags[TAG_PATH]))
 		}),
 		handlers: make(map[string]Handler),
 	}
 }
 
-func (m *mpxImpl) Serve(data string, tags map[string]string, writer ResponseWriter) {
+func (m *mpxImpl) Serve(dataRaw []byte, tags map[string]string, writer ResponseWriter) {
 	multiPlexerSpliter := regexp.MustCompile(`^/?([^/]*)/?(.*)$`)
 
 	var path string
@@ -57,14 +57,14 @@ func (m *mpxImpl) Serve(data string, tags map[string]string, writer ResponseWrit
 
 	if len(dir) != 0 {
 		if handler, ok := m.handlers[dir]; ok {
-			handler.Serve(data, newTags, writer)
+			handler.Serve(dataRaw, newTags, writer)
 			return
 		}
 	}
 
 	delete(newTags, TAG_PATH_MATCH_KIND)
 	delete(newTags, TAG_LEAF)
-	m.defaultHandler.Serve(data, newTags, writer)
+	m.defaultHandler.Serve(dataRaw, newTags, writer)
 }
 
 func (m *mpxImpl) SetHandler(pattern string, handler Handler) {

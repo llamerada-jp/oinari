@@ -64,16 +64,16 @@ export class ResponseWriter {
     this.replied = false;
   }
 
-  replySuccess(result: any): void {
+  replySuccess(response: any): void {
     if (this.replied) {
       console.error("response replied yet.");
       return;
     }
 
     this.worker.post({
-      type: "reply",
+      type: "response",
       id: this.id,
-      result: result,
+      response: response,
     });
 
     this.replied = true;
@@ -115,7 +115,7 @@ export class Crosslink {
       id: number;
       tags: Map<string, string>, // for call
       data: any, // for call
-      result: any, // for reply
+      response: any, // for response
       message: string, // for error
     }) => {
       switch (datum.type) {
@@ -123,8 +123,8 @@ export class Crosslink {
           this.receiveCall(datum.data, datum.tags, datum.id);
           break;
 
-        case "reply":
-          this.receiveReply(datum.result, datum.id);
+        case "response":
+          this.receiveResponse(datum.response, datum.id);
           break;
 
         case "error":
@@ -193,7 +193,7 @@ export class Crosslink {
     }
   }
 
-  private receiveReply(result: any, id: number): void {
+  private receiveResponse(response: any, id: number): void {
     let waiting = this.waitings.get(id);
 
     if (waiting === undefined) {
@@ -202,7 +202,7 @@ export class Crosslink {
     }
 
     this.waitings.delete(id);
-    waiting.resolve(result);
+    waiting.resolve(response);
   }
 
   private receiveError(message: string, id: number): void {
@@ -293,10 +293,6 @@ export class MultiPlexer implements Handler {
   }
 }
 
-interface stringMap {
-  [key: string]: string;
-}
-
 export class GoInterfaceHandler implements Handler {
   private cl: Crosslink | undefined;
   private rwMap: Map<number, ResponseWriter>;
@@ -319,7 +315,7 @@ export class GoInterfaceHandler implements Handler {
     } while (rwMap.has(id));
     rwMap.set(id, writer);
 
-    let jsTags: stringMap = {};
+    let jsTags: Record<string, string> = {};
     for (const key of tags.keys()) {
       let value = tags.get(key);
       if (key !== TAG_LEAF && value !== undefined) {
@@ -334,7 +330,7 @@ export class GoInterfaceHandler implements Handler {
     console.assert(false, "this method will be override by go");
   }
 
-  serveReplyFromGo(id: number, result: string, message: string): void {
+  replyFromGo(id: number, response: string, message: string): void {
     let rw = this.rwMap.get(id);
 
     if (rw === undefined) {
@@ -346,31 +342,38 @@ export class GoInterfaceHandler implements Handler {
     if (message !== "") {
       rw.replyError(message);
     } else {
-      rw.replySuccess(JSON.parse(result));
+      rw.replySuccess(JSON.parse(response));
     }
   }
 
-  callFromGo(id: number, path:string, data: string, tags: string) {
+  callFromGo(id: number, path: string, data: string, tags: string) {
     if (this.cl === undefined) {
       console.error("Crosslink should be bind on setup.");
       return;
     }
 
-    let jsTags = JSON.parse(tags) as stringMap;
     let mapTags = new Map<string, string>()
 
-    for (const key of Object.keys(jsTags)) {
-      mapTags.set(key, jsTags[key]);
+    if (tags != null && tags != "") {
+      let jsTags = JSON.parse(tags) as Record<string, string>;
+      for (const key of Object.keys(jsTags)) {
+        mapTags.set(key, jsTags[key]);
+      }
     }
 
-    this.cl.call(path, JSON.parse(data), mapTags).then((reply) => {
-      this.callReplyToGo(id, JSON.stringify(reply), "");
+    let obj: any = null
+    if (data != null && data != "") {
+      obj = JSON.parse(data);
+    }
+
+    this.cl.call(path, obj, mapTags).then((response) => {
+      this.replyToGo(id, JSON.stringify(response), "");
     }).catch((message: string) => {
-      this.callReplyToGo(id, "", message);
+      this.replyToGo(id, "", message);
     });
   }
 
-  callReplyToGo(id: number, reply: string, message: string): void {
+  replyToGo(_1: number, _2: string, _3: string): void {
     console.assert(false, "this method will be override by go");
   }
 }

@@ -28,7 +28,7 @@ class HandlerMock implements CL.Handler {
   serve(data: any, tags: Map<string, string>, writer: CL.ResponseWriter): void {
     this.data = data;
     this.tags = tags;
-    writer.replySuccess("reply");
+    writer.replySuccess("response");
   }
 }
 
@@ -47,8 +47,8 @@ test("handler", () => {
     { key: "value" },
     new Map<string, string>([["tag", "tag content"]])
 
-  ).then((reply: any) => {
-    expect(reply).toBe("reply");
+  ).then((response: any) => {
+    expect(response).toBe("response");
     expect(handler.data.key).toBe("value");
     expect(handler.tags.size).toBe(2);
     expect(handler.tags.get(CL.TAG_PATH)).toBe("test_path");
@@ -88,8 +88,8 @@ describe("response", () => {
   test("func with success reply", () => {
     return crosslink2.call("success", {
       request: "request success",
-    }, new Map<string, string>([["tag", "tag success"]])).then((reply: any) => {
-      let r = reply as { res: string };
+    }, new Map<string, string>([["tag", "tag success"]])).then((response: any) => {
+      let r = response as { res: string };
       expect(r.res).toBe("reply success");
     });
   });
@@ -150,22 +150,22 @@ test("multiplexer", () => {
     });
   });
 
-  crosslink1.call("notexist", "request default").then((reply) => {
-    expect(reply).toBe("reply default");
+  crosslink1.call("notexist", "request default").then((response) => {
+    expect(response).toBe("reply default");
   }).catch(() => {
     throw "unreachable";
   });
 
   crosslink1.call("func1", "request func1").then(() => {
     throw "unreachable";
-  }).catch((reply) => {
-    expect(reply).toBe("reply func1");
+  }).catch((response) => {
+    expect(response).toBe("reply func1");
   })
 
   crosslink1.call("branch/func2", {
     message: "request func2"
-  }).then((reply) => {
-    let r = reply as {
+  }).then((response) => {
+    let r = response as {
       message: string
     };
     expect(r.message).toBe("reply func2");

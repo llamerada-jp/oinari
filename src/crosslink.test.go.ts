@@ -41,13 +41,13 @@ export class Tester {
     // setup handlers
     mpx.setHandlerFunc("jsFunc", (data: any, tags: Map<string, string>, writer: CL.ResponseWriter) => {
       this.called++;
-      console.assert(data === "request js");
+      console.assert(data === "request js"+this.called);
       console.assert(tags.get(CL.TAG_PATH) === "jsFunc");
 
       if (tags.get("type") === "success") {
-        writer.replySuccess("result js success");
+        writer.replySuccess("response js success");
       } else {
-        writer.replyError("result js failure");
+        writer.replyError("response js failure");
       }
     });
   }
@@ -79,14 +79,14 @@ export class Tester {
   // called by go
   runByGo() {
     this.crosslink.call("goFunc", "request go").then((value: string) => {
-      console.assert(value === "result go func1");
+      console.assert(value === "response go func1");
       this.finToGo(true);
     }).catch(() => {
       console.assert(false, "unreachable in this test case");
     })
   }
 
-  finToGo(result: boolean) {
+  finToGo(response: boolean) {
     console.assert(false, "this method will be override by go")
   }
 }
