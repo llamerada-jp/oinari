@@ -245,8 +245,8 @@ type ListImagesResponse struct {
 type Image struct {
 	ID   string    `json:"id"`
 	Spec ImageSpec `json:"spec"`
-	// this field meaning the runtime environment of wasm, like 'go:1.19'
-	Runtime string `json:"runtime"`
+	// this field meaning the runtime environment of wasm, like  'core:dev1', 'go:1.19'
+	Runtime []string `json:"runtime"`
 }
 
 type PullImageRequest struct {

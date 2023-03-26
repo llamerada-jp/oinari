@@ -22,12 +22,12 @@ import (
 
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/agent/cri"
-	"github.com/llamerada-jp/oinari/agent/crosslink"
 	"github.com/llamerada-jp/oinari/agent/resource"
 	"github.com/llamerada-jp/oinari/agent/resource/account"
 	"github.com/llamerada-jp/oinari/agent/resource/node"
 	"github.com/llamerada-jp/oinari/agent/resource/pod"
 	"github.com/llamerada-jp/oinari/agent/system"
+	"github.com/llamerada-jp/oinari/lib/crosslink"
 )
 
 type agent struct {

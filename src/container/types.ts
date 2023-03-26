@@ -27,7 +27,7 @@ export interface ReadyResponse {
   // container_id: string
   // pod_sandbox_id: string
   image: ArrayBuffer
-  // runtime: string
+  runtime: string[]
   args: string[]
   envs: Record<string, string>
 };

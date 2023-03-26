@@ -1,6 +1,6 @@
 package system
 
-import "github.com/llamerada-jp/oinari/agent/crosslink"
+import "github.com/llamerada-jp/oinari/lib/crosslink"
 
 type connectRequest struct {
 	Url     string `json:"url"`

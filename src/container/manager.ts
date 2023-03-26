@@ -22,15 +22,18 @@ importScripts("wasm_exec.js");
 const CL_PATH: string = Types.CrosslinkPath + "/";
 
 let crosslink: CL.Crosslink;
+let rootMpx: CL.MultiPlexer;
 
-export function initManager(cl: CL.Crosslink, rootMpx: CL.MultiPlexer): void {
+export function initManager(cl: CL.Crosslink, rm: CL.MultiPlexer): void {
   crosslink = cl;
+  rootMpx = rm;
   initHandler(rootMpx);
 }
 
 export function ready(): void {
   crosslink.call(CL_PATH + "ready", {}).then((obj) => {
     let res = obj as Types.ReadyResponse;
+    setup(res);
     start(res);
   });
 }
@@ -44,6 +47,21 @@ function initHandler(rootMpx: CL.MultiPlexer): void {
     // go wasm module can not process term signal, so ignore this
     writer.replySuccess({});
   });
+}
+
+function setup(config: Types.ReadyResponse): void {
+  for (const r of config.runtime) {
+    if (r === "core:dev1") {
+      setupCrosslink();
+    }
+  }
+}
+
+function setupCrosslink(): void {
+  let goIfHandler = new CL.GoInterfaceHandler();
+  goIfHandler.bindCrosslink(crosslink);
+  (globalThis as any).crosslink = goIfHandler;
+  rootMpx.setDefaultHandler(goIfHandler);
 }
 
 function start(config: Types.ReadyResponse): void {

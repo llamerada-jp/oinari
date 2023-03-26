@@ -1,4 +1,4 @@
 {
   "image": "./exit.wasm",
-  "runtime": "go1.19"
+  "runtime": ["go:1.19"]
 }

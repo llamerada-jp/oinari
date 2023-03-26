@@ -23,6 +23,8 @@ const containerIDMax: number = Math.floor(Math.pow(2, 30));
 const imageRefIDMax: number = Math.floor(Math.pow(2, 30));
 const containerStopTimeout: number = 10 * 1000;
 
+const runtimeRequired: string[] = ["go:1.19"];
+
 // key means PodSandboxID
 let sandboxes: Map<string, SandboxImpl> = new Map();
 // key means ContainerID
@@ -46,14 +48,14 @@ class ImageImpl {
   // image ref id
   id: string
   url: string
-  runtime: string
+  runtime: Array<string>
   image: ArrayBuffer | undefined
 
   constructor(id: string, url: string) {
     this.state = ImageState.Created;
     this.id = id;
     this.url = url;
-    this.runtime = "";
+    this.runtime = new Array();
     this.pull();
   }
 
@@ -71,10 +73,9 @@ class ImageImpl {
     }).then((p) => {
       let param = p as {
         image: string
-        runtime: string
+        runtime: string[]
       };
 
-      // TODO check runtime
       this.runtime = param.runtime;
 
       return fetch(new URL(param.image, this.url).toString());
@@ -139,6 +140,11 @@ class ContainerImpl {
     console.assert(this.worker == null);
 
     this.started_at = getTimestamp();
+    if (!this._check()) {
+      this.exit_code = -1;
+      this.finished_at = getTimestamp();
+      return;
+    }
     let rootMpx = new CL.MultiPlexer();
     this.worker = new Worker("container.js");
     this.link = new CL.Crosslink(new CL.WorkerImpl(this.worker), rootMpx);
@@ -173,6 +179,29 @@ class ContainerImpl {
     this.link = undefined;
   }
 
+  _check(): boolean {
+    // image isn't exist
+    if (this.image.image == null) {
+      console.error("can not start container without the image");
+      return false;
+    }
+
+    // should specify required runtime
+    let hasRequiredRuntime = false;
+    for (const r of this.image.runtime) {
+      if (runtimeRequired.indexOf(r) != -1) {
+        hasRequiredRuntime = true;
+        break;
+      }
+    }
+    if (!hasRequiredRuntime) {
+      console.error("minimum required runtime is not specified:" + JSON.stringify(this.image.runtime));
+      return false;
+    }
+
+    return true;
+  }
+
   _initHandler(rootMpx: CL.MultiPlexer) {
     let mpx = new CL.MultiPlexer();
     rootMpx.setHandler(CT.CrosslinkPath, mpx);
@@ -191,23 +220,14 @@ class ContainerImpl {
   _onReady(_: CT.ReadyRequest): CT.ReadyResponse {
     // set error code and finished timestamp immediately if image isn't exist
     if (this.image.image == null) {
-      console.error("can not start container without the image");
-
-      this.exit_code = -1;
-      this.finished_at = getTimestamp();
-
-      return {
-        name: this.image.url,
-        image: new ArrayBuffer(0),
-        args: [],
-        envs: {},
-      };
+      throw new Error("the image should be pulled");
     }
 
     // pass image to run for web worker
     return {
       name: this.image.url,
       image: this.image.image.slice(0),
+      runtime: this.image.runtime,
       args: this.args,
       envs: this.envs,
     };
@@ -572,7 +592,7 @@ interface Image {
   id: string
   spec: ImageSpec
   // this field meaning the runtime environment of wasm, like 'go:1.19'
-  runtime: string
+  runtime: string[]
 }
 
 interface PullImageRequest {

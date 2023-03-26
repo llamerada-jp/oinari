@@ -1,8 +1,8 @@
 package pod
 
 import (
-	"github.com/llamerada-jp/oinari/agent/crosslink"
 	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/lib/crosslink"
 )
 
 type applicationDigest struct {

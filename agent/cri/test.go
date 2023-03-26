@@ -3,7 +3,7 @@ package cri
 import (
 	"time"
 
-	"github.com/llamerada-jp/oinari/agent/crosslink"
+	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -69,7 +69,7 @@ func (suite *CriSuite) TestImage() {
 	listRes, err = suite.cri.ListImages(&ListImagesRequest{})
 	suite.NoError(err)
 	suite.Len(listRes.Images, 1)
-	suite.checkImage(&listRes.Images[0], "http://localhost:8080/exit/container.json", "go1.19", test1ID)
+	suite.checkImage(&listRes.Images[0], "http://localhost:8080/exit/container.json", []string{"go:1.19"}, test1ID)
 
 	// expect there to be two images after pull another image
 	pullRes, err = suite.cri.PullImage(&PullImageRequest{
@@ -85,11 +85,11 @@ func (suite *CriSuite) TestImage() {
 	suite.Len(listRes.Images, 2)
 
 	if listRes.Images[0].Spec.Image == "http://localhost:8080/exit/container.json" {
-		suite.checkImage(&listRes.Images[0], "http://localhost:8080/exit/container.json", "go1.19", test1ID)
-		suite.checkImage(&listRes.Images[1], "http://localhost:8080/sleep/container.json", "go1.19", test2ID)
+		suite.checkImage(&listRes.Images[0], "http://localhost:8080/exit/container.json", []string{"go:1.19"}, test1ID)
+		suite.checkImage(&listRes.Images[1], "http://localhost:8080/sleep/container.json", []string{"go:1.19"}, test2ID)
 	} else {
-		suite.checkImage(&listRes.Images[0], "http://localhost:8080/sleep/container.json", "go1.19", test2ID)
-		suite.checkImage(&listRes.Images[1], "http://localhost:8080/exit/container.json", "go1.19", test1ID)
+		suite.checkImage(&listRes.Images[0], "http://localhost:8080/sleep/container.json", []string{"go:1.19"}, test2ID)
+		suite.checkImage(&listRes.Images[1], "http://localhost:8080/exit/container.json", []string{"go:1.19"}, test1ID)
 	}
 	suite.NotEqual(listRes.Images[0].ID, listRes.Images[1].ID)
 
@@ -117,7 +117,7 @@ func (suite *CriSuite) TestImage() {
 	listRes, err = suite.cri.ListImages(&ListImagesRequest{})
 	suite.NoError(err)
 	suite.Len(listRes.Images, 1)
-	suite.checkImage(&listRes.Images[0], "http://localhost:8080/sleep/container.json", "go1.19", test2ID)
+	suite.checkImage(&listRes.Images[0], "http://localhost:8080/sleep/container.json", []string{"go:1.19"}, test2ID)
 }
 
 func (suite *CriSuite) TestSandbox() {
@@ -382,6 +382,7 @@ func (suite *CriSuite) TestContainer() {
 	for _, image := range []string{
 		"http://localhost:8080/exit/container.json",
 		"http://localhost:8080/sleep/container.json",
+		"http://localhost:8080/sleep/incorrect_runtime.json",
 	} {
 		_, err = suite.cri.PullImage(&PullImageRequest{
 			Image: ImageSpec{
@@ -645,9 +646,38 @@ func (suite *CriSuite) TestContainer() {
 		ContainerID: container4,
 	})
 	suite.NoError(err)
+
+	// check the container become error when specify incorrect runtime
+	createRes, err = suite.cri.CreateContainer(&CreateContainerRequest{
+		PodSandboxID: sandbox2,
+		Config: ContainerConfig{
+			Metadata: ContainerMetadata{
+				Name: "container3",
+			},
+			Image: ImageSpec{
+				Image: "http://localhost:8080/sleep/incorrect_runtime.json",
+			},
+		},
+	})
+	suite.NoError(err)
+	container5 := createRes.ContainerID
+
+	_, err = suite.cri.StartContainer(&StartContainerRequest{
+		ContainerID: container5,
+	})
+	suite.NoError(err)
+
+	suite.Eventually(func() bool {
+		statusRes, err = suite.cri.ContainerStatus(&ContainerStatusRequest{
+			ContainerID: container5,
+		})
+		suite.NoError(err)
+		return statusRes.Status.State == ContainerExited
+	}, 15*time.Second, time.Second)
+	suite.Equal(-1, statusRes.Status.ExitCode)
 }
 
-func (suite *CriSuite) checkImage(image *Image, url, runtime, id string) {
+func (suite *CriSuite) checkImage(image *Image, url string, runtime []string, id string) {
 	suite.NotEmpty(image.ID)
 	suite.Equal(id, image.ID)
 	suite.Equal(url, image.Spec.Image)

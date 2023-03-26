@@ -3,7 +3,7 @@ package system
 import (
 	"log"
 
-	"github.com/llamerada-jp/oinari/agent/crosslink"
+	"github.com/llamerada-jp/oinari/lib/crosslink"
 )
 
 type CommandDriver interface {

@@ -1,0 +1,4 @@
+{
+  "image": "./core_test.wasm",
+  "runtime": ["core:dev1", "go:1.19"]
+}

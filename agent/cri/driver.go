@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/llamerada-jp/oinari/agent/crosslink"
+	"github.com/llamerada-jp/oinari/lib/crosslink"
 )
 
 const (

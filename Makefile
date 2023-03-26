@@ -33,7 +33,7 @@ build-test: build # $(MAP_FILES)
 
 .PHONY: test-wasm
 test-wasm:
-	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./agent/crosslink/*
+	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./lib/crosslink/*
 	GOOS=js GOARCH=wasm go test -o ./dist/test/test.wasm -c ./cmd/agent/*
 
 test-ts: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/keys.ts
