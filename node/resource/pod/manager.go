@@ -7,10 +7,10 @@ import (
 	"log"
 
 	"github.com/google/uuid"
-	"github.com/llamerada-jp/oinari/agent/cri"
-	"github.com/llamerada-jp/oinari/agent/resource/account"
-	"github.com/llamerada-jp/oinari/agent/resource/node"
 	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/node/cri"
+	"github.com/llamerada-jp/oinari/node/resource/account"
+	"github.com/llamerada-jp/oinari/node/resource/node"
 )
 
 type Manager interface {

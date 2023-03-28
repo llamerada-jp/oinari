@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/llamerada-jp/oinari/agent/resource/pod"
 	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/node/resource/pod"
 )
 
 type Manager interface {

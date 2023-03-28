@@ -17,13 +17,18 @@
 import * as CL from "./crosslink";
 import * as CT from "./container/types";
 
-const crosslinkPath: string = "cri";
+const crosslinkCriPath: string = "cri";
+const crosslinkNodePath: string = "node";
+const containerTag: string = "container";
+const sandboxTag: string = "sandbox";
 const podSandboxIDMax: number = Math.floor(Math.pow(2, 30));
 const containerIDMax: number = Math.floor(Math.pow(2, 30));
 const imageRefIDMax: number = Math.floor(Math.pow(2, 30));
 const containerStopTimeout: number = 10 * 1000;
 
 const runtimeRequired: string[] = ["go:1.19"];
+
+let nodeCL: CL.Crosslink;
 
 // key means PodSandboxID
 let sandboxes: Map<string, SandboxImpl> = new Map();
@@ -150,6 +155,7 @@ class ContainerImpl {
     this.link = new CL.Crosslink(new CL.WorkerImpl(this.worker), rootMpx);
 
     this._initHandler(rootMpx);
+    rootMpx.setHandler(crosslinkNodePath, new NodePipe(this.sandbox_id, this.id));
   }
 
   stop() {
@@ -302,13 +308,60 @@ class SandboxImpl {
   }
 }
 
-export function initCRI(rootMpx: CL.MultiPlexer): void {
+class ApplicationPipe implements CL.Handler {
+  serve(data: any, tags: Map<string, string>, writer: CL.ResponseWriter): void {
+    let path = tags.get(CL.TAG_PATH);
+    let containerID = tags.get(containerTag);
+    console.assert(path != null && containerID != null);
+
+    let container = containers.get(containerID!);
+    if (container == null) {
+      writer.replyError("container isn't exist:" + containerID);
+      return;
+    }
+
+    container.link?.call(path!, data, tags).then((response) => {
+      writer.replySuccess(response);
+    }).catch((err) => {
+      writer.replyError(err);
+    });
+  }
+}
+
+class NodePipe implements CL.Handler {
+  sandbox_id: string
+  container_id: string
+
+  constructor(sandbox_id: string, container_id: string) {
+    this.sandbox_id = sandbox_id;
+    this.container_id = container_id;
+  }
+
+  serve(data: any, tags: Map<string, string>, writer: CL.ResponseWriter): void {
+    let path = tags.get(CL.TAG_PATH);
+    console.assert(path != null);
+
+    tags.set(sandboxTag, this.sandbox_id);
+    tags.set(containerTag, this.container_id);
+
+    nodeCL.call(path!, data, tags).then((response) => {
+      writer.replySuccess(response);
+    }).catch((err) => {
+      writer.replyError(err);
+    });
+  }
+}
+
+export function initCRI(nCL: CL.Crosslink, rootMpx: CL.MultiPlexer): void {
+  nodeCL = nCL;
   initHandler(rootMpx);
+  rootMpx.setHandler("application", new ApplicationPipe());
 }
 
 function initHandler(rootMpx: CL.MultiPlexer) {
   let mpx = new CL.MultiPlexer();
-  rootMpx.setHandler(crosslinkPath, mpx);
+
+  rootMpx.setHandler(crosslinkCriPath, mpx);
 
   mpx.setHandlerFunc("runPodSandbox", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     let res = runPodSandbox(data as RunPodSandboxRequest);

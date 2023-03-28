@@ -19,7 +19,7 @@ package main
 import (
 	"testing"
 
-	"github.com/llamerada-jp/oinari/agent/cri"
+	"github.com/llamerada-jp/oinari/node/cri"
 	"github.com/stretchr/testify/suite"
 )
 

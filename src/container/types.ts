@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export const CrosslinkPath: string = "manager";
+export const CrosslinkPath: string = "container";
 
 // ReadyRequest is a message to inform the parent that the worker has started
 export interface ReadyRequest {

@@ -21,16 +21,16 @@ import (
 	"log"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/agent/cri"
-	"github.com/llamerada-jp/oinari/agent/resource"
-	"github.com/llamerada-jp/oinari/agent/resource/account"
-	"github.com/llamerada-jp/oinari/agent/resource/node"
-	"github.com/llamerada-jp/oinari/agent/resource/pod"
-	"github.com/llamerada-jp/oinari/agent/system"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
+	"github.com/llamerada-jp/oinari/node/cri"
+	"github.com/llamerada-jp/oinari/node/resource"
+	"github.com/llamerada-jp/oinari/node/resource/account"
+	"github.com/llamerada-jp/oinari/node/resource/node"
+	"github.com/llamerada-jp/oinari/node/resource/pod"
+	"github.com/llamerada-jp/oinari/node/system"
 )
 
-type agent struct {
+type nodeAgent struct {
 	ctx context.Context
 	// crosslink
 	cl      crosslink.Crosslink
@@ -41,56 +41,56 @@ type agent struct {
 	sys system.System
 }
 
-func (agent *agent) initCrosslink() error {
-	agent.rootMpx = crosslink.NewMultiPlexer()
-	agent.cl = crosslink.NewCrosslink("crosslink", agent.rootMpx)
+func (na *nodeAgent) initCrosslink() error {
+	na.rootMpx = crosslink.NewMultiPlexer()
+	na.cl = crosslink.NewCrosslink("crosslink", na.rootMpx)
 	return nil
 }
 
-func (agent *agent) initColonio() error {
+func (na *nodeAgent) initColonio() error {
 	config := colonio.NewConfig()
 	col, err := colonio.NewColonio(config)
 	if err != nil {
 		return err
 	}
-	agent.col = col
+	na.col = col
 	return nil
 }
 
-func (agent *agent) initSystem() error {
-	cd := system.NewCommandDriver(agent.cl)
-	agent.sys = system.NewSystem(agent.col, agent, cd)
+func (na *nodeAgent) initSystem() error {
+	cd := system.NewCommandDriver(na.cl)
+	na.sys = system.NewSystem(na.col, na, cd)
 	go func() {
-		err := agent.sys.Start(agent.ctx)
+		err := na.sys.Start(na.ctx)
 		if err != nil {
 			log.Fatalln(err)
 		}
 	}()
 
-	system.InitCommandHandler(agent.sys, agent.rootMpx)
+	system.InitCommandHandler(na.sys, na.rootMpx)
 	return nil
 }
 
-func (agent *agent) execute() error {
+func (na *nodeAgent) execute() error {
 	ctx, _ := context.WithCancel(context.Background())
-	agent.ctx = ctx
+	na.ctx = ctx
 
-	err := agent.initCrosslink()
+	err := na.initCrosslink()
 	if err != nil {
 		return err
 	}
 
-	err = agent.initColonio()
+	err = na.initColonio()
 	if err != nil {
 		return err
 	}
 
-	err = agent.initSystem()
+	err = na.initSystem()
 	if err != nil {
 		return err
 	}
 
-	err = agent.sys.TellInitComplete()
+	err = na.sys.TellInitComplete()
 	if err != nil {
 		return err
 	}
@@ -100,27 +100,27 @@ func (agent *agent) execute() error {
 }
 
 // implement system events
-func (agent *agent) OnConnect() error {
+func (na *nodeAgent) OnConnect() error {
 	// node manager
-	nodeMgr := node.NewManager(agent.col.GetLocalNid())
+	nodeMgr := node.NewManager(na.col.GetLocalNid())
 
 	// account manager
-	accountKvs := account.NewKvsDriver(agent.col)
-	accountMgr := account.NewManager(agent.sys.GetAccount(), accountKvs)
+	accountKvs := account.NewKvsDriver(na.col)
+	accountMgr := account.NewManager(na.sys.GetAccount(), accountKvs)
 
 	// pod manager
-	cri := cri.NewCRI(agent.cl)
-	podKvs := pod.NewKvsDriver(agent.col)
-	podMsg := pod.NewMessagingDriver(agent.col)
+	cri := cri.NewCRI(na.cl)
+	podKvs := pod.NewKvsDriver(na.col)
+	podMsg := pod.NewMessagingDriver(na.col)
 	podMgr := pod.NewManager(cri, podKvs, podMsg, accountMgr, nodeMgr)
-	pod.InitCommandHandler(podMgr, agent.rootMpx)
-	pod.InitMessagingHandler(podMgr, agent.col)
+	pod.InitCommandHandler(podMgr, na.rootMpx)
+	pod.InitMessagingHandler(podMgr, na.col)
 
 	// resource manager
-	ld := resource.NewLocalDatastore(agent.col)
+	ld := resource.NewLocalDatastore(na.col)
 	resourceManager := resource.NewManager(ld, podMgr)
 	go func() {
-		err := resourceManager.Start(agent.ctx)
+		err := resourceManager.Start(na.ctx)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -130,8 +130,8 @@ func (agent *agent) OnConnect() error {
 }
 
 func main() {
-	agent := &agent{}
-	err := agent.execute()
+	na := &nodeAgent{}
+	err := na.execute()
 	if err != nil {
 		fmt.Println(err)
 	}

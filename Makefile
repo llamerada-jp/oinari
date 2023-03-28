@@ -22,7 +22,7 @@ setup:
 
 .PHONY: build
 build: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/colonio.d.ts src/colonio_go.d.ts
-	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/agent/*.go
+	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/node/*.go
 	npm run build
 	mv ./dist/test.js ./dist/test/test.js
 
@@ -34,7 +34,7 @@ build-test: build # $(MAP_FILES)
 .PHONY: test-wasm
 test-wasm:
 	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./lib/crosslink/*
-	GOOS=js GOARCH=wasm go test -o ./dist/test/test.wasm -c ./cmd/agent/*
+	GOOS=js GOARCH=wasm go test -o ./dist/test/test.wasm -c ./cmd/node/*
 
 test-ts: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/keys.ts
 	npm t
