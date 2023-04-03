@@ -43,7 +43,7 @@ test("handler", () => {
   const crosslink2 = new CL.Crosslink(mock2, handler);
 
   crosslink1.call(
-    "test_path",
+    "testPath",
     { key: "value" },
     new Map<string, string>([["tag", "tag content"]])
 
@@ -51,7 +51,7 @@ test("handler", () => {
     expect(response).toBe("response");
     expect(handler.data.key).toBe("value");
     expect(handler.tags.size).toBe(2);
-    expect(handler.tags.get(CL.TAG_PATH)).toBe("test_path");
+    expect(handler.tags.get(CL.TAG_PATH)).toBe("testPath");
     expect(handler.tags.get("tag")).toBe("tag content");
   });
 });

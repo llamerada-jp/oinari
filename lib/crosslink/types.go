@@ -3,7 +3,7 @@ package crosslink
 const (
 	TAG_PATH            = "path"
 	TAG_LEAF            = "leaf"
-	TAG_PATH_MATCH_KIND = "match_kind"
+	TAG_PATH_MATCH_KIND = "matchKind"
 
 	PATH_MATCH_KIND_EXACT = "E"
 	PATH_MATCH_KIND_HEAD  = "H"

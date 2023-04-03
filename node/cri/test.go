@@ -25,7 +25,7 @@ func (suite *CriSuite) AfterTest(suiteName, testName string) {
 	suite.NoError(err)
 	for _, container := range containersRes.Containers {
 		_, err = suite.cri.RemoveContainer(&RemoveContainerRequest{
-			ContainerID: container.ID,
+			ContainerId: container.ID,
 		})
 		suite.NoError(err)
 	}
@@ -35,7 +35,7 @@ func (suite *CriSuite) AfterTest(suiteName, testName string) {
 	suite.NoError(err)
 	for _, sandbox := range sandboxesRes.Items {
 		_, err = suite.cri.RemovePodSandbox(&RemovePodSandboxRequest{
-			PodSandboxID: sandbox.ID,
+			PodSandboxId: sandbox.ID,
 		})
 		suite.NoError(err)
 	}
@@ -145,7 +145,7 @@ func (suite *CriSuite) TestSandbox() {
 		},
 	})
 	suite.NoError(err)
-	sandboxId1 := runRes.PodSandboxID
+	sandboxId1 := runRes.PodSandboxId
 
 	listRes, err = suite.cri.ListPodSandbox(&ListPodSandboxRequest{})
 	suite.NoError(err)
@@ -195,7 +195,7 @@ func (suite *CriSuite) TestSandbox() {
 		},
 	})
 	suite.NoError(err)
-	sandboxId2 := runRes.PodSandboxID
+	sandboxId2 := runRes.PodSandboxId
 
 	listRes, err = suite.cri.ListPodSandbox(&ListPodSandboxRequest{})
 	suite.NoError(err)
@@ -213,13 +213,13 @@ func (suite *CriSuite) TestSandbox() {
 
 	// expect an error when call PodSandboxStatus for pod not exist
 	_, err = suite.cri.PodSandboxStatus(&PodSandboxStatusRequest{
-		PodSandboxID: "not exist",
+		PodSandboxId: "not exist",
 	})
 	suite.Error(err)
 
 	// checking response of PodSandboxStatus
 	createContainerRes, err := suite.cri.CreateContainer(&CreateContainerRequest{
-		PodSandboxID: sandboxId1,
+		PodSandboxId: sandboxId1,
 		Config: ContainerConfig{
 			Metadata: ContainerMetadata{
 				Name: "containerName",
@@ -230,10 +230,10 @@ func (suite *CriSuite) TestSandbox() {
 		},
 	})
 	suite.NoError(err)
-	container1 := createContainerRes.ContainerID
+	container1 := createContainerRes.ContainerId
 
 	statusRes, err := suite.cri.PodSandboxStatus(&PodSandboxStatusRequest{
-		PodSandboxID: sandboxId1,
+		PodSandboxId: sandboxId1,
 	})
 	suite.NoError(err)
 	suite.Equal(sandboxId1, statusRes.Status.ID)
@@ -253,19 +253,19 @@ func (suite *CriSuite) TestSandbox() {
 
 	// start container
 	_, err = suite.cri.StartContainer(&StartContainerRequest{
-		ContainerID: container1,
+		ContainerId: container1,
 	})
 	suite.NoError(err)
 
 	// checking status after stopping sandbox
 	_, err = suite.cri.StopPodSandbox(&StopPodSandboxRequest{
-		PodSandboxID: sandboxId1,
+		PodSandboxId: sandboxId1,
 	})
 	suite.NoError(err)
 
 	suite.Eventually(func() bool {
 		statusRes, err = suite.cri.PodSandboxStatus(&PodSandboxStatusRequest{
-			PodSandboxID: sandboxId1,
+			PodSandboxId: sandboxId1,
 		})
 		suite.NoError(err)
 		return statusRes.ContainersStatuses[0].State == ContainerExited
@@ -281,13 +281,13 @@ func (suite *CriSuite) TestSandbox() {
 
 	// StopPodSandbox is idempotent
 	_, err = suite.cri.StopPodSandbox(&StopPodSandboxRequest{
-		PodSandboxID: sandboxId1,
+		PodSandboxId: sandboxId1,
 	})
 	suite.NoError(err)
 
 	// expect there is one sandbox after remove one sandbox
 	_, err = suite.cri.RemovePodSandbox(&RemovePodSandboxRequest{
-		PodSandboxID: sandboxId1,
+		PodSandboxId: sandboxId1,
 	})
 	suite.NoError(err)
 
@@ -299,7 +299,7 @@ func (suite *CriSuite) TestSandbox() {
 
 	// RemovePodSandbox is idempotent
 	_, err = suite.cri.RemovePodSandbox(&RemovePodSandboxRequest{
-		PodSandboxID: sandboxId1,
+		PodSandboxId: sandboxId1,
 	})
 	suite.NoError(err)
 
@@ -350,7 +350,7 @@ func (suite *CriSuite) TestContainer() {
 		},
 	})
 	suite.NoError(err)
-	sandbox1 := sandboxRes.PodSandboxID
+	sandbox1 := sandboxRes.PodSandboxId
 
 	sandboxRes, err = suite.cri.RunPodSandbox(&RunPodSandboxRequest{
 		Config: PodSandboxConfig{
@@ -362,11 +362,11 @@ func (suite *CriSuite) TestContainer() {
 		},
 	})
 	suite.NoError(err)
-	sandbox2 := sandboxRes.PodSandboxID
+	sandbox2 := sandboxRes.PodSandboxId
 
 	// expect an error when create before pulling image
 	_, err = suite.cri.CreateContainer(&CreateContainerRequest{
-		PodSandboxID: sandbox1,
+		PodSandboxId: sandbox1,
 		Config: ContainerConfig{
 			Metadata: ContainerMetadata{
 				Name: "container1",
@@ -393,7 +393,7 @@ func (suite *CriSuite) TestContainer() {
 	}
 
 	createRes, err := suite.cri.CreateContainer(&CreateContainerRequest{
-		PodSandboxID: sandbox1,
+		PodSandboxId: sandbox1,
 		Config: ContainerConfig{
 			Metadata: ContainerMetadata{
 				Name: "container1",
@@ -404,10 +404,10 @@ func (suite *CriSuite) TestContainer() {
 		},
 	})
 	suite.NoError(err)
-	container1 := createRes.ContainerID
+	container1 := createRes.ContainerId
 
 	statusRes, err := suite.cri.ContainerStatus(&ContainerStatusRequest{
-		ContainerID: container1,
+		ContainerId: container1,
 	})
 	suite.NoError(err)
 	suite.Equal(container1, statusRes.Status.ID)
@@ -422,12 +422,12 @@ func (suite *CriSuite) TestContainer() {
 
 	// expect container status is running after start the container
 	_, err = suite.cri.StartContainer(&StartContainerRequest{
-		ContainerID: container1,
+		ContainerId: container1,
 	})
 	suite.NoError(err)
 
 	statusRes, err = suite.cri.ContainerStatus(&ContainerStatusRequest{
-		ContainerID: container1,
+		ContainerId: container1,
 	})
 	suite.NoError(err)
 	suite.Equal(ContainerRunning, statusRes.Status.State)
@@ -436,7 +436,7 @@ func (suite *CriSuite) TestContainer() {
 	// expect finish program eventually
 	suite.Eventually(func() bool {
 		statusRes, err = suite.cri.ContainerStatus(&ContainerStatusRequest{
-			ContainerID: container1,
+			ContainerId: container1,
 		})
 		suite.NoError(err)
 		return statusRes.Status.State == ContainerExited
@@ -446,7 +446,7 @@ func (suite *CriSuite) TestContainer() {
 
 	// expect an error when try to create container with existing name on the same sandbox
 	_, err = suite.cri.CreateContainer(&CreateContainerRequest{
-		PodSandboxID: sandbox1,
+		PodSandboxId: sandbox1,
 		Config: ContainerConfig{
 			Metadata: ContainerMetadata{
 				Name: "container1",
@@ -460,7 +460,7 @@ func (suite *CriSuite) TestContainer() {
 
 	// can run container with different name from existing one on the same sandbox
 	createRes, err = suite.cri.CreateContainer(&CreateContainerRequest{
-		PodSandboxID: sandbox1,
+		PodSandboxId: sandbox1,
 		Config: ContainerConfig{
 			Metadata: ContainerMetadata{
 				Name: "container2",
@@ -474,17 +474,17 @@ func (suite *CriSuite) TestContainer() {
 		},
 	})
 	suite.NoError(err)
-	container2 := createRes.ContainerID
+	container2 := createRes.ContainerId
 
 	_, err = suite.cri.StartContainer(&StartContainerRequest{
-		ContainerID: container2,
+		ContainerId: container2,
 	})
 	suite.NoError(err)
 
 	// expect finish program eventually and set exit code
 	suite.Eventually(func() bool {
 		statusRes, err = suite.cri.ContainerStatus(&ContainerStatusRequest{
-			ContainerID: container2,
+			ContainerId: container2,
 		})
 		suite.NoError(err)
 		return statusRes.Status.State == ContainerExited
@@ -494,7 +494,7 @@ func (suite *CriSuite) TestContainer() {
 
 	// can run container with the same name from existing one on the different sandbox
 	createRes, err = suite.cri.CreateContainer(&CreateContainerRequest{
-		PodSandboxID: sandbox2,
+		PodSandboxId: sandbox2,
 		Config: ContainerConfig{
 			Metadata: ContainerMetadata{
 				Name: "container1",
@@ -506,22 +506,22 @@ func (suite *CriSuite) TestContainer() {
 		},
 	})
 	suite.NoError(err)
-	container3 := createRes.ContainerID
+	container3 := createRes.ContainerId
 
 	_, err = suite.cri.StartContainer(&StartContainerRequest{
-		ContainerID: container3,
+		ContainerId: container3,
 	})
 	suite.NoError(err)
 
 	// stop container force and get error code eventually
 	_, err = suite.cri.StopContainer(&StopContainerRequest{
-		ContainerID: container3,
+		ContainerId: container3,
 	})
 	suite.NoError(err)
 
 	suite.Eventually(func() bool {
 		statusRes, err = suite.cri.ContainerStatus(&ContainerStatusRequest{
-			ContainerID: container3,
+			ContainerId: container3,
 		})
 		suite.NoError(err)
 		return statusRes.Status.State == ContainerExited
@@ -531,7 +531,7 @@ func (suite *CriSuite) TestContainer() {
 
 	// StopContainer is idempotent
 	_, err = suite.cri.StopContainer(&StopContainerRequest{
-		ContainerID: container3,
+		ContainerId: container3,
 	})
 	suite.NoError(err)
 
@@ -562,7 +562,7 @@ func (suite *CriSuite) TestContainer() {
 
 	// start a container with sleep infinity
 	createRes, err = suite.cri.CreateContainer(&CreateContainerRequest{
-		PodSandboxID: sandbox2,
+		PodSandboxId: sandbox2,
 		Config: ContainerConfig{
 			Metadata: ContainerMetadata{
 				Name: "container2",
@@ -576,10 +576,10 @@ func (suite *CriSuite) TestContainer() {
 		},
 	})
 	suite.NoError(err)
-	container4 := createRes.ContainerID
+	container4 := createRes.ContainerId
 
 	_, err = suite.cri.StartContainer(&StartContainerRequest{
-		ContainerID: container4,
+		ContainerId: container4,
 	})
 	suite.NoError(err)
 
@@ -598,7 +598,7 @@ func (suite *CriSuite) TestContainer() {
 	// check response of list container with specify sandbox
 	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
 		Filter: &ContainerFilter{
-			PodSandboxID: sandbox1,
+			PodSandboxId: sandbox1,
 		},
 	})
 	suite.NoError(err)
@@ -610,8 +610,8 @@ func (suite *CriSuite) TestContainer() {
 		suite.Equal(container1, listRes.Containers[1].ID)
 		suite.Equal(container2, listRes.Containers[0].ID)
 	}
-	suite.Equal(sandbox1, listRes.Containers[0].PodSandboxID)
-	suite.Equal(sandbox1, listRes.Containers[1].PodSandboxID)
+	suite.Equal(sandbox1, listRes.Containers[0].PodSandboxId)
+	suite.Equal(sandbox1, listRes.Containers[1].PodSandboxId)
 
 	// check response of list container with specify state & sandbox
 	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
@@ -619,7 +619,7 @@ func (suite *CriSuite) TestContainer() {
 			State: &ContainerStateValue{
 				State: ContainerExited,
 			},
-			PodSandboxID: sandbox2,
+			PodSandboxId: sandbox2,
 		},
 	})
 	suite.NoError(err)
@@ -628,13 +628,13 @@ func (suite *CriSuite) TestContainer() {
 
 	// check response of list container after remove a container
 	_, err = suite.cri.RemoveContainer(&RemoveContainerRequest{
-		ContainerID: container4,
+		ContainerId: container4,
 	})
 	suite.NoError(err)
 
 	listRes, err = suite.cri.ListContainers(&ListContainersRequest{
 		Filter: &ContainerFilter{
-			PodSandboxID: sandbox2,
+			PodSandboxId: sandbox2,
 		},
 	})
 	suite.NoError(err)
@@ -643,13 +643,13 @@ func (suite *CriSuite) TestContainer() {
 
 	// RemoveContainer is idempotent
 	_, err = suite.cri.RemoveContainer(&RemoveContainerRequest{
-		ContainerID: container4,
+		ContainerId: container4,
 	})
 	suite.NoError(err)
 
 	// check the container become error when specify incorrect runtime
 	createRes, err = suite.cri.CreateContainer(&CreateContainerRequest{
-		PodSandboxID: sandbox2,
+		PodSandboxId: sandbox2,
 		Config: ContainerConfig{
 			Metadata: ContainerMetadata{
 				Name: "container3",
@@ -660,16 +660,16 @@ func (suite *CriSuite) TestContainer() {
 		},
 	})
 	suite.NoError(err)
-	container5 := createRes.ContainerID
+	container5 := createRes.ContainerId
 
 	_, err = suite.cri.StartContainer(&StartContainerRequest{
-		ContainerID: container5,
+		ContainerId: container5,
 	})
 	suite.NoError(err)
 
 	suite.Eventually(func() bool {
 		statusRes, err = suite.cri.ContainerStatus(&ContainerStatusRequest{
-			ContainerID: container5,
+			ContainerId: container5,
 		})
 		suite.NoError(err)
 		return statusRes.Status.State == ContainerExited
@@ -699,7 +699,7 @@ func (suite *CriSuite) checkSandboxMeta(meta *PodSandboxMetadata, name, uid, nam
 
 func (suite *CriSuite) checkContainer(container *Container, id, sandbox, name, url string, state ContainerState) {
 	suite.Equal(id, container.ID)
-	suite.Equal(sandbox, container.PodSandboxID)
+	suite.Equal(sandbox, container.PodSandboxId)
 	suite.Equal(name, container.Metadata.Name)
 	suite.Equal(url, container.Image.Image)
 	suite.NotEmpty(container.ImageRef)

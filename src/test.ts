@@ -23,7 +23,7 @@ async function testUsingController() {
   let crosslink = new CL.Crosslink(new CL.WorkerImpl(controller), rootMpx);
 
   // setup CRI
-  CRI.initCRI(rootMpx);
+  CRI.initCRI(crosslink, rootMpx);
 
   // run wasm test program
   await crosslink.call("run", {

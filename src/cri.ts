@@ -21,18 +21,18 @@ const crosslinkCriPath: string = "cri";
 const crosslinkNodePath: string = "node";
 const containerTag: string = "container";
 const sandboxTag: string = "sandbox";
-const podSandboxIDMax: number = Math.floor(Math.pow(2, 30));
-const containerIDMax: number = Math.floor(Math.pow(2, 30));
-const imageRefIDMax: number = Math.floor(Math.pow(2, 30));
+const podSandboxIdMax: number = Math.floor(Math.pow(2, 30));
+const containerIdMax: number = Math.floor(Math.pow(2, 30));
+const imageRefIdMax: number = Math.floor(Math.pow(2, 30));
 const containerStopTimeout: number = 10 * 1000;
 
 const runtimeRequired: string[] = ["go:1.19"];
 
 let nodeCL: CL.Crosslink;
 
-// key means PodSandboxID
+// key means PodSandboxId
 let sandboxes: Map<string, SandboxImpl> = new Map();
-// key means ContainerID
+// key means ContainerId
 let containers: Map<string, ContainerImpl> = new Map();
 // key means image url (not image ref id)
 let images: Map<string, ImageImpl> = new Map();
@@ -108,34 +108,34 @@ class ImageImpl {
 
 class ContainerImpl {
   id: string
-  // PodSandboxID
-  sandbox_id: string
+  // PodSandboxId
+  sandboxId: string
   name: string
   image: ImageImpl
   worker: Worker | undefined
   link: CL.Crosslink | undefined
   args: string[]
   envs: Record<string, string>
-  created_at: string
-  started_at: string | undefined
-  finished_at: string | undefined
-  exit_code: number | undefined
+  createdAt: string
+  startedAt: string | undefined
+  finishedAt: string | undefined
+  exitCode: number | undefined
 
-  constructor(id: string, sandbox_id: string, name: string, image: ImageImpl, args: string[], envs: Record<string, string>) {
+  constructor(id: string, sandboxId: string, name: string, image: ImageImpl, args: string[], envs: Record<string, string>) {
     this.id = id;
-    this.sandbox_id = sandbox_id;
+    this.sandboxId = sandboxId;
     this.name = name;
     this.image = image;
     this.args = args;
     this.envs = envs;
-    this.created_at = getTimestamp();
+    this.createdAt = getTimestamp();
   }
 
   getState(): ContainerState {
-    if (this.finished_at != null) {
+    if (this.finishedAt != null) {
       return ContainerState.ContainerExited;
     }
-    if (this.started_at != null) {
+    if (this.startedAt != null) {
       return ContainerState.ContainerRunning;
     }
     return ContainerState.ContainerCreated;
@@ -144,10 +144,10 @@ class ContainerImpl {
   start() {
     console.assert(this.worker == null);
 
-    this.started_at = getTimestamp();
+    this.startedAt = getTimestamp();
     if (!this._check()) {
-      this.exit_code = -1;
-      this.finished_at = getTimestamp();
+      this.exitCode = -1;
+      this.finishedAt = getTimestamp();
       return;
     }
     let rootMpx = new CL.MultiPlexer();
@@ -155,7 +155,7 @@ class ContainerImpl {
     this.link = new CL.Crosslink(new CL.WorkerImpl(this.worker), rootMpx);
 
     this._initHandler(rootMpx);
-    rootMpx.setHandler(crosslinkNodePath, new NodePipe(this.sandbox_id, this.id));
+    rootMpx.setHandler(crosslinkNodePath, new NodePipe(this.sandboxId, this.id));
   }
 
   stop() {
@@ -165,10 +165,10 @@ class ContainerImpl {
 
     this.link.call(CT.CrosslinkPath + "/term", {});
     setTimeout(() => {
-      if (this.finished_at == null) {
-        this.finished_at = getTimestamp();
+      if (this.finishedAt == null) {
+        this.finishedAt = getTimestamp();
         // 137 meaning 128 + sig kill(9)
-        this.exit_code = 137;
+        this.exitCode = 137;
       }
 
       this.cleanup();
@@ -240,10 +240,10 @@ class ContainerImpl {
   }
 
   _onFinished(request: CT.FinishedRequest): CT.FinishedResponse {
-    console.assert(this.finished_at == null);
+    console.assert(this.finishedAt == null);
 
-    this.exit_code = request.code;
-    this.finished_at = getTimestamp();
+    this.exitCode = request.code;
+    this.finishedAt = getTimestamp();
 
     setTimeout(() => {
       this.cleanup();
@@ -253,7 +253,7 @@ class ContainerImpl {
 }
 
 class SandboxImpl {
-  // PodSandboxID
+  // PodSandboxId
   id: string
   name: string
   // pod.metadata.uid
@@ -261,7 +261,7 @@ class SandboxImpl {
   namespace: string
   state: PodSandboxState
   containers: Map<string, ContainerImpl>
-  created_at: string
+  createdAt: string
 
   constructor(id: string, name: string, uid: string, namespace: string) {
     this.id = id;
@@ -270,7 +270,7 @@ class SandboxImpl {
     this.namespace = namespace;
     this.state = PodSandboxState.SandboxReady
     this.containers = new Map<string, ContainerImpl>();
-    this.created_at = getTimestamp();
+    this.createdAt = getTimestamp();
   }
 
   stop() {
@@ -284,9 +284,9 @@ class SandboxImpl {
   createContainer(name: string, image: ImageImpl, args: string[], envs: Record<string, string>): string {
     console.assert(this.state == PodSandboxState.SandboxReady);
 
-    let id: string = (Math.floor(Math.random() * containerIDMax)).toString(16);
+    let id: string = (Math.floor(Math.random() * containerIdMax)).toString(16);
     while (this.containers.has(id)) {
-      id = (Math.floor(Math.random() * containerIDMax)).toString(16);
+      id = (Math.floor(Math.random() * containerIdMax)).toString(16);
     }
 
     // raise error when there is a container having duplicate name
@@ -311,12 +311,12 @@ class SandboxImpl {
 class ApplicationPipe implements CL.Handler {
   serve(data: any, tags: Map<string, string>, writer: CL.ResponseWriter): void {
     let path = tags.get(CL.TAG_PATH);
-    let containerID = tags.get(containerTag);
-    console.assert(path != null && containerID != null);
+    let containerId = tags.get(containerTag);
+    console.assert(path != null && containerId != null);
 
-    let container = containers.get(containerID!);
+    let container = containers.get(containerId!);
     if (container == null) {
-      writer.replyError("container isn't exist:" + containerID);
+      writer.replyError("container isn't exist:" + containerId);
       return;
     }
 
@@ -329,20 +329,20 @@ class ApplicationPipe implements CL.Handler {
 }
 
 class NodePipe implements CL.Handler {
-  sandbox_id: string
-  container_id: string
+  sandboxId: string
+  containerId: string
 
-  constructor(sandbox_id: string, container_id: string) {
-    this.sandbox_id = sandbox_id;
-    this.container_id = container_id;
+  constructor(sandboxId: string, containerId: string) {
+    this.sandboxId = sandboxId;
+    this.containerId = containerId;
   }
 
   serve(data: any, tags: Map<string, string>, writer: CL.ResponseWriter): void {
     let path = tags.get(CL.TAG_PATH);
     console.assert(path != null);
 
-    tags.set(sandboxTag, this.sandbox_id);
-    tags.set(containerTag, this.container_id);
+    tags.set(sandboxTag, this.sandboxId);
+    tags.set(containerTag, this.containerId);
 
     nodeCL.call(path!, data, tags).then((response) => {
       writer.replySuccess(response);
@@ -454,12 +454,12 @@ interface PodSandboxMetadata {
 }
 
 interface RunPodSandboxResponse {
-  pod_sandbox_id: string
+  podSandboxId: string
 }
 
 
 interface StopPodSandboxRequest {
-  pod_sandbox_id: string
+  podSandboxId: string
 }
 
 interface StopPodSandboxResponse {
@@ -467,7 +467,7 @@ interface StopPodSandboxResponse {
 }
 
 interface RemovePodSandboxRequest {
-  pod_sandbox_id: string
+  podSandboxId: string
 }
 
 interface RemovePodSandboxResponse {
@@ -475,12 +475,12 @@ interface RemovePodSandboxResponse {
 }
 
 interface PodSandboxStatusRequest {
-  pod_sandbox_id: string
+  podSandboxId: string
 }
 
 interface PodSandboxStatusResponse {
   status: PodSandboxStatus
-  containers_statuses: ContainerStatus[]
+  containersStatuses: ContainerStatus[]
   timestamp: string
 }
 
@@ -496,7 +496,7 @@ interface PodSandboxStatus {
   id: string
   metadata: PodSandboxMetadata
   state: PodSandboxState
-  created_at: string
+  createdAt: string
 }
 
 enum PodSandboxState {
@@ -517,13 +517,13 @@ interface PodSandbox {
   id: string
   metadata: PodSandboxMetadata
   state: PodSandboxState
-  created_at: string
+  createdAt: string
 }
 
 interface CreateContainerRequest {
-  pod_sandbox_id: string
+  podSandboxId: string
   config: ContainerConfig
-  // sandbox_config: PodSandboxConfig
+  // sandboxConfig: PodSandboxConfig
 }
 
 interface ContainerConfig {
@@ -538,11 +538,11 @@ interface ContainerMetadata {
 }
 
 interface CreateContainerResponse {
-  container_id: string
+  containerId: string
 }
 
 interface StartContainerRequest {
-  container_id: string
+  containerId: string
 }
 
 interface StartContainerResponse {
@@ -550,7 +550,7 @@ interface StartContainerResponse {
 }
 
 interface StopContainerRequest {
-  container_id: string
+  containerId: string
 }
 
 interface StopContainerResponse {
@@ -558,7 +558,7 @@ interface StopContainerResponse {
 }
 
 interface RemoveContainerRequest {
-  container_id: string
+  containerId: string
 }
 
 interface RemoveContainerResponse {
@@ -574,7 +574,7 @@ interface ListContainersResponse {
 }
 
 interface ContainerStatusRequest {
-  container_id: string
+  containerId: string
 }
 
 interface ContainerStatusResponse {
@@ -590,12 +590,12 @@ interface ContainerStatus {
   id: string
   metadata: ContainerMetadata
   state: ContainerState
-  created_at: string
-  started_at: string
-  finished_at: string
-  exit_code: number
+  createdAt: string
+  startedAt: string
+  finishedAt: string
+  exitCode: number
   image: ImageSpec
-  image_ref: string
+  imageRef: string
 }
 
 enum ContainerState {
@@ -608,7 +608,7 @@ enum ContainerState {
 interface ContainerFilter {
   id: string
   state: ContainerStateValue
-  pod_sandbox_id: string
+  podSandboxId: string
 }
 
 interface ContainerStateValue {
@@ -617,12 +617,12 @@ interface ContainerStateValue {
 
 interface Container {
   id: string
-  pod_sandbox_id: string
+  podSandboxId: string
   metadata: ContainerMetadata
   image: ImageSpec
-  image_ref: string
+  imageRef: string
   state: ContainerState
-  created_at: string
+  createdAt: string
 }
 
 interface ListImagesRequest {
@@ -653,7 +653,7 @@ interface PullImageRequest {
 }
 
 interface PullImageResponse {
-  image_ref: string
+  imageRef: string
 }
 
 interface RemoveImageRequest {
@@ -681,20 +681,20 @@ function runPodSandbox(request: RunPodSandboxRequest): RunPodSandboxResponse {
   }
 
   // assign id of sandbox
-  let id: string = (Math.floor(Math.random() * podSandboxIDMax)).toString(16);
+  let id: string = (Math.floor(Math.random() * podSandboxIdMax)).toString(16);
   while (sandboxes.has(id)) {
-    id = (Math.floor(Math.random() * podSandboxIDMax)).toString(16);
+    id = (Math.floor(Math.random() * podSandboxIdMax)).toString(16);
   }
 
   // allocate new sandbox instance
   let meta: PodSandboxMetadata = request.config.metadata;
   sandboxes.set(id, new SandboxImpl(id, meta.name, meta.uid, meta.namespace));
 
-  return { pod_sandbox_id: id };
+  return { podSandboxId: id };
 }
 
 function stopPodSandbox(request: StopPodSandboxRequest): StopPodSandboxResponse {
-  let sandbox = sandboxes.get(request.pod_sandbox_id);
+  let sandbox = sandboxes.get(request.podSandboxId);
 
   if (sandbox != null) {
     sandbox.stop();
@@ -704,7 +704,7 @@ function stopPodSandbox(request: StopPodSandboxRequest): StopPodSandboxResponse 
 }
 
 function removePodSandbox(request: RemovePodSandboxRequest): RemovePodSandboxResponse {
-  let sandbox = sandboxes.get(request.pod_sandbox_id);
+  let sandbox = sandboxes.get(request.podSandboxId);
 
   if (sandbox != null) {
     sandbox.stop();
@@ -712,54 +712,54 @@ function removePodSandbox(request: RemovePodSandboxRequest): RemovePodSandboxRes
     // remove all containers of the sandbox
     for (const [_, container] of sandbox.containers) {
       removeContainer({
-        container_id: container.id,
+        containerId: container.id,
       });
     }
 
-    sandboxes.delete(request.pod_sandbox_id);
+    sandboxes.delete(request.podSandboxId);
   }
 
   return {};
 }
 
 function podSandboxStatus(request: PodSandboxStatusRequest): PodSandboxStatusResponse {
-  let sandbox = sandboxes.get(request.pod_sandbox_id);
+  let sandbox = sandboxes.get(request.podSandboxId);
 
   if (sandbox == null) {
     throw new Error("sandbox not found");
   }
 
-  let containers_statuses: ContainerStatus[] = new Array();
+  let containersStatuses: ContainerStatus[] = new Array();
   for (const [_, container] of sandbox.containers) {
-    containers_statuses.push({
+    containersStatuses.push({
       id: container.id,
       metadata: {
         name: container.name,
       },
       state: container.getState(),
-      created_at: container.created_at,
-      started_at: container.started_at ?? "",
-      finished_at: container.finished_at ?? "",
-      exit_code: container.exit_code ?? 0,
+      createdAt: container.createdAt,
+      startedAt: container.startedAt ?? "",
+      finishedAt: container.finishedAt ?? "",
+      exitCode: container.exitCode ?? 0,
       image: {
         image: container.image.url,
       },
-      image_ref: container.image.id,
+      imageRef: container.image.id,
     });
   }
 
   return {
     status: {
-      id: request.pod_sandbox_id,
+      id: request.podSandboxId,
       metadata: {
         name: sandbox.name,
         namespace: sandbox.namespace,
         uid: sandbox.uid,
       },
       state: sandbox.state,
-      created_at: sandbox.created_at,
+      createdAt: sandbox.createdAt,
     },
-    containers_statuses: containers_statuses,
+    containersStatuses: containersStatuses,
     timestamp: getTimestamp(),
   };
 }
@@ -786,7 +786,7 @@ function listPodSandbox(request: ListPodSandboxRequest): ListPodSandboxResponse 
         namespace: sandbox.namespace,
       },
       state: sandbox.state,
-      created_at: sandbox.created_at,
+      createdAt: sandbox.createdAt,
     })
   }
 
@@ -794,7 +794,7 @@ function listPodSandbox(request: ListPodSandboxRequest): ListPodSandboxResponse 
 }
 
 function createContainer(request: CreateContainerRequest): CreateContainerResponse {
-  let sandbox = sandboxes.get(request.pod_sandbox_id);
+  let sandbox = sandboxes.get(request.podSandboxId);
   if (sandbox == null) {
     throw new Error("sandbox not found");
   }
@@ -817,11 +817,11 @@ function createContainer(request: CreateContainerRequest): CreateContainerRespon
   }
 
   let id = sandbox.createContainer(request.config.metadata.name, image, args, envs);
-  return { container_id: id };
+  return { containerId: id };
 }
 
 function startContainer(request: StartContainerRequest): StartContainerResponse {
-  let container = containers.get(request.container_id);
+  let container = containers.get(request.containerId);
   if (container == null) {
     throw new Error("container not found");
   }
@@ -830,7 +830,7 @@ function startContainer(request: StartContainerRequest): StartContainerResponse 
 }
 
 function stopContainer(request: StopContainerRequest): StopContainerResponse {
-  let container = containers.get(request.container_id);
+  let container = containers.get(request.containerId);
   if (container == null) {
     throw new Error("container not found");
   }
@@ -839,7 +839,7 @@ function stopContainer(request: StopContainerRequest): StopContainerResponse {
 }
 
 function removeContainer(request: RemoveContainerRequest): RemoveContainerResponse {
-  let container = containers.get(request.container_id);
+  let container = containers.get(request.containerId);
   if (container == null) {
     return {};
   }
@@ -847,7 +847,7 @@ function removeContainer(request: RemoveContainerRequest): RemoveContainerRespon
   container.stop();
   container.cleanup();
 
-  let sandbox = sandboxes.get(container.sandbox_id);
+  let sandbox = sandboxes.get(container.sandboxId);
   if (sandbox != null) {
     sandbox.removeContainer(container.id);
   }
@@ -867,7 +867,7 @@ function listContainers(request: ListContainersRequest): ListContainersResponse 
         continue;
       }
 
-      if (filter.pod_sandbox_id != "" && filter.pod_sandbox_id !== container.sandbox_id) {
+      if (filter.podSandboxId != "" && filter.podSandboxId !== container.sandboxId) {
         continue;
       }
 
@@ -878,16 +878,16 @@ function listContainers(request: ListContainersRequest): ListContainersResponse 
 
     resContainers.push({
       id: container.id,
-      pod_sandbox_id: container.sandbox_id,
+      podSandboxId: container.sandboxId,
       metadata: {
         name: container.name,
       },
       image: {
         image: container.image.url,
       },
-      image_ref: container.image.id,
+      imageRef: container.image.id,
       state: container.getState(),
-      created_at: container.created_at,
+      createdAt: container.createdAt,
     });
   }
 
@@ -895,7 +895,7 @@ function listContainers(request: ListContainersRequest): ListContainersResponse 
 }
 
 function containerStatus(request: ContainerStatusRequest): ContainerStatusResponse {
-  let container = containers.get(request.container_id);
+  let container = containers.get(request.containerId);
   if (container == null) {
     throw new Error("specified container not found");
   }
@@ -907,14 +907,14 @@ function containerStatus(request: ContainerStatusRequest): ContainerStatusRespon
         name: container.name,
       },
       state: container.getState(),
-      created_at: container.created_at,
-      started_at: container.started_at || "",
-      finished_at: container.finished_at || "",
-      exit_code: container.exit_code || 0,
+      createdAt: container.createdAt,
+      startedAt: container.startedAt || "",
+      finishedAt: container.finishedAt || "",
+      exitCode: container.exitCode || 0,
       image: {
         image: container.image.url,
       },
-      image_ref: container.image.id,
+      imageRef: container.image.id,
     }
   };
 }
@@ -964,9 +964,9 @@ function pullImage(request: PullImageRequest): Promise<PullImageResponse> {
       idSet.add(image.id);
     }
 
-    let id: string = (Math.floor(Math.random() * imageRefIDMax)).toString(16);
+    let id: string = (Math.floor(Math.random() * imageRefIdMax)).toString(16);
     while (idSet.has(id)) {
-      id = (Math.floor(Math.random() * imageRefIDMax)).toString(16);
+      id = (Math.floor(Math.random() * imageRefIdMax)).toString(16);
     }
 
     image = new ImageImpl(id, request.image.image);
@@ -986,14 +986,14 @@ function pullImage(request: PullImageRequest): Promise<PullImageResponse> {
         reject("logic error on pullImage");
         return;
       }
-      resolve({ image_ref: image.id });
+      resolve({ imageRef: image.id });
     });
   }
 
   return new Promise<PullImageResponse>((resolve, reject) => {
-    let intervalID = setInterval(() => {
+    let intervalId = setInterval(() => {
       if (image == null) {
-        clearInterval(intervalID);
+        clearInterval(intervalId);
         reject("logic error on pullImage");
         return;
       }
@@ -1004,7 +1004,7 @@ function pullImage(request: PullImageRequest): Promise<PullImageResponse> {
           break;
 
         case ImageState.Downloaded:
-          resolve({ image_ref: image.id });
+          resolve({ imageRef: image.id });
           break;
 
         case ImageState.Downloading:
@@ -1016,7 +1016,7 @@ function pullImage(request: PullImageRequest): Promise<PullImageResponse> {
           break;
       }
 
-      clearInterval(intervalID);
+      clearInterval(intervalId);
     }, 1000);
   });
 }

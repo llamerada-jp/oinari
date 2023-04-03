@@ -1,7 +1,7 @@
 import * as CL from "./crosslink";
 
 const CL_SYSTEM_PATH: string = "system";
-const CL_MANAGER_PATH: string = "pod_manager";
+const CL_MANAGER_PATH: string = "podManager";
 
 export interface ApplicationDigest {
   name: string

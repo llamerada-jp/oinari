@@ -30,7 +30,7 @@ type managerImpl struct {
 	accountMgr account.Manager
 	nodeMgr    node.Manager
 	// key: Pod UUID, value: sandbox ID
-	sandboxIDMap map[string]string
+	sandboxIdMap map[string]string
 }
 
 func NewManager(cri cri.CRI, kvs KvsDriver, messaging MessagingDriver, accountMgr account.Manager, nodeMgr node.Manager) Manager {
@@ -40,7 +40,7 @@ func NewManager(cri cri.CRI, kvs KvsDriver, messaging MessagingDriver, accountMg
 		messaging:    messaging,
 		accountMgr:   accountMgr,
 		nodeMgr:      nodeMgr,
-		sandboxIDMap: make(map[string]string),
+		sandboxIdMap: make(map[string]string),
 	}
 }
 
@@ -168,7 +168,7 @@ func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {
 		}
 	}
 
-	sandboxID, sandboxExists := mgr.sandboxIDMap[pod.Meta.Uuid]
+	sandboxId, sandboxExists := mgr.sandboxIdMap[pod.Meta.Uuid]
 
 	if pod.Meta.DeletionTimestamp != "" {
 		// TODO: send exit signal when any container running
@@ -192,13 +192,13 @@ func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {
 				return err
 			}
 
-			sandboxID = res.PodSandboxID
-			mgr.sandboxIDMap[pod.Meta.Uuid] = sandboxID
+			sandboxId = res.PodSandboxId
+			mgr.sandboxIdMap[pod.Meta.Uuid] = sandboxId
 		}
 
 		// start containers if they are not exist
 		sandboxStatus, err := mgr.cri.PodSandboxStatus(&cri.PodSandboxStatusRequest{
-			PodSandboxID: sandboxID,
+			PodSandboxId: sandboxId,
 		})
 		if err != nil {
 			return err
@@ -245,7 +245,7 @@ func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {
 				}
 
 				res, err := mgr.cri.CreateContainer(&cri.CreateContainerRequest{
-					PodSandboxID: sandboxID,
+					PodSandboxId: sandboxId,
 					Config: cri.ContainerConfig{
 						Metadata: cri.ContainerMetadata{
 							Name: container.Name,
@@ -261,7 +261,7 @@ func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {
 				}
 
 				_, err = mgr.cri.StartContainer(&cri.StartContainerRequest{
-					ContainerID: res.ContainerID,
+					ContainerId: res.ContainerId,
 				})
 
 				if err != nil {
@@ -290,7 +290,7 @@ func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {
 					continue
 				}
 				_, err := mgr.cri.StopContainer(&cri.StopContainerRequest{
-					ContainerID: containerStatus.ID,
+					ContainerId: containerStatus.ID,
 				})
 
 				if err != nil {

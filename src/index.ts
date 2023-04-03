@@ -34,7 +34,7 @@ async function initController() {
   crosslink = new CL.Crosslink(new CL.WorkerImpl(controller), rootMpx);
 
   // setup CRI
-  CRI.initCRI(rootMpx);
+  CRI.initCRI(crosslink, rootMpx);
 
   // setup colonio module handler
   let colonioMpx = new CL.MultiPlexer();
@@ -97,7 +97,7 @@ const mapOptions = {
   heading: 0,
   zoom: 18,
   center: { lat: 35.6594945, lng: 139.6999859 },
-  mapId: Keys.googleMapID,
+  mapId: Keys.googleMapId,
   // disable interactions due to animation loop and moveCamera
   disableDefaultUI: true,
   gestureHandling: "none",

@@ -31,7 +31,7 @@ type terminateRequest struct {
 
 func InitCommandHandler(podMgr Manager, rootHandler crosslink.MultiPlexer) error {
 	mpx := crosslink.NewMultiPlexer()
-	rootHandler.SetHandler("pod_manager", mpx)
+	rootHandler.SetHandler("podManager", mpx)
 
 	mpx.SetHandler("run", crosslink.NewFuncHandler(
 		func(request *runRequest, tags map[string]string, writer crosslink.ResponseWriter) {

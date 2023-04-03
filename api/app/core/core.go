@@ -35,7 +35,7 @@ type OutputResponse struct {
 
 // types to pass from node manager to application
 type SetupRequest struct {
-	FirstInPod bool `json:"first_in_pod"`
+	FirstInPod bool `json:"firstInPod"`
 }
 
 type SetupResponse struct {
@@ -47,11 +47,11 @@ type DumpRequest struct {
 }
 
 type DumpResponse struct {
-	DumpData []byte `json:"dump_data"`
+	DumpData []byte `json:"dumpData"`
 }
 
 type RestoreRequest struct {
-	DumpData []byte `json:"dump_data"`
+	DumpData []byte `json:"dumpData"`
 }
 
 type RestoreResponse struct {
@@ -59,7 +59,7 @@ type RestoreResponse struct {
 }
 
 type TeardownRequest struct {
-	LastInPod bool `json:"last_in_pod"`
+	LastInPod bool `json:"lastInPod"`
 }
 
 type TeardownResponse struct {
