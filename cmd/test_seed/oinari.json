@@ -1,12 +1,5 @@
 {
   "revision": 20220312.1,
-  "documentRoot": "dist",
-  "headers": {
-    "Cross-Origin-Resource-Policy": "cross-origin"
-  },
-  "host": "",
-  "port": 8080,
-  "path": "/seed",
   "pingInterval": 10000,
   "timeout": 30000,
   "node": {

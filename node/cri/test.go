@@ -60,7 +60,7 @@ func (suite *CriSuite) TestImage() {
 	// expect there to be one image after pull a image
 	pullRes, err := suite.cri.PullImage(&PullImageRequest{
 		Image: ImageSpec{
-			Image: "http://localhost:8080/exit/container.json",
+			Image: "http://localhost:8080/test/exit.wasm",
 		},
 	})
 	suite.NoError(err)
@@ -69,12 +69,12 @@ func (suite *CriSuite) TestImage() {
 	listRes, err = suite.cri.ListImages(&ListImagesRequest{})
 	suite.NoError(err)
 	suite.Len(listRes.Images, 1)
-	suite.checkImage(&listRes.Images[0], "http://localhost:8080/exit/container.json", []string{"go:1.19"}, test1ID)
+	suite.checkImage(&listRes.Images[0], "http://localhost:8080/test/exit.wasm", test1ID)
 
 	// expect there to be two images after pull another image
 	pullRes, err = suite.cri.PullImage(&PullImageRequest{
 		Image: ImageSpec{
-			Image: "http://localhost:8080/sleep/container.json",
+			Image: "http://localhost:8080/test/sleep.wasm",
 		},
 	})
 	suite.NoError(err)
@@ -84,19 +84,19 @@ func (suite *CriSuite) TestImage() {
 	suite.NoError(err)
 	suite.Len(listRes.Images, 2)
 
-	if listRes.Images[0].Spec.Image == "http://localhost:8080/exit/container.json" {
-		suite.checkImage(&listRes.Images[0], "http://localhost:8080/exit/container.json", []string{"go:1.19"}, test1ID)
-		suite.checkImage(&listRes.Images[1], "http://localhost:8080/sleep/container.json", []string{"go:1.19"}, test2ID)
+	if listRes.Images[0].Spec.Image == "http://localhost:8080/test/exit.wasm" {
+		suite.checkImage(&listRes.Images[0], "http://localhost:8080/test/exit.wasm", test1ID)
+		suite.checkImage(&listRes.Images[1], "http://localhost:8080/test/sleep.wasm", test2ID)
 	} else {
-		suite.checkImage(&listRes.Images[0], "http://localhost:8080/sleep/container.json", []string{"go:1.19"}, test2ID)
-		suite.checkImage(&listRes.Images[1], "http://localhost:8080/exit/container.json", []string{"go:1.19"}, test1ID)
+		suite.checkImage(&listRes.Images[0], "http://localhost:8080/test/sleep.wasm", test2ID)
+		suite.checkImage(&listRes.Images[1], "http://localhost:8080/test/exit.wasm", test1ID)
 	}
 	suite.NotEqual(listRes.Images[0].ID, listRes.Images[1].ID)
 
 	// expect there to be two images after pull the same image
 	pullRes, err = suite.cri.PullImage(&PullImageRequest{
 		Image: ImageSpec{
-			Image: "http://localhost:8080/exit/container.json",
+			Image: "http://localhost:8080/test/exit.wasm",
 		},
 	})
 	suite.NoError(err)
@@ -109,7 +109,7 @@ func (suite *CriSuite) TestImage() {
 	// expect there to be one image after remove the image
 	_, err = suite.cri.RemoveImage(&RemoveImageRequest{
 		Image: ImageSpec{
-			Image: "http://localhost:8080/exit/container.json",
+			Image: "http://localhost:8080/test/exit.wasm",
 		},
 	})
 	suite.NoError(err)
@@ -117,7 +117,7 @@ func (suite *CriSuite) TestImage() {
 	listRes, err = suite.cri.ListImages(&ListImagesRequest{})
 	suite.NoError(err)
 	suite.Len(listRes.Images, 1)
-	suite.checkImage(&listRes.Images[0], "http://localhost:8080/sleep/container.json", []string{"go:1.19"}, test2ID)
+	suite.checkImage(&listRes.Images[0], "http://localhost:8080/test/sleep.wasm", test2ID)
 }
 
 func (suite *CriSuite) TestSandbox() {
@@ -129,7 +129,7 @@ func (suite *CriSuite) TestSandbox() {
 	// setup image
 	_, err = suite.cri.PullImage(&PullImageRequest{
 		Image: ImageSpec{
-			Image: "http://localhost:8080/exit/container.json",
+			Image: "http://localhost:8080/test/exit.wasm",
 		},
 	})
 	suite.NoError(err)
@@ -225,8 +225,9 @@ func (suite *CriSuite) TestSandbox() {
 				Name: "containerName",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/exit/container.json",
+				Image: "http://localhost:8080/test/exit.wasm",
 			},
+			Runtime: []string{"go:1.19"},
 		},
 	})
 	suite.NoError(err)
@@ -247,7 +248,7 @@ func (suite *CriSuite) TestSandbox() {
 	suite.checkTimestampFormat(statusRes.ContainersStatuses[0].CreatedAt)
 	suite.Len(statusRes.ContainersStatuses[0].StartedAt, 0)
 	suite.Len(statusRes.ContainersStatuses[0].FinishedAt, 0)
-	suite.Equal(statusRes.ContainersStatuses[0].Image.Image, "http://localhost:8080/exit/container.json")
+	suite.Equal(statusRes.ContainersStatuses[0].Image.Image, "http://localhost:8080/test/exit.wasm")
 	suite.NotEmpty(statusRes.ContainersStatuses[0].ImageRef)
 	suite.checkTimestampFormat(statusRes.Timestamp)
 
@@ -372,17 +373,17 @@ func (suite *CriSuite) TestContainer() {
 				Name: "container1",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/sleep/container.json",
+				Image: "http://localhost:8080/test/sleep.wasm",
 			},
+			Runtime: []string{"go:1.19"},
 		},
 	})
 	suite.Error(err)
 
 	// expect no error after pulling image
 	for _, image := range []string{
-		"http://localhost:8080/exit/container.json",
-		"http://localhost:8080/sleep/container.json",
-		"http://localhost:8080/sleep/incorrect_runtime.json",
+		"http://localhost:8080/test/exit.wasm",
+		"http://localhost:8080/test/sleep.wasm",
 	} {
 		_, err = suite.cri.PullImage(&PullImageRequest{
 			Image: ImageSpec{
@@ -399,8 +400,9 @@ func (suite *CriSuite) TestContainer() {
 				Name: "container1",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/sleep/container.json",
+				Image: "http://localhost:8080/test/sleep.wasm",
 			},
+			Runtime: []string{"go:1.19"},
 		},
 	})
 	suite.NoError(err)
@@ -417,7 +419,7 @@ func (suite *CriSuite) TestContainer() {
 	suite.Empty(statusRes.Status.StartedAt)
 	suite.Empty(statusRes.Status.FinishedAt)
 	suite.Equal(0, statusRes.Status.ExitCode)
-	suite.Equal("http://localhost:8080/sleep/container.json", statusRes.Status.Image.Image)
+	suite.Equal("http://localhost:8080/test/sleep.wasm", statusRes.Status.Image.Image)
 	suite.NotEmpty(statusRes.Status.ImageRef)
 
 	// expect container status is running after start the container
@@ -452,8 +454,9 @@ func (suite *CriSuite) TestContainer() {
 				Name: "container1",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/sleep/container.json",
+				Image: "http://localhost:8080/test/sleep.wasm",
 			},
+			Runtime: []string{"go:1.19"},
 		},
 	})
 	suite.Error(err)
@@ -466,7 +469,10 @@ func (suite *CriSuite) TestContainer() {
 				Name: "container2",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/exit/container.json",
+				Image: "http://localhost:8080/test/exit.wasm",
+			},
+			Runtime: []string{
+				"go:1.19",
 			},
 			Args: []string{
 				"1",
@@ -500,9 +506,10 @@ func (suite *CriSuite) TestContainer() {
 				Name: "container1",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/sleep/container.json",
+				Image: "http://localhost:8080/test/sleep.wasm",
 			},
-			Args: []string{"-1"},
+			Runtime: []string{"go:1.19"},
+			Args:    []string{"-1"},
 		},
 	})
 	suite.NoError(err)
@@ -542,11 +549,11 @@ func (suite *CriSuite) TestContainer() {
 	for _, container := range listRes.Containers {
 		switch container.ID {
 		case container1:
-			suite.checkContainer(&container, container1, sandbox1, "container1", "http://localhost:8080/sleep/container.json", ContainerExited)
+			suite.checkContainer(&container, container1, sandbox1, "container1", "http://localhost:8080/test/sleep.wasm", ContainerExited)
 		case container2:
-			suite.checkContainer(&container, container2, sandbox1, "container2", "http://localhost:8080/exit/container.json", ContainerExited)
+			suite.checkContainer(&container, container2, sandbox1, "container2", "http://localhost:8080/test/exit.wasm", ContainerExited)
 		case container3:
-			suite.checkContainer(&container, container3, sandbox2, "container1", "http://localhost:8080/sleep/container.json", ContainerExited)
+			suite.checkContainer(&container, container3, sandbox2, "container1", "http://localhost:8080/test/sleep.wasm", ContainerExited)
 		}
 	}
 
@@ -568,11 +575,10 @@ func (suite *CriSuite) TestContainer() {
 				Name: "container2",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/sleep/container.json",
+				Image: "http://localhost:8080/test/sleep.wasm",
 			},
-			Args: []string{
-				"-1",
-			},
+			Runtime: []string{"go:1.19"},
+			Args:    []string{"-1"},
 		},
 	})
 	suite.NoError(err)
@@ -655,8 +661,9 @@ func (suite *CriSuite) TestContainer() {
 				Name: "container3",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/sleep/incorrect_runtime.json",
+				Image: "http://localhost:8080/test/sleep.wasm",
 			},
+			Runtime: []string{"incorrect"},
 		},
 	})
 	suite.NoError(err)
@@ -677,11 +684,10 @@ func (suite *CriSuite) TestContainer() {
 	suite.Equal(-1, statusRes.Status.ExitCode)
 }
 
-func (suite *CriSuite) checkImage(image *Image, url string, runtime []string, id string) {
+func (suite *CriSuite) checkImage(image *Image, url string, id string) {
 	suite.NotEmpty(image.ID)
 	suite.Equal(id, image.ID)
 	suite.Equal(url, image.Spec.Image)
-	suite.Equal(runtime, image.Runtime)
 }
 
 // check timestamp format (ISO8601/RFC3339)

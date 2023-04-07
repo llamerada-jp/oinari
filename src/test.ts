@@ -34,6 +34,7 @@ async function testUsingController() {
 async function main() {
   await testCrossLinkGo();
   await testUsingController();
+  console.log("FINISH");
 }
 
 main();

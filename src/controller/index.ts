@@ -36,6 +36,14 @@ function run(data: any, _: Map<string, string>, writer: CL.ResponseWriter): void
   const go = new Go();
   const wasm = fetch(req.file);
 
+  go.exit = (code: number) => {
+    if (code === 0) {
+      writer.replySuccess({});
+    } else {
+      writer.replyError("test failed");
+    }
+  }
+
   ColonioModule().then((colonio) => {
     // bypass webrtc
     let colonioMpx = new CL.MultiPlexer();
@@ -51,7 +59,6 @@ function run(data: any, _: Map<string, string>, writer: CL.ResponseWriter): void
   }).then((result) => {
     // start go program
     go.run(result.instance);
-    writer.replySuccess({});
   });
 }
 

@@ -53,14 +53,12 @@ class ImageImpl {
   // image ref id
   id: string
   url: string
-  runtime: Array<string>
   image: ArrayBuffer | undefined
 
   constructor(id: string, url: string) {
     this.state = ImageState.Created;
     this.id = id;
     this.url = url;
-    this.runtime = new Array();
     this.pull();
   }
 
@@ -70,22 +68,6 @@ class ImageImpl {
     this.state = ImageState.Downloading;
 
     fetch(this.url).then((response: Response) => {
-      if (!response.ok) {
-        throw new Error(response.statusText);
-      }
-      return response.json();
-
-    }).then((p) => {
-      let param = p as {
-        image: string
-        runtime: string[]
-      };
-
-      this.runtime = param.runtime;
-
-      return fetch(new URL(param.image, this.url).toString());
-
-    }).then((response: Response) => {
       if (!response.ok || response.status !== 200) {
         throw new Error(response.statusText);
       }
@@ -114,6 +96,7 @@ class ContainerImpl {
   image: ImageImpl
   worker: Worker | undefined
   link: CL.Crosslink | undefined
+  runtime: string[]
   args: string[]
   envs: Record<string, string>
   createdAt: string
@@ -121,10 +104,11 @@ class ContainerImpl {
   finishedAt: string | undefined
   exitCode: number | undefined
 
-  constructor(id: string, sandboxId: string, name: string, image: ImageImpl, args: string[], envs: Record<string, string>) {
+  constructor(id: string, sandboxId: string, name: string, image: ImageImpl, runtime: string[], args: string[], envs: Record<string, string>) {
     this.id = id;
     this.sandboxId = sandboxId;
     this.name = name;
+    this.runtime = runtime;
     this.image = image;
     this.args = args;
     this.envs = envs;
@@ -194,14 +178,14 @@ class ContainerImpl {
 
     // should specify required runtime
     let hasRequiredRuntime = false;
-    for (const r of this.image.runtime) {
+    for (const r of this.runtime) {
       if (runtimeRequired.indexOf(r) != -1) {
         hasRequiredRuntime = true;
         break;
       }
     }
     if (!hasRequiredRuntime) {
-      console.error("minimum required runtime is not specified:" + JSON.stringify(this.image.runtime));
+      console.error("minimum required runtime is not specified:" + JSON.stringify(this.runtime));
       return false;
     }
 
@@ -233,7 +217,7 @@ class ContainerImpl {
     return {
       name: this.image.url,
       image: this.image.image.slice(0),
-      runtime: this.image.runtime,
+      runtime: this.runtime,
       args: this.args,
       envs: this.envs,
     };
@@ -281,7 +265,7 @@ class SandboxImpl {
     // this.containers.clear();
   }
 
-  createContainer(name: string, image: ImageImpl, args: string[], envs: Record<string, string>): string {
+  createContainer(name: string, image: ImageImpl, runtime: string[], args: string[], envs: Record<string, string>): string {
     console.assert(this.state == PodSandboxState.SandboxReady);
 
     let id: string = (Math.floor(Math.random() * containerIdMax)).toString(16);
@@ -296,7 +280,7 @@ class SandboxImpl {
       }
     }
 
-    let container = new ContainerImpl(id, this.id, name, image, args, envs);
+    let container = new ContainerImpl(id, this.id, name, image, runtime, args, envs);
     containers.set(id, container);
     this.containers.set(id, container);
 
@@ -529,6 +513,7 @@ interface CreateContainerRequest {
 interface ContainerConfig {
   metadata: ContainerMetadata
   image: ImageSpec
+  runtime: string[]
   args: string[]
   envs: KeyValue[]
 }
@@ -644,8 +629,6 @@ interface ListImagesResponse {
 interface Image {
   id: string
   spec: ImageSpec
-  // this field meaning the runtime environment of wasm, like 'go:1.19'
-  runtime: string[]
 }
 
 interface PullImageRequest {
@@ -804,6 +787,11 @@ function createContainer(request: CreateContainerRequest): CreateContainerRespon
     throw new Error("image not found:" + request.config.image.image);
   }
 
+  let runtime = request.config.runtime;
+  if (runtime == null) {
+    runtime = new Array<string>();
+  }
+
   let args = request.config.args;
   if (args == null) {
     args = new Array<string>();
@@ -816,7 +804,7 @@ function createContainer(request: CreateContainerRequest): CreateContainerRespon
     }
   }
 
-  let id = sandbox.createContainer(request.config.metadata.name, image, args, envs);
+  let id = sandbox.createContainer(request.config.metadata.name, image, runtime, args, envs);
   return { containerId: id };
 }
 
@@ -945,7 +933,6 @@ function listImages(request: ListImagesRequest): ListImagesResponse {
       spec: {
         image: it.url
       },
-      runtime: it.runtime,
     });
   }
 

@@ -1,5 +1,5 @@
 /.vscode/
-/bin/seed
+/bin/test_seed
 /build/
 /coverage
 /dist/*.map
@@ -7,14 +7,11 @@
 /dist/404.html
 /dist/colonio_go.js
 /dist/colonio.js
-/dist/colonio.wasm
 /dist/container.js
 /dist/controller.js
 /dist/error.html
-/dist/exit/exit.wasm
 /dist/index.html
 /dist/index.js
-/dist/sleep/sleep.wasm
 /dist/test/*.map
 /dist/test/*.wasm
 /dist/test/test.js

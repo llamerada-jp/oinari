@@ -126,8 +126,10 @@ type CreateContainerRequest struct {
 type ContainerConfig struct {
 	Metadata ContainerMetadata `json:"metadata"`
 	Image    ImageSpec         `json:"image"`
-	Args     []string          `json:"args"`
-	Envs     []KeyValue        `json:"envs"`
+	// this field meaning the runtime environment of wasm, like  'core:dev1', 'go:1.19'
+	Runtime []string   `json:"runtime"`
+	Args    []string   `json:"args"`
+	Envs    []KeyValue `json:"envs"`
 }
 
 type ContainerMetadata struct {
@@ -245,8 +247,6 @@ type ListImagesResponse struct {
 type Image struct {
 	ID   string    `json:"id"`
 	Spec ImageSpec `json:"spec"`
-	// this field meaning the runtime environment of wasm, like  'core:dev1', 'go:1.19'
-	Runtime []string `json:"runtime"`
 }
 
 type PullImageRequest struct {

@@ -1,4 +1,0 @@
-{
-  "image": "./sleep.wasm",
-  "runtime": ["core:dev1"]
-}

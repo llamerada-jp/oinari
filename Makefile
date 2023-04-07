@@ -1,12 +1,23 @@
 
 COLONIO_BRANCH := main
 COLONIO_FILES := dist/colonio.js dist/colonio_go.js dist/colonio.wasm
-GO_FILES := $(shell find . -name *.go)
+GO_FILES := $(shell find . -name *.go | grep -v ./build/)
+TS_FILES := $(shell find ./src/ -name *.ts) src/colonio.d.ts src/colonio_go.d.ts src/keys.ts
 OINARI_FILES := dist/wasm_exec.js dist/404.html dist/error.html dist/index.html
 MAP_FILES := dist/colonio.wasm.map dist/colonio_go.js.map
 
-run: build-test test-wasm # test-ts
-	while true; do ./bin/seed --debug -p 8080; done
+build: $(COLONIO_FILES) $(OINARI_FILES) build-go build-ts
+
+build-go: $(GO_FILES)
+	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/node/*.go
+	GOOS=js GOARCH=wasm go build -o ./dist/test/exit.wasm ./cmd/app/exit/*.go
+	GOOS=js GOARCH=wasm go build -o ./dist/test/sleep.wasm ./cmd/app/sleep/*.go
+	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./lib/crosslink/*
+	GOOS=js GOARCH=wasm go test -o ./dist/test/test.wasm -c ./cmd/node/*
+
+build-ts: $(TS_FILES)
+	npm run build
+	mv ./dist/test.js ./dist/test/test.js
 
 .PHONY: setup
 setup:
@@ -20,27 +31,14 @@ setup:
 	$(MAKE) -C build/colonio build BUILD_TYPE=Debug
 	npm install	
 
-.PHONY: build
-build: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/colonio.d.ts src/colonio_go.d.ts
-	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/node/*.go
-	npm run build
-	mv ./dist/test.js ./dist/test/test.js
+.PHONY: loop-test
+loop-test: build
+	while true; do go run ./cmd/test_seed; done
 
-.PHONY: build-test
-build-test: build # $(MAP_FILES)
-	GOOS=js GOARCH=wasm go build -o ./dist/exit/exit.wasm ./cmd/app/exit/*.go
-	GOOS=js GOARCH=wasm go build -o ./dist/sleep/sleep.wasm ./cmd/app/sleep/*.go
-
-.PHONY: test-wasm
-test-wasm:
-	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./lib/crosslink/*
-	GOOS=js GOARCH=wasm go test -o ./dist/test/test.wasm -c ./cmd/node/*
-
-test-ts: $(COLONIO_FILES) $(GO_FILES) $(OINARI_FILES) bin/seed src/keys.ts
+.PHONY: test
+test: build
 	npm t
-
-bin/seed: $(GO_FILES)
-	go build -o $@ ./cmd/seed
+	# go run ./cmd/test_seed -test
 
 dist/404.html: src/404.html keys.json
 	go run ./cmd/tool template -i src/404.html -v keys.json > $@
@@ -77,3 +75,7 @@ src/colonio_go.d.ts: build/colonio/src/js/colonio_go.d.ts
 
 src/keys.ts: src/keys.temp keys.json
 	go run ./cmd/tool template -i src/keys.temp -v keys.json > $@
+
+.PHONY: clean
+clean:
+	rm -f ./dist/**/*.js ./dist/**/*.map ./dist/**/*.wasm $(OINARI_FILES)

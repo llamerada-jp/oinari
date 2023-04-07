@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package main
+package seed
 
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,12 +28,13 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-const (
-	rootPath = "."
-)
+const rootPath = "."
 
-func enableDebugMode() error {
-	log.Println("start debug mode")
+func InitDebug(mux *http.ServeMux) error {
+	utime := time.Now().Format(time.RFC3339)
+	mux.HandleFunc("/utime", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(utime))
+	})
 
 	dfw, err := newDebugFileWatcher(rootPath)
 	if err != nil {
@@ -62,7 +64,7 @@ func enableDebugMode() error {
 }
 
 func build(rootPath string) error {
-	outs, err := execHelper(".", "make", []string{"build-test", "-C", rootPath})
+	outs, err := execHelper(".", "make", []string{"build", "-C", rootPath})
 	for _, out := range outs {
 		fmt.Println(out)
 	}
