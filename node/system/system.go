@@ -72,6 +72,6 @@ func (sys *systemImpl) connect(url, account, token string) error {
 
 func (sys *systemImpl) setPosition(latitude, longitude float64) error {
 	// convert L/L to radian
-	_, _, err := sys.colonio.SetPosition(longitude*math.Pi/180.0, latitude*math.Pi/90.0)
+	_, _, err := sys.colonio.SetPosition(longitude*math.Pi/180.0, latitude*math.Pi/180.0)
 	return err
 }

@@ -8,14 +8,14 @@ MAP_FILES := dist/colonio.wasm.map dist/colonio_go.js.map
 
 build: $(COLONIO_FILES) $(OINARI_FILES) build-go build-ts
 
-build-go: $(GO_FILES)
+build-go: $(GO_FILES) go.mod go.sum
 	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/node/*.go
 	GOOS=js GOARCH=wasm go build -o ./dist/test/exit.wasm ./cmd/app/exit/*.go
 	GOOS=js GOARCH=wasm go build -o ./dist/test/sleep.wasm ./cmd/app/sleep/*.go
 	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./lib/crosslink/*
 	GOOS=js GOARCH=wasm go test -o ./dist/test/test.wasm -c ./cmd/node/*
 
-build-ts: $(TS_FILES)
+build-ts: $(TS_FILES) package.json tsconfig.json webpack.config.js
 	npm run build
 	mv ./dist/test.js ./dist/test/test.js
 
@@ -31,8 +31,8 @@ setup:
 	$(MAKE) -C build/colonio build BUILD_TYPE=Debug
 	npm install	
 
-.PHONY: loop-test
-loop-test: build
+.PHONY: s
+s: build
 	while true; do go run ./cmd/test_seed; done
 
 .PHONY: test

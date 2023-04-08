@@ -1,6 +1,6 @@
 {
   "name": "oinari",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Oinari(オイナリ) is the PoC project using distributed algorithms. In this program, by connecting users' browsers and collaborating with each other, it is possible to diffuse the data with little use of the server.",
   "main": "index.js",
   "dependencies": {

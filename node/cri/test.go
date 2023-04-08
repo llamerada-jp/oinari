@@ -7,19 +7,18 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type CriSuite struct {
+type TestSuite struct {
 	suite.Suite
 	cri CRI
 }
 
-func (suite *CriSuite) SetupSuite() {
-	rootMpx := crosslink.NewMultiPlexer()
-	cl := crosslink.NewCrosslink("crosslink", rootMpx)
-
-	suite.cri = NewCRI(cl)
+func NewTestSuite(cl crosslink.Crosslink) *TestSuite {
+	return &TestSuite{
+		cri: NewCRI(cl),
+	}
 }
 
-func (suite *CriSuite) AfterTest(suiteName, testName string) {
+func (suite *TestSuite) AfterTest(suiteName, testName string) {
 	// cleanup containers
 	containersRes, err := suite.cri.ListContainers(&ListContainersRequest{})
 	suite.NoError(err)
@@ -51,7 +50,7 @@ func (suite *CriSuite) AfterTest(suiteName, testName string) {
 	}
 }
 
-func (suite *CriSuite) TestImage() {
+func (suite *TestSuite) TestImage() {
 	// expect the listRes empty
 	listRes, err := suite.cri.ListImages(&ListImagesRequest{})
 	suite.NoError(err)
@@ -120,7 +119,7 @@ func (suite *CriSuite) TestImage() {
 	suite.checkImage(&listRes.Images[0], "http://localhost:8080/test/sleep.wasm", test2ID)
 }
 
-func (suite *CriSuite) TestSandbox() {
+func (suite *TestSuite) TestSandbox() {
 	// expect that there is not sandbox
 	listRes, err := suite.cri.ListPodSandbox(&ListPodSandboxRequest{})
 	suite.NoError(err)
@@ -329,7 +328,7 @@ func (suite *CriSuite) TestSandbox() {
 	suite.Len(listRes.Items, 0)
 }
 
-func (suite *CriSuite) TestContainer() {
+func (suite *TestSuite) TestContainer() {
 	// expect there is no container
 	listRes, err := suite.cri.ListContainers(&ListContainersRequest{})
 	suite.NoError(err)
@@ -684,26 +683,26 @@ func (suite *CriSuite) TestContainer() {
 	suite.Equal(-1, statusRes.Status.ExitCode)
 }
 
-func (suite *CriSuite) checkImage(image *Image, url string, id string) {
+func (suite *TestSuite) checkImage(image *Image, url string, id string) {
 	suite.NotEmpty(image.ID)
 	suite.Equal(id, image.ID)
 	suite.Equal(url, image.Spec.Image)
 }
 
 // check timestamp format (ISO8601/RFC3339)
-func (suite *CriSuite) checkTimestampFormat(timestamp string) {
+func (suite *TestSuite) checkTimestampFormat(timestamp string) {
 	_, err := time.Parse(time.RFC3339, timestamp)
 	suite.NoError(err)
 }
 
-func (suite *CriSuite) checkSandboxMeta(meta *PodSandboxMetadata, name, uid, namespace string) {
+func (suite *TestSuite) checkSandboxMeta(meta *PodSandboxMetadata, name, uid, namespace string) {
 	suite.Equal(name, meta.Name)
 	suite.NotEmpty(meta.UID)
 	suite.Equal(uid, meta.UID)
 	suite.Equal(namespace, meta.Namespace)
 }
 
-func (suite *CriSuite) checkContainer(container *Container, id, sandbox, name, url string, state ContainerState) {
+func (suite *TestSuite) checkContainer(container *Container, id, sandbox, name, url string, state ContainerState) {
 	suite.Equal(id, container.ID)
 	suite.Equal(sandbox, container.PodSandboxId)
 	suite.Equal(name, container.Metadata.Name)

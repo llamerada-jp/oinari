@@ -19,10 +19,22 @@ package main
 import (
 	"testing"
 
+	"github.com/llamerada-jp/colonio/go/colonio"
+	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node/cri"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
 func TestMain(t *testing.T) {
-	suite.Run(t, new(cri.CriSuite))
+	// setup
+	// crosslink
+	rootMpx := crosslink.NewMultiPlexer()
+	cl := crosslink.NewCrosslink("crosslink", rootMpx)
+	// colonio
+	config := colonio.NewConfig()
+	col, err := colonio.NewColonio(config)
+	assert.NoError(t, err)
+
+	suite.Run(t, cri.NewTestSuite(cl))
 }

@@ -68,11 +68,6 @@ async function main() {
   await command.connect("ws://localhost:8080/seed", "dummy-account", "");
   // set a position for sample playing
   await command.setPosition(35.6594945, 139.6999859);
-  // run sample application
-  let app = await command.runApplication("./sample.app.json");
-  setTimeout(() => {
-    command.terminateApplication(app.uuid);
-  }, 60 * 1000);
 }
 
 main();
