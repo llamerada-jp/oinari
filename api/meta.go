@@ -19,7 +19,7 @@ type ObjectMeta struct {
 	DeletionTimestamp string       `json:"deletionTimestamp"`
 }
 
-func (meta *ObjectMeta) Validate(t ResourceType, uuid string) error {
+func (meta *ObjectMeta) Validate(t ResourceType) error {
 	if meta.Type != t {
 		return fmt.Errorf("type field should be %s", t)
 	}
@@ -43,10 +43,6 @@ func (meta *ObjectMeta) Validate(t ResourceType, uuid string) error {
 
 	if len(meta.Uuid) == 0 {
 		return fmt.Errorf("uuid of the resource should be specify")
-	}
-
-	if meta.Uuid != uuid {
-		return fmt.Errorf("invalid uuid was specified (%s)", meta.Uuid)
 	}
 
 	if len(meta.DeletionTimestamp) != 0 {

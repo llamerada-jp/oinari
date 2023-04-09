@@ -43,8 +43,12 @@ func (account *Account) Validate() error {
 		return fmt.Errorf("metadata field should be filled")
 	}
 
-	if err := account.Meta.Validate(ResourceTypeAccount, GenerateAccountUuid(account.Meta.Name)); err != nil {
+	if err := account.Meta.Validate(ResourceTypeAccount); err != nil {
 		return fmt.Errorf("invalid metadata for %s %w", account.Meta.Name, err)
+	}
+
+	if account.Meta.Uuid != GenerateAccountUuid(account.Meta.Name) {
+		return fmt.Errorf("invalid uuid for %s", account.Meta.Name)
 	}
 
 	if account.State == nil {

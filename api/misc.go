@@ -22,7 +22,7 @@ import (
 )
 
 // node id format is equal to colonio node ids
-var NODE_NAME_EXPRESSION = regexp.MustCompile("^[0-9a-z]{32}$")
+var NODE_NAME_EXPRESSION = regexp.MustCompile("^[0-9a-f]{32}$")
 
 func ValidateNodeId(name string) error {
 	if !NODE_NAME_EXPRESSION.Match([]byte(name)) {
