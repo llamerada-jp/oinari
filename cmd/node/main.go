@@ -72,7 +72,8 @@ func (na *nodeAgent) initSystem() error {
 }
 
 func (na *nodeAgent) execute() error {
-	ctx, _ := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	na.ctx = ctx
 
 	err := na.initCrosslink()
@@ -106,7 +107,7 @@ func (na *nodeAgent) OnConnect() error {
 
 	// account manager
 	accountKvs := account.NewKvsDriver(na.col)
-	accountMgr := account.NewManager(na.sys.GetAccount(), accountKvs)
+	accountMgr := account.NewManager(na.sys.GetAccount(), nodeMgr.GetNid(), accountKvs)
 
 	// pod manager
 	cri := cri.NewCRI(na.cl)

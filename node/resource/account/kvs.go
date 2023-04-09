@@ -1,8 +1,21 @@
+/*
+ * Copyright 2018 Yuji Ito <llamerada.jp@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package account
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -11,8 +24,8 @@ import (
 )
 
 type KvsDriver interface {
-	setMeta(name string) error
-	bindPod(pod *api.Pod) error
+	get(name string) (*api.Account, error)
+	set(account *api.Account) error
 }
 
 type kvsDriverImpl struct {
@@ -47,12 +60,12 @@ func (kvs *kvsDriverImpl) bindPod(pod *api.Pod) error {
 		return err
 	}
 
-	node, ok := account.Status.Pods[pod.Meta.Uuid]
+	node, ok := account.State.Pods[pod.Meta.Uuid]
 	if ok && node == pod.Status.RunningNode {
 		return nil
 	}
 
-	account.Status.Pods[pod.Meta.Uuid] = pod.Status.RunningNode
+	account.State.Pods[pod.Meta.Uuid] = pod.Status.RunningNode
 	return kvs.set(account)
 }
 
@@ -82,7 +95,7 @@ func (kvs *kvsDriverImpl) getOrCreate(name string) (*api.Account, error) {
 			Owner: name,
 			Uuid:  kvs.getUUID(name),
 		},
-		Status: &api.AccountStatus{
+		State: &api.AccountState{
 			Pods: make(map[string]string),
 		},
 	}
@@ -95,7 +108,41 @@ func (kvs *kvsDriverImpl) getOrCreate(name string) (*api.Account, error) {
 	return account, nil
 }
 
+func (kvs *kvsDriverImpl) get(name string) (*api.Account, error) {
+	key := kvs.getKey(name)
+	val, err := kvs.col.KvsGet(key)
+	// TODO: return error if err is not `not found error`
+	if err != nil {
+		return nil, nil
+	}
+
+	raw, err := val.GetBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	var account api.Account
+	err = json.Unmarshal(raw, &account)
+	if err != nil {
+		return nil, err
+	}
+
+	return &account, nil
+}
+
 func (kvs *kvsDriverImpl) set(account *api.Account) error {
+	if len(account.Meta.Type) == 0 {
+		account.Meta.Type = api.ResourceTypeAccount
+	}
+
+	if len(account.Meta.Uuid) == 0 {
+		account.Meta.Uuid = kvs.getUUID(account.Meta.Name)
+	}
+
+	if err := kvs.check(account); err != nil {
+		return err
+	}
+
 	raw, err := json.Marshal(account)
 	if err != nil {
 		return err
@@ -112,10 +159,4 @@ func (kvs *kvsDriverImpl) set(account *api.Account) error {
 // use sha256 hash as account's uuid
 func (kvs *kvsDriverImpl) getKey(name string) string {
 	return string(api.ResourceTypeAccount) + "/" + kvs.getUUID(name)
-}
-
-// use sha256 hash as account's uuid
-func (kvs *kvsDriverImpl) getUUID(name string) string {
-	hash := sha256.Sum256([]byte(kvs.name))
-	return hex.EncodeToString(hash[:])
 }

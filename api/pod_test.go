@@ -13,22 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package node
+package api
 
-type Manager interface {
-	GetNid() string
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestGeneratePodUuid(t *testing.T) {
+	assert := assert.New(t)
+
+	id1 := GeneratePodUuid()
+	assert.NotEmpty(id1)
+	id2 := GeneratePodUuid()
+	assert.NotEmpty(id2)
+	assert.NotEqual(id1, id2)
 }
 
-type ManagerImpl struct {
-	localNid string
-}
+func TestValidatePodUuid(t *testing.T) {
+	assert := assert.New(t)
 
-func NewManager(localNid string) *ManagerImpl {
-	return &ManagerImpl{
-		localNid: localNid,
+	validUuid := GeneratePodUuid()
+	assert.NoError(ValidatePodUuid(validUuid))
+
+	for _, uuid := range []string{
+		"",
+		validUuid + "z",
+	} {
+		assert.Error(ValidatePodUuid(uuid))
 	}
-}
-
-func (mgr *ManagerImpl) GetNid() string {
-	return mgr.localNid
 }

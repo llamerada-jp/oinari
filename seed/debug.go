@@ -52,7 +52,7 @@ func InitDebug(mux *http.ServeMux) error {
 
 			err = build(rootPath)
 			if err != nil {
-				log.Print("failed to build", err)
+				log.Print("failed to build:", err)
 
 			} else {
 				os.Exit(0)
@@ -138,6 +138,7 @@ func execHelper(path, command string, args []string) ([]string, error) {
 	cmd.Dir = path
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		fmt.Println(string(out))
 		return nil, fmt.Errorf("error on execHelper %v", map[string]interface{}{
 			"path":    path,
 			"command": command,

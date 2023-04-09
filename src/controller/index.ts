@@ -34,13 +34,12 @@ function run(data: any, _: Map<string, string>, writer: CL.ResponseWriter): void
   let req = data as RunRequest;
 
   const go = new Go();
-  const wasm = fetch(req.file);
 
   go.exit = (code: number) => {
     if (code === 0) {
       writer.replySuccess({});
     } else {
-      writer.replyError("test failed");
+      writer.replyError("controller process failed");
     }
   }
 
@@ -54,11 +53,14 @@ function run(data: any, _: Map<string, string>, writer: CL.ResponseWriter): void
     // setup colonio for go
     (globalThis as any).colonioGo = new ColonioGo(colonio);
 
-    return WebAssembly.instantiateStreaming(wasm, go.importObject);
+    return fetch(req.file);
 
-  }).then((result) => {
+  }).then((response)=> {
+    return WebAssembly.instantiateStreaming(response, go.importObject);
+
+  }).then((wasm) => {
     // start go program
-    go.run(result.instance);
+    go.run(wasm.instance);
   });
 }
 

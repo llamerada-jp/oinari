@@ -13,22 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package node
+package api
 
-type Manager interface {
-	GetNid() string
-}
+import (
+	"fmt"
+	"regexp"
+	"time"
+)
 
-type ManagerImpl struct {
-	localNid string
-}
+// node id format is equal to colonio node ids
+var NODE_NAME_EXPRESSION = regexp.MustCompile("^[0-9a-z]{32}$")
 
-func NewManager(localNid string) *ManagerImpl {
-	return &ManagerImpl{
-		localNid: localNid,
+func ValidateNodeId(name string) error {
+	if !NODE_NAME_EXPRESSION.Match([]byte(name)) {
+		return fmt.Errorf("node id should be 128bit hex format")
 	}
+	return nil
 }
 
-func (mgr *ManagerImpl) GetNid() string {
-	return mgr.localNid
+func ValidateTimestamp(timestamp string) error {
+	_, err := time.Parse(time.RFC3339, timestamp)
+	if err != nil {
+		return fmt.Errorf("timestamp should be ISO8601/RFC3339 format:%w", err)
+	}
+	return nil
 }

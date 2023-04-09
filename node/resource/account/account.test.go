@@ -13,35 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package main
+package account
 
 import (
-	"testing"
-
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/lib/crosslink"
-	"github.com/llamerada-jp/oinari/node/cri"
-	"github.com/llamerada-jp/oinari/node/resource/node"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
-func TestMain(t *testing.T) {
-	// setup crosslink
-	rootMpx := crosslink.NewMultiPlexer()
-	cl := crosslink.NewCrosslink("crosslink", rootMpx)
+const ACCOUNT = "cat"
 
-	// run tests that can be run offline.
-	suite.Run(t, cri.NewCriTest(cl))
-	suite.Run(t, node.NewNodeTest())
+type AccountTest struct {
+	suite.Suite
+	col colonio.Colonio
+	kvs KvsDriver
+	mgr Manager
+}
 
-	// setup colonio
-	config := colonio.NewConfig()
-	col, err := colonio.NewColonio(config)
-	assert.NoError(t, err)
-	err = col.Connect("ws://localhost:8080/seed", "")
-	assert.NoError(t, err)
-	defer col.Disconnect()
+func NewAccountTest(col colonio.Colonio) *AccountTest {
+	kvs := NewKvsDriver(col)
+	return &AccountTest{
+		col: col,
+		kvs: kvs,
+		mgr: NewManager(ACCOUNT, kvs),
+	}
+}
 
-	// run tests that requires online
+func (at *AccountTest) TestGetAccountName() {
+	at.Equal(ACCOUNT, at.mgr.GetAccountName())
+}
+
+func (at *AccountTest) TestRefresh() {
+
 }

@@ -96,7 +96,7 @@ func (mgr *managerImpl) run(name string, spec *api.PodSpec) (*applicationDigest,
 			Name:        name,
 			Owner:       mgr.accountMgr.GetAccountName(),
 			CreatorNode: mgr.nodeMgr.GetNid(),
-			Uuid:        uuid.Must(uuid.NewRandom()).String(),
+			Uuid:        ,
 		},
 		Spec: mgr.setDefaultPodSpec(spec),
 		Status: &api.PodStatus{

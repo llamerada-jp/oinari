@@ -29,6 +29,13 @@ async function testUsingController() {
   // setup CRI
   CRI.initCRI(crosslink, rootMpx);
 
+   // setup colonio module handler
+   let colonioMpx = new CL.MultiPlexer();
+   rootMpx.setHandler("colonio", colonioMpx);
+   let colonio = await ColonioModule();
+   let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
+   colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(crosslink, webrtcImpl));
+
   // run wasm test program
   await crosslink.call("run", {
     file: "test/test.wasm",

@@ -15,20 +15,19 @@
  */
 package node
 
-type Manager interface {
-	GetNid() string
+import (
+	"github.com/stretchr/testify/suite"
+)
+
+type NodeTest struct {
+	suite.Suite
 }
 
-type ManagerImpl struct {
-	localNid string
+func NewNodeTest() *NodeTest {
+	return &NodeTest{}
 }
 
-func NewManager(localNid string) *ManagerImpl {
-	return &ManagerImpl{
-		localNid: localNid,
-	}
-}
-
-func (mgr *ManagerImpl) GetNid() string {
-	return mgr.localNid
+func (nt *NodeTest) TestNid() {
+	mgr := NewManager("test-nid")
+	nt.Equal("test_nid", mgr.GetNid())
 }
