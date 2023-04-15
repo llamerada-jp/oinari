@@ -21,13 +21,13 @@ import (
 	"time"
 
 	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/node/misc"
 )
 
 const KEEP_ALIVE_INTERVAL = 30 * time.Second
 
 type Manager interface {
 	GetAccountName() string
-	BindPod(pod *api.Pod) error
 	CheckByLocalData(account *api.Account) error
 }
 
@@ -67,9 +67,22 @@ func (mgr *managerImpl) GetAccountName() string {
 	return mgr.accountName
 }
 
+/*
 func (mgr *managerImpl) BindPod(pod *api.Pod) error {
-	return mgr.kvs.bindPod(pod)
+	account, err := kvs.getOrCreate(kvs.name)
+	if err != nil {
+		return err
+	}
+
+	node, ok := account.State.Pods[pod.Meta.Uuid]
+	if ok && node == pod.Status.RunningNode {
+		return nil
+	}
+
+	account.State.Pods[pod.Meta.Uuid] = pod.Status.RunningNode
+	return kvs.set(account)
 }
+//*/
 
 func (mgr *managerImpl) CheckByLocalData(account *api.Account) error {
 	log.Fatal("todo")
@@ -92,4 +105,7 @@ func (mgr *managerImpl) keepAlive() error {
 		}
 	}
 
+	account.State.Nodes[mgr.localNid] = misc.GetTimestamp()
+
+	return mgr.kvs.set(account)
 }

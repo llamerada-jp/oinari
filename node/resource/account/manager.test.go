@@ -16,11 +16,14 @@
 package account
 
 import (
+	"context"
+
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/stretchr/testify/suite"
 )
 
 const ACCOUNT = "cat"
+const NODE_ID = "012345678901234567890123456789ab"
 
 type AccountTest struct {
 	suite.Suite
@@ -29,12 +32,13 @@ type AccountTest struct {
 	mgr Manager
 }
 
-func NewAccountTest(col colonio.Colonio) *AccountTest {
+func NewAccountTest(ctx context.Context, col colonio.Colonio) *AccountTest {
 	kvs := NewKvsDriver(col)
+
 	return &AccountTest{
 		col: col,
 		kvs: kvs,
-		mgr: NewManager(ACCOUNT, kvs),
+		mgr: NewManager(ctx, ACCOUNT, NODE_ID, kvs),
 	}
 }
 

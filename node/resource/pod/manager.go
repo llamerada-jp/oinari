@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/google/uuid"
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/cri"
 	"github.com/llamerada-jp/oinari/node/resource/account"
@@ -96,7 +95,7 @@ func (mgr *managerImpl) run(name string, spec *api.PodSpec) (*applicationDigest,
 			Name:        name,
 			Owner:       mgr.accountMgr.GetAccountName(),
 			CreatorNode: mgr.nodeMgr.GetNid(),
-			Uuid:        ,
+			Uuid:        api.GeneratePodUuid(),
 		},
 		Spec: mgr.setDefaultPodSpec(spec),
 		Status: &api.PodStatus{
