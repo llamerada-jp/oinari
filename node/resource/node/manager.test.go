@@ -19,15 +19,15 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type NodeTest struct {
+type nodeManagerTest struct {
 	suite.Suite
 }
 
-func NewNodeTest() *NodeTest {
-	return &NodeTest{}
+func NewNodeTest() suite.TestingSuite {
+	return &nodeManagerTest{}
 }
 
-func (nt *NodeTest) TestNid() {
+func (nmt *nodeManagerTest) TestNid() {
 	mgr := NewManager("test-nid")
-	nt.Equal("test_nid", mgr.GetNid())
+	nmt.Equal("test-nid", mgr.GetNid())
 }

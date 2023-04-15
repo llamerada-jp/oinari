@@ -29,8 +29,7 @@ type KvsDriver interface {
 }
 
 type kvsDriverImpl struct {
-	name string
-	col  colonio.Colonio
+	col colonio.Colonio
 }
 
 func NewKvsDriver(col colonio.Colonio) KvsDriver {
@@ -72,14 +71,6 @@ func (kvs *kvsDriverImpl) get(name string) (*api.Account, error) {
 }
 
 func (kvs *kvsDriverImpl) set(account *api.Account) error {
-	if len(account.Meta.Type) == 0 {
-		account.Meta.Type = api.ResourceTypeAccount
-	}
-
-	if len(account.Meta.Uuid) == 0 {
-		account.Meta.Uuid = api.GenerateAccountUuid(account.Meta.Name)
-	}
-
 	if err := account.Validate(); err != nil {
 		return err
 	}

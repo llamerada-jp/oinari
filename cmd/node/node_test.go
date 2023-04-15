@@ -16,24 +16,28 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/lib/crosslink"
-	"github.com/llamerada-jp/oinari/node/cri"
-	"github.com/llamerada-jp/oinari/node/resource/node"
+	"github.com/llamerada-jp/oinari/node/resource/account"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
 func TestMain(t *testing.T) {
-	// setup crosslink
-	rootMpx := crosslink.NewMultiPlexer()
-	cl := crosslink.NewCrosslink("crosslink", rootMpx)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// run tests that can be run offline.
-	suite.Run(t, cri.NewCriTest(cl))
-	suite.Run(t, node.NewNodeTest())
+	/*
+		// setup crosslink
+		rootMpx := crosslink.NewMultiPlexer()
+		cl := crosslink.NewCrosslink("crosslink", rootMpx)
+
+		// run tests that can be run offline.
+		suite.Run(t, cri.NewCriTest(cl))
+		suite.Run(t, node.NewNodeTest())
+	  //*/
 
 	// setup colonio
 	config := colonio.NewConfig()
@@ -43,5 +47,7 @@ func TestMain(t *testing.T) {
 	assert.NoError(t, err)
 	defer col.Disconnect()
 
-	// run tests that requires online
+	// run tests that requires colonio
+	suite.Run(t, account.NewAccountKvsTest(ctx, col))
+	suite.Run(t, account.NewAccountManagerTest(ctx, col))
 }

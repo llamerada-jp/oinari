@@ -25,27 +25,28 @@ import (
 const ACCOUNT = "cat"
 const NODE_ID = "012345678901234567890123456789ab"
 
-type AccountTest struct {
+type accountManagerTest struct {
 	suite.Suite
 	col colonio.Colonio
 	kvs KvsDriver
-	mgr Manager
+	mgr *managerImpl
 }
 
-func NewAccountTest(ctx context.Context, col colonio.Colonio) *AccountTest {
+func NewAccountManagerTest(ctx context.Context, col colonio.Colonio) suite.TestingSuite {
 	kvs := NewKvsDriver(col)
 
-	return &AccountTest{
+	return &accountManagerTest{
 		col: col,
 		kvs: kvs,
-		mgr: NewManager(ctx, ACCOUNT, NODE_ID, kvs),
+		mgr: &managerImpl{
+			accountName: ACCOUNT,
+			localNid:    NODE_ID,
+			kvs:         kvs,
+			logs:        make(map[string]*logEntry),
+		},
 	}
 }
 
-func (at *AccountTest) TestGetAccountName() {
-	at.Equal(ACCOUNT, at.mgr.GetAccountName())
-}
-
-func (at *AccountTest) TestRefresh() {
-
+func (amt *accountManagerTest) TestGetAccountName() {
+	amt.Equal(ACCOUNT, amt.mgr.GetAccountName())
 }

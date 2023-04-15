@@ -12,8 +12,10 @@ build-go: $(GO_FILES) go.mod go.sum
 	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/node/*.go
 	GOOS=js GOARCH=wasm go build -o ./dist/test/exit.wasm ./cmd/app/exit/*.go
 	GOOS=js GOARCH=wasm go build -o ./dist/test/sleep.wasm ./cmd/app/sleep/*.go
-	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./lib/crosslink/*
-	GOOS=js GOARCH=wasm go test -o ./dist/test/test.wasm -c ./cmd/node/* -c ./api/**/*
+	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./lib/crosslink/
+	## should edit TESTS@src/test.ts to run test build by wasm
+	GOOS=js GOARCH=wasm go test -o ./dist/test/test_api.wasm -c ./api/
+	GOOS=js GOARCH=wasm go test -o ./dist/test/test_node.wasm -c ./cmd/node/
 
 build-ts: $(TS_FILES) package.json tsconfig.json webpack.config.js
 	npm run build

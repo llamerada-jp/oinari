@@ -102,12 +102,14 @@ func (na *nodeAgent) execute() error {
 
 // implement system events
 func (na *nodeAgent) OnConnect() error {
+	ctx := context.Background()
+
 	// node manager
 	nodeMgr := node.NewManager(na.col.GetLocalNid())
 
 	// account manager
 	accountKvs := account.NewKvsDriver(na.col)
-	accountMgr := account.NewManager(na.sys.GetAccount(), nodeMgr.GetNid(), accountKvs)
+	accountMgr := account.NewManager(ctx, na.sys.GetAccount(), nodeMgr.GetNid(), accountKvs)
 
 	// pod manager
 	cri := cri.NewCRI(na.cl)

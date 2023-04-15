@@ -7,8 +7,13 @@ import * as crosslinkGoTest from "./crosslink.test.go";
 
 declare function ColonioModule(): Promise<any>;
 
+const TESTS = [
+  "test/test_api.wasm",
+  "test/test_node.wasm",
+];
+
 async function testCrossLinkGo() {
-  console.log("start test of CrossLink");
+  console.log("testing CrossLink");
   try {
     let crosslinkGoTester = new crosslinkGoTest.Tester()
     console.assert(await crosslinkGoTester.start(), "cross link");
@@ -18,7 +23,6 @@ async function testCrossLinkGo() {
 }
 
 async function testUsingController() {
-  console.log("start tests implements by WASM");
   // start controller worker
   const controller = new Worker("./controller.js");
 
@@ -29,17 +33,20 @@ async function testUsingController() {
   // setup CRI
   CRI.initCRI(crosslink, rootMpx);
 
-   // setup colonio module handler
-   let colonioMpx = new CL.MultiPlexer();
-   rootMpx.setHandler("colonio", colonioMpx);
-   let colonio = await ColonioModule();
-   let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
-   colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(crosslink, webrtcImpl));
+  // setup colonio module handler
+  let colonioMpx = new CL.MultiPlexer();
+  rootMpx.setHandler("colonio", colonioMpx);
+  let colonio = await ColonioModule();
+  let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
+  colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(crosslink, webrtcImpl));
 
-  // run wasm test program
-  await crosslink.call("run", {
-    file: "test/test.wasm",
-  });
+  // run wasm test programs
+  for (const file of TESTS) {
+    console.log("testing", file);
+    await crosslink.call("run", {
+      file: file,
+    });
+  }
 }
 
 async function test() {

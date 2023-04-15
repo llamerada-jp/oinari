@@ -25,16 +25,32 @@ import (
 )
 
 const KEEP_ALIVE_INTERVAL = 30 * time.Second
+const RESOURCE_KEEP_ALIVE_THRESHOLD = KEEP_ALIVE_INTERVAL * 6
+const ACCOUNT_DELETION_THRESHOLD = KEEP_ALIVE_INTERVAL * 60
 
 type Manager interface {
 	GetAccountName() string
-	CheckByLocalData(account *api.Account) error
+	Cleanup(account *api.Account) error
+	KeepAlivePods(pods []*api.Pod) error
 }
 
 type managerImpl struct {
 	accountName string
 	localNid    string
 	kvs         KvsDriver
+	logs        map[string]*logEntry
+}
+
+type logEntry struct {
+	lastUpdated time.Time
+	lastChecked time.Time
+	pods        map[string]timestampLog
+	nodes       map[string]timestampLog
+}
+
+type timestampLog struct {
+	lastUpdated  time.Time
+	timestampStr string
 }
 
 func NewManager(ctx context.Context, account, localNid string, kvs KvsDriver) Manager {
@@ -42,6 +58,7 @@ func NewManager(ctx context.Context, account, localNid string, kvs KvsDriver) Ma
 		accountName: account,
 		localNid:    localNid,
 		kvs:         kvs,
+		logs:        make(map[string]*logEntry),
 	}
 
 	// kick keep alive for each interval
@@ -53,9 +70,10 @@ func NewManager(ctx context.Context, account, localNid string, kvs KvsDriver) Ma
 				return
 
 			case <-ticker.C:
-				if err := mgr.keepAlive(); err != nil {
+				if err := mgr.keepAliveNode(); err != nil {
 					log.Println(err)
 				}
+				mgr.cleanLogs()
 			}
 		}
 	}()
@@ -67,45 +85,156 @@ func (mgr *managerImpl) GetAccountName() string {
 	return mgr.accountName
 }
 
-/*
-func (mgr *managerImpl) BindPod(pod *api.Pod) error {
-	account, err := kvs.getOrCreate(kvs.name)
-	if err != nil {
-		return err
+func (mgr *managerImpl) KeepAlivePods(pods []*api.Pod) error {
+	podsByAccount := make(map[string][]*api.Pod)
+	for _, pod := range pods {
+		podsByAccount[pod.Meta.Owner] = append(podsByAccount[pod.Meta.Owner], pod)
 	}
 
-	node, ok := account.State.Pods[pod.Meta.Uuid]
-	if ok && node == pod.Status.RunningNode {
-		return nil
+	for accountName, podSlice := range podsByAccount {
+		account, err := mgr.getOrCreateAccount(accountName)
+		if err != nil {
+			return err
+		}
+
+		for _, pod := range podSlice {
+			account.State.Pods[pod.Meta.Uuid] = api.AccountPodState{
+				RunningNode: mgr.localNid,
+				Timestamp:   misc.GetTimestamp(),
+			}
+		}
+
+		err = mgr.kvs.set(account)
+		if err != nil {
+			return err
+		}
 	}
 
-	account.State.Pods[pod.Meta.Uuid] = pod.Status.RunningNode
-	return kvs.set(account)
-}
-//*/
-
-func (mgr *managerImpl) CheckByLocalData(account *api.Account) error {
-	log.Fatal("todo")
 	return nil
 }
 
-func (mgr *managerImpl) keepAlive() error {
-	account, err := mgr.kvs.get(mgr.accountName)
+func (mgr *managerImpl) Cleanup(account *api.Account) error {
+	if err := account.Validate(); err != nil {
+		log.Printf("invalid account found %s and it will be deleted: %v", account.Meta.Name, err)
+		return mgr.kvs.delete(account.Meta.Name)
+	}
+
+	log, ok := mgr.logs[account.Meta.Name]
+	if !ok {
+		log = &logEntry{
+			lastUpdated: time.Now(),
+			pods:        make(map[string]timestampLog),
+			nodes:       make(map[string]timestampLog),
+		}
+		mgr.logs[account.Meta.Name] = log
+	}
+
+	updateAccount := false
+	now := time.Now()
+	log.lastChecked = now
+
+	for key, pod := range account.State.Pods {
+		podLog, ok := log.pods[key]
+		if !ok || podLog.timestampStr != pod.Timestamp {
+			log.pods[key] = timestampLog{
+				lastUpdated:  now,
+				timestampStr: pod.Timestamp,
+			}
+			log.lastUpdated = now
+			continue
+		}
+		if now.After(podLog.lastUpdated.Add(RESOURCE_KEEP_ALIVE_THRESHOLD)) {
+			delete(account.State.Pods, key)
+			updateAccount = true
+			delete(log.pods, key)
+			log.lastUpdated = now
+		}
+	}
+	for key, podLog := range log.pods {
+		if now.After(podLog.lastUpdated.Add(RESOURCE_KEEP_ALIVE_THRESHOLD * 2)) {
+			delete(log.pods, key)
+			log.lastUpdated = now
+		}
+	}
+
+	for key, node := range account.State.Nodes {
+		nodeLog, ok := log.nodes[key]
+		if !ok || nodeLog.timestampStr != node.Timestamp {
+			log.nodes[key] = timestampLog{
+				lastUpdated:  now,
+				timestampStr: node.Timestamp,
+			}
+			log.lastUpdated = now
+			continue
+		}
+		if now.After(nodeLog.lastUpdated.Add(RESOURCE_KEEP_ALIVE_THRESHOLD)) {
+			delete(account.State.Nodes, key)
+			updateAccount = true
+			delete(log.nodes, key)
+			log.lastUpdated = now
+		}
+	}
+	for key, nodeLog := range log.nodes {
+		if now.After(nodeLog.lastUpdated.Add(RESOURCE_KEEP_ALIVE_THRESHOLD * 2)) {
+			delete(log.nodes, key)
+			log.lastUpdated = now
+		}
+	}
+
+	if updateAccount {
+		return mgr.kvs.set(account)
+	}
+
+	if now.After(log.lastUpdated.Add(ACCOUNT_DELETION_THRESHOLD)) {
+		return mgr.kvs.delete(account.Meta.Name)
+	}
+
+	return nil
+}
+
+func (mgr *managerImpl) keepAliveNode() error {
+	account, err := mgr.getOrCreateAccount(mgr.accountName)
 	if err != nil {
 		return err
+	}
+
+	account.State.Nodes[mgr.localNid] = api.AccountNodeState{
+		Timestamp: misc.GetTimestamp(),
+	}
+
+	return mgr.kvs.set(account)
+}
+
+func (mgr *managerImpl) cleanLogs() {
+	now := time.Now()
+	for key, log := range mgr.logs {
+		if now.After(log.lastChecked.Add(RESOURCE_KEEP_ALIVE_THRESHOLD * 2)) {
+			delete(mgr.logs, key)
+		}
+	}
+}
+
+func (mgr *managerImpl) getOrCreateAccount(accountName string) (*api.Account, error) {
+	account, err := mgr.kvs.get(accountName)
+	if err != nil {
+		return nil, err
 	}
 
 	if account == nil {
 		account = &api.Account{
 			Meta: &api.ObjectMeta{
-				Name:  mgr.accountName,
-				Owner: mgr.accountName,
+				Type:        api.ResourceTypeAccount,
+				Name:        accountName,
+				Owner:       accountName,
+				CreatorNode: mgr.localNid,
+				Uuid:        api.GenerateAccountUuid(accountName),
 			},
-			State: &api.AccountState{},
+			State: &api.AccountState{
+				Pods:  make(map[string]api.AccountPodState),
+				Nodes: make(map[string]api.AccountNodeState),
+			},
 		}
 	}
 
-	account.State.Nodes[mgr.localNid] = misc.GetTimestamp()
-
-	return mgr.kvs.set(account)
+	return account, nil
 }

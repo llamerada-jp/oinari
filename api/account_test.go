@@ -48,7 +48,8 @@ func TestAccountValidate(t *testing.T) {
 				DeletionTimestamp: "",
 			},
 			State: &AccountState{
-				Nodes: map[string]string{},
+				Pods:  make(map[string]AccountPodState),
+				Nodes: make(map[string]AccountNodeState),
 			},
 		},
 	} {
@@ -59,7 +60,8 @@ func TestAccountValidate(t *testing.T) {
 	for title, account := range map[string]*Account{
 		"no meta": {
 			State: &AccountState{
-				Nodes: map[string]string{},
+				Pods:  make(map[string]AccountPodState),
+				Nodes: make(map[string]AccountNodeState),
 			},
 		},
 		"invalid meta": {
@@ -72,7 +74,8 @@ func TestAccountValidate(t *testing.T) {
 				DeletionTimestamp: "",
 			},
 			State: &AccountState{
-				Nodes: map[string]string{},
+				Pods:  make(map[string]AccountPodState),
+				Nodes: make(map[string]AccountNodeState),
 			},
 		},
 		"invalid uuid": {
@@ -85,7 +88,8 @@ func TestAccountValidate(t *testing.T) {
 				DeletionTimestamp: "",
 			},
 			State: &AccountState{
-				Nodes: map[string]string{},
+				Pods:  make(map[string]AccountPodState),
+				Nodes: make(map[string]AccountNodeState),
 			},
 		},
 		"no state": {
@@ -120,12 +124,23 @@ func TestAccountStateValidate(t *testing.T) {
 	// valid patterns
 	for _, state := range []*AccountState{
 		{
-			Nodes: map[string]string{},
+			Pods:  make(map[string]AccountPodState),
+			Nodes: make(map[string]AccountNodeState),
 		},
 		{
-			Nodes: map[string]string{
-				"01234567890123456789012345abcdef": "2021-04-09T14:00:40+09:00",
-				"01234567890123456789012345abcde0": "2021-04-09T14:00:40Z",
+			Pods: map[string]AccountPodState{
+				GeneratePodUuid(): {
+					RunningNode: "01234567890123456789012345abcdef",
+					Timestamp:   "2021-04-09T14:00:40+09:00",
+				},
+			},
+			Nodes: map[string]AccountNodeState{
+				"01234567890123456789012345abcdef": {
+					Timestamp: "2021-04-09T14:00:40+09:00",
+				},
+				"01234567890123456789012345abcde0": {
+					Timestamp: "2021-04-09T14:00:40Z",
+				},
 			},
 		},
 	} {
@@ -134,19 +149,62 @@ func TestAccountStateValidate(t *testing.T) {
 
 	// invalid patterns
 	for title, state := range map[string]*AccountState{
+		"pods is nil": {
+			// Pods: make(map[string]AccountPodState),
+			Nodes: make(map[string]AccountNodeState),
+		},
+		"invalid pod uuid": {
+			Pods: map[string]AccountPodState{
+				GeneratePodUuid() + "-": {
+					RunningNode: "01234567890123456789012345abcdef",
+					Timestamp:   "2021-04-09T14:00:40+09:00",
+				},
+			},
+			Nodes: make(map[string]AccountNodeState),
+		},
+		"invalid node id for the pod": {
+			Pods: map[string]AccountPodState{
+				GeneratePodUuid(): {
+					RunningNode: "01234567890123456789012345abcdef+",
+					Timestamp:   "2021-04-09T14:00:40+09:00",
+				},
+			},
+			Nodes: make(map[string]AccountNodeState),
+		},
+		"invalid timestamp for the pod": {
+			Pods: map[string]AccountPodState{
+				GeneratePodUuid(): {
+					RunningNode: "01234567890123456789012345abcdef+",
+					Timestamp:   "2021-04-09T14:00:40+09:00U",
+				},
+			},
+			Nodes: make(map[string]AccountNodeState),
+		},
+
 		"nodes is nil": {
-			// Nodes: map[string]string{},
+			Pods: make(map[string]AccountPodState),
+			// Nodes: make(map[string]AccountNodeState),
 		},
 		"invalid node id": {
-			Nodes: map[string]string{
-				"01234567890123456789012345abcdef": "2021-04-09T14:00:40+09:00",
-				"01234567890123456789012345abcdez": "2021-04-09T14:00:40Z",
+			Pods: make(map[string]AccountPodState),
+			Nodes: map[string]AccountNodeState{
+				"01234567890123456789012345abcdef": {
+					Timestamp: "2021-04-09T14:00:40+09:00",
+				},
+				"01234567890123456789012345abcdez": {
+					Timestamp: "2021-04-09T14:00:40Z",
+				},
 			},
 		},
-		"invalid timestamp": {
-			Nodes: map[string]string{
-				"01234567890123456789012345abcdef": "2021-04-09T14:00:40+09:00",
-				"01234567890123456789012345abcde0": "",
+		"invalid timestamp for the node": {
+			Pods: make(map[string]AccountPodState),
+			Nodes: map[string]AccountNodeState{
+				"01234567890123456789012345abcdef": {
+					Timestamp: "2021-04-09T14:00:40+09:00",
+				},
+				"01234567890123456789012345abcde0": {
+					Timestamp: "",
+				},
 			},
 		},
 	} {

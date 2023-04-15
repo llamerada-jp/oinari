@@ -27,9 +27,19 @@ type Account struct {
 }
 
 type AccountState struct {
-	//Pods map[string]string `json:"pods"`
+	// map describing pod's uuid and pod state
+	Pods map[string]AccountPodState `json:"pods"`
 	// map describing nid and timestamp of keepalive
-	Nodes map[string]string `json:"nodes"`
+	Nodes map[string]AccountNodeState `json:"nodes"`
+}
+
+type AccountPodState struct {
+	RunningNode string `json:"runningNode"`
+	Timestamp   string `json:"timestamp"`
+}
+
+type AccountNodeState struct {
+	Timestamp string `json:"timestamp"`
 }
 
 // use sha256 hash as account's uuid
@@ -62,15 +72,31 @@ func (account *Account) Validate() error {
 }
 
 func (state *AccountState) validate() error {
+	if state.Pods == nil {
+		return fmt.Errorf("pods field should be filled")
+	}
+
+	for podUuid, podState := range state.Pods {
+		if err := ValidatePodUuid(podUuid); err != nil {
+			return fmt.Errorf("there is an invalid pod uuid for pods: %w", err)
+		}
+		if err := ValidateNodeId(podState.RunningNode); err != nil {
+			return fmt.Errorf("there is an invalid node if for pod %s: %w", podUuid, err)
+		}
+		if err := ValidateTimestamp(podState.Timestamp); err != nil {
+			return fmt.Errorf("there is an invalid timestamp for pod %s: %w", podUuid, err)
+		}
+	}
+
 	if state.Nodes == nil {
 		return fmt.Errorf("nodes field should be filled")
 	}
 
-	for nid, timestamp := range state.Nodes {
+	for nid, nodeState := range state.Nodes {
 		if err := ValidateNodeId(nid); err != nil {
 			return fmt.Errorf("there is an invalid node id for nodes: %w", err)
 		}
-		if err := ValidateTimestamp(timestamp); err != nil {
+		if err := ValidateTimestamp(nodeState.Timestamp); err != nil {
 			return fmt.Errorf("there is an invalid timestamp for nodes: %w", err)
 		}
 	}

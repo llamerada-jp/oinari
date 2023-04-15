@@ -53,10 +53,12 @@ func (mgr *managerImpl) DealLocalResource(raw []byte) error {
 	switch pod.Status.Phase {
 
 	case api.PodPhasePending:
-		err = mgr.accountMgr.BindPod(&pod)
-		if err != nil {
-			return err
-		}
+		/*
+			err = mgr.accountMgr.BindPod(&pod)
+			if err != nil {
+				return err
+			}
+			//*/
 
 		err = mgr.schedulePod(&pod)
 		if err != nil {
@@ -64,10 +66,12 @@ func (mgr *managerImpl) DealLocalResource(raw []byte) error {
 		}
 
 	case api.PodPhaseRunning, api.PodPhaseMigrating:
-		err = mgr.accountMgr.BindPod(&pod)
-		if err != nil {
-			return err
-		}
+		/*
+			err = mgr.accountMgr.BindPod(&pod)
+			if err != nil {
+				return err
+			}
+			//*/
 
 		err = mgr.messaging.encouragePod(pod.Status.RunningNode, &pod)
 		if err != nil {
