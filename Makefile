@@ -1,3 +1,4 @@
+SHELL := /bin/bash -o pipefail
 
 COLONIO_BRANCH := main
 COLONIO_FILES := dist/colonio.js dist/colonio_go.js dist/colonio.wasm
@@ -34,13 +35,15 @@ setup:
 	npm install	
 
 .PHONY: s
-s: build
+s: build generate-cert
+	sudo sysctl -w net.core.rmem_max=2500000
 	while true; do go run ./cmd/test_seed; done
 
 .PHONY: test
-test: build
+test: build generate-cert
+	sudo sysctl -w net.core.rmem_max=2500000
 	npm t
-	# go run ./cmd/test_seed -test
+	go run ./cmd/test_seed --test
 
 dist/404.html: src/404.html keys.json
 	go run ./cmd/tool template -i src/404.html -v keys.json > $@
@@ -78,6 +81,17 @@ src/colonio_go.d.ts: build/colonio/src/js/colonio_go.d.ts
 src/keys.ts: src/keys.temp keys.json
 	go run ./cmd/tool template -i src/keys.temp -v keys.json > $@
 
+.PHONY: generate-cert
+generate-cert:
+	openssl req -x509 -out localhost.crt -keyout localhost.key \
+  -newkey rsa:2048 -nodes -sha256 \
+  -subj '/CN=localhost' -extensions EXT -config <( \
+   printf "[dn]\nCN=localhost\n[req]\ndistinguished_name = dn\n[EXT]\nsubjectAltName=DNS:localhost\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth")
+
 .PHONY: clean
 clean:
-	rm -f ./dist/**/*.js ./dist/**/*.map ./dist/**/*.wasm $(OINARI_FILES)
+	rm -f ./dist/*.js ./dist/**/*.js ./dist/*.map ./dist/**/*.map ./dist/*.wasm ./dist/**/*.wasm $(OINARI_FILES) ./src/colonio_go.d.ts ./src/colonio.d.ts ./src/keys.ts localhost.crt localhost.key
+
+.PHONY: deisclean
+deisclean: clean
+	rm -fr ./node_modules ./coverage ./build

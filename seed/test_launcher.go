@@ -17,7 +17,9 @@ package seed
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
@@ -31,20 +33,39 @@ func NewTestLauncher() *testLauncher {
 }
 
 func (r *testLauncher) Launch() error {
-	fmt.Println("Run test")
+	log.Println("Run test")
 
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("ignore-certificate-errors", "1"),
+	)
+	allocCtx, cancel1 := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer cancel1()
+	ctx, cancel2 := chromedp.NewContext(allocCtx,
+		chromedp.WithLogf(log.Printf))
+	defer cancel2()
 
-	finCh := make(chan any, 1)
-	hasFail := false
+	resultCh := make(chan bool, 1)
 
 	chromedp.ListenTarget(ctx, func(ev interface{}) {
 		switch ev := ev.(type) {
 		case *runtime.EventConsoleAPICalled:
 			for _, arg := range ev.Args {
-				if string(arg.Value) == "\"FINISH\"" {
-					finCh <- true
+				if arg.Type != runtime.TypeString {
+					continue
+				}
+				var line string
+				if err := json.Unmarshal(arg.Value, &line); err != nil {
+					log.Println("failed to decode: ", line)
+					continue
+				}
+				log.Println("(browser)", line)
+
+				switch line {
+				case "FINISH":
+					resultCh <- true
+
+				case "FAIL":
+					resultCh <- false
 				}
 			}
 
@@ -55,12 +76,12 @@ func (r *testLauncher) Launch() error {
 		}
 	})
 
-	if err := chromedp.Run(ctx, chromedp.Navigate("http://localhost:8080/test.html")); err != nil {
+	if err := chromedp.Run(ctx, chromedp.Navigate("https://localhost:8080/test.html")); err != nil {
 		return err
 	}
 
-	<-finCh
-	if hasFail {
+	result := <-resultCh
+	if !result {
 		return fmt.Errorf("test failed")
 	}
 

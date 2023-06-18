@@ -16,25 +16,21 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
-	"net/http"
 
-	colonioSeed "github.com/llamerada-jp/colonio/go/seed"
+	"github.com/llamerada-jp/colonio/go/service"
 	"github.com/llamerada-jp/oinari/seed"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 var (
 	//go:embed oinari.json
-	configData   []byte
-	documentRoot string
-	port         uint16
-	test         bool
+	configData []byte
+	test       bool
 )
 
 var cmd = &cobra.Command{
@@ -44,50 +40,46 @@ var cmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		mux := http.NewServeMux()
 
-		seed.InitDebug(mux)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-		// Publish colonio-seed
-		seedConfig := &colonioSeed.Config{}
-		if err := json.Unmarshal(configData, seedConfig); err != nil {
+		// setup colonio service
+		config := &service.Config{}
+		if err := json.Unmarshal(configData, config); err != nil {
 			return err
 		}
 
-		seed.InitSeed(mux, documentRoot, seedConfig)
+		sv, err := service.NewService(".", config, nil)
+		if err != nil {
+			return err
+		}
+
+		// publish debug path
+		seed.InitDebug(sv.Mux)
 
 		if test {
 			// Start HTTP(S) service.
 			go func() {
-				if err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux); err != nil {
+				if err := sv.Run(ctx); err != nil {
 					log.Fatal(err)
 				}
 			}()
 
 			// Run test
 			launcher := seed.NewTestLauncher()
-			if err := launcher.Launch(); err != nil {
-				return err
-			}
+			return launcher.Launch()
 
 		} else {
-			if err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux); err != nil {
-				log.Fatal(err)
-			}
+			return sv.Run(ctx)
 		}
-
-		return nil
 	},
 }
 
 func init() {
 	flags := cmd.PersistentFlags()
 
-	flags.StringVarP(&documentRoot, "root", "r", "./dist", "path to document root")
-	flags.Uint16VarP(&port, "port", "p", 8080, "port number for HTTP service, and it will be ignored if https option is selected")
 	flags.BoolVarP(&test, "test", "t", false, "run test using headless browser")
-
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 }
 
 func main() {

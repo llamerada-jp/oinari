@@ -106,7 +106,7 @@ async function sidenode(param: SideNodeParam) {
   systemMpx.setHandlerFunc("onInitComplete", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
     writer.replySuccess("");
     command = new CM.Commands(crosslink);
-    command.connect("ws://localhost:8080/seed", param.account, "").then(() => {
+    command.connect("https://localhost:8080/seed", param.account, "").then(() => {
       return command.setPosition(param.latitude, param.longitude);
 
     }).then(() => {

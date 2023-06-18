@@ -65,7 +65,7 @@ async function main() {
   // start controller
   await initController();
   command = new CM.Commands(crosslink);
-  await command.connect("ws://localhost:8080/seed", "dummy-account", "");
+  await command.connect("https://localhost:8080/seed", "dummy-account", "");
   // set a position for sample playing
   await command.setPosition(35.6594945, 139.6999859);
 }

@@ -16,6 +16,8 @@
 /dist/test/test.js
 /dist/wasm_exec.js
 /keys.json
+/localhost.crt
+/localhost.key
 /node_modules
 /src/colonio_go.d.ts
 /src/colonio.d.ts

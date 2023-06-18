@@ -43,7 +43,7 @@ func TestMain(t *testing.T) {
 	config := colonio.NewConfig()
 	col, err := colonio.NewColonio(config)
 	assert.NoError(t, err)
-	err = col.Connect("ws://localhost:8080/seed", "")
+	err = col.Connect("https://localhost:8080/seed", "")
 	assert.NoError(t, err)
 	defer col.Disconnect()
 

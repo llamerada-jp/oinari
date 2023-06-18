@@ -74,7 +74,7 @@ func (ct *CriTest) TestImage() {
 	// expect there to be one image after pull a image
 	pullRes, err := ct.cri.PullImage(&PullImageRequest{
 		Image: ImageSpec{
-			Image: "http://localhost:8080/test/exit.wasm",
+			Image: "https://localhost:8080/test/exit.wasm",
 		},
 	})
 	ct.NoError(err)
@@ -83,12 +83,12 @@ func (ct *CriTest) TestImage() {
 	listRes, err = ct.cri.ListImages(&ListImagesRequest{})
 	ct.NoError(err)
 	ct.Len(listRes.Images, 1)
-	ct.checkImage(&listRes.Images[0], "http://localhost:8080/test/exit.wasm", test1ID)
+	ct.checkImage(&listRes.Images[0], "https://localhost:8080/test/exit.wasm", test1ID)
 
 	// expect there to be two images after pull another image
 	pullRes, err = ct.cri.PullImage(&PullImageRequest{
 		Image: ImageSpec{
-			Image: "http://localhost:8080/test/sleep.wasm",
+			Image: "https://localhost:8080/test/sleep.wasm",
 		},
 	})
 	ct.NoError(err)
@@ -98,19 +98,19 @@ func (ct *CriTest) TestImage() {
 	ct.NoError(err)
 	ct.Len(listRes.Images, 2)
 
-	if listRes.Images[0].Spec.Image == "http://localhost:8080/test/exit.wasm" {
-		ct.checkImage(&listRes.Images[0], "http://localhost:8080/test/exit.wasm", test1ID)
-		ct.checkImage(&listRes.Images[1], "http://localhost:8080/test/sleep.wasm", test2ID)
+	if listRes.Images[0].Spec.Image == "https://localhost:8080/test/exit.wasm" {
+		ct.checkImage(&listRes.Images[0], "https://localhost:8080/test/exit.wasm", test1ID)
+		ct.checkImage(&listRes.Images[1], "https://localhost:8080/test/sleep.wasm", test2ID)
 	} else {
-		ct.checkImage(&listRes.Images[0], "http://localhost:8080/test/sleep.wasm", test2ID)
-		ct.checkImage(&listRes.Images[1], "http://localhost:8080/test/exit.wasm", test1ID)
+		ct.checkImage(&listRes.Images[0], "https://localhost:8080/test/sleep.wasm", test2ID)
+		ct.checkImage(&listRes.Images[1], "https://localhost:8080/test/exit.wasm", test1ID)
 	}
 	ct.NotEqual(listRes.Images[0].ID, listRes.Images[1].ID)
 
 	// expect there to be two images after pull the same image
 	pullRes, err = ct.cri.PullImage(&PullImageRequest{
 		Image: ImageSpec{
-			Image: "http://localhost:8080/test/exit.wasm",
+			Image: "https://localhost:8080/test/exit.wasm",
 		},
 	})
 	ct.NoError(err)
@@ -123,7 +123,7 @@ func (ct *CriTest) TestImage() {
 	// expect there to be one image after remove the image
 	_, err = ct.cri.RemoveImage(&RemoveImageRequest{
 		Image: ImageSpec{
-			Image: "http://localhost:8080/test/exit.wasm",
+			Image: "https://localhost:8080/test/exit.wasm",
 		},
 	})
 	ct.NoError(err)
@@ -131,7 +131,7 @@ func (ct *CriTest) TestImage() {
 	listRes, err = ct.cri.ListImages(&ListImagesRequest{})
 	ct.NoError(err)
 	ct.Len(listRes.Images, 1)
-	ct.checkImage(&listRes.Images[0], "http://localhost:8080/test/sleep.wasm", test2ID)
+	ct.checkImage(&listRes.Images[0], "https://localhost:8080/test/sleep.wasm", test2ID)
 }
 
 func (ct *CriTest) TestSandbox() {
@@ -143,7 +143,7 @@ func (ct *CriTest) TestSandbox() {
 	// setup image
 	_, err = ct.cri.PullImage(&PullImageRequest{
 		Image: ImageSpec{
-			Image: "http://localhost:8080/test/exit.wasm",
+			Image: "https://localhost:8080/test/exit.wasm",
 		},
 	})
 	ct.NoError(err)
@@ -239,7 +239,7 @@ func (ct *CriTest) TestSandbox() {
 				Name: "containerName",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/test/exit.wasm",
+				Image: "https://localhost:8080/test/exit.wasm",
 			},
 			Runtime: []string{"go:1.19"},
 		},
@@ -262,7 +262,7 @@ func (ct *CriTest) TestSandbox() {
 	ct.checkTimestampFormat(statusRes.ContainersStatuses[0].CreatedAt)
 	ct.Len(statusRes.ContainersStatuses[0].StartedAt, 0)
 	ct.Len(statusRes.ContainersStatuses[0].FinishedAt, 0)
-	ct.Equal(statusRes.ContainersStatuses[0].Image.Image, "http://localhost:8080/test/exit.wasm")
+	ct.Equal(statusRes.ContainersStatuses[0].Image.Image, "https://localhost:8080/test/exit.wasm")
 	ct.NotEmpty(statusRes.ContainersStatuses[0].ImageRef)
 	ct.checkTimestampFormat(statusRes.Timestamp)
 
@@ -387,7 +387,7 @@ func (ct *CriTest) TestContainer() {
 				Name: "container1",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/test/sleep.wasm",
+				Image: "https://localhost:8080/test/sleep.wasm",
 			},
 			Runtime: []string{"go:1.19"},
 		},
@@ -396,8 +396,8 @@ func (ct *CriTest) TestContainer() {
 
 	// expect no error after pulling image
 	for _, image := range []string{
-		"http://localhost:8080/test/exit.wasm",
-		"http://localhost:8080/test/sleep.wasm",
+		"https://localhost:8080/test/exit.wasm",
+		"https://localhost:8080/test/sleep.wasm",
 	} {
 		_, err = ct.cri.PullImage(&PullImageRequest{
 			Image: ImageSpec{
@@ -414,7 +414,7 @@ func (ct *CriTest) TestContainer() {
 				Name: "container1",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/test/sleep.wasm",
+				Image: "https://localhost:8080/test/sleep.wasm",
 			},
 			Runtime: []string{"go:1.19"},
 		},
@@ -433,7 +433,7 @@ func (ct *CriTest) TestContainer() {
 	ct.Empty(statusRes.Status.StartedAt)
 	ct.Empty(statusRes.Status.FinishedAt)
 	ct.Equal(0, statusRes.Status.ExitCode)
-	ct.Equal("http://localhost:8080/test/sleep.wasm", statusRes.Status.Image.Image)
+	ct.Equal("https://localhost:8080/test/sleep.wasm", statusRes.Status.Image.Image)
 	ct.NotEmpty(statusRes.Status.ImageRef)
 
 	// expect container status is running after start the container
@@ -468,7 +468,7 @@ func (ct *CriTest) TestContainer() {
 				Name: "container1",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/test/sleep.wasm",
+				Image: "https://localhost:8080/test/sleep.wasm",
 			},
 			Runtime: []string{"go:1.19"},
 		},
@@ -483,7 +483,7 @@ func (ct *CriTest) TestContainer() {
 				Name: "container2",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/test/exit.wasm",
+				Image: "https://localhost:8080/test/exit.wasm",
 			},
 			Runtime: []string{
 				"go:1.19",
@@ -520,7 +520,7 @@ func (ct *CriTest) TestContainer() {
 				Name: "container1",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/test/sleep.wasm",
+				Image: "https://localhost:8080/test/sleep.wasm",
 			},
 			Runtime: []string{"go:1.19"},
 			Args:    []string{"-1"},
@@ -563,11 +563,11 @@ func (ct *CriTest) TestContainer() {
 	for _, container := range listRes.Containers {
 		switch container.ID {
 		case container1:
-			ct.checkContainer(&container, container1, sandbox1, "container1", "http://localhost:8080/test/sleep.wasm", ContainerExited)
+			ct.checkContainer(&container, container1, sandbox1, "container1", "https://localhost:8080/test/sleep.wasm", ContainerExited)
 		case container2:
-			ct.checkContainer(&container, container2, sandbox1, "container2", "http://localhost:8080/test/exit.wasm", ContainerExited)
+			ct.checkContainer(&container, container2, sandbox1, "container2", "https://localhost:8080/test/exit.wasm", ContainerExited)
 		case container3:
-			ct.checkContainer(&container, container3, sandbox2, "container1", "http://localhost:8080/test/sleep.wasm", ContainerExited)
+			ct.checkContainer(&container, container3, sandbox2, "container1", "https://localhost:8080/test/sleep.wasm", ContainerExited)
 		}
 	}
 
@@ -589,7 +589,7 @@ func (ct *CriTest) TestContainer() {
 				Name: "container2",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/test/sleep.wasm",
+				Image: "https://localhost:8080/test/sleep.wasm",
 			},
 			Runtime: []string{"go:1.19"},
 			Args:    []string{"-1"},
@@ -675,7 +675,7 @@ func (ct *CriTest) TestContainer() {
 				Name: "container3",
 			},
 			Image: ImageSpec{
-				Image: "http://localhost:8080/test/sleep.wasm",
+				Image: "https://localhost:8080/test/sleep.wasm",
 			},
 			Runtime: []string{"incorrect"},
 		},
