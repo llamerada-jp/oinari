@@ -1,5 +1,4 @@
 {
-  "revision": 20220312.1,
   "documentRoot": "./dist",
   "headers": {
     "Cross-Origin-Resource-Policy": "cross-origin"
@@ -9,9 +8,10 @@
   "port": 8080,
   "certFile": "./localhost.crt",
   "keyFile": "./localhost.key",
-  "keepAliveTimeout": 30000,
+  "sessionTimeout": 30000,
   "PollingTimeout": 10000,
   "node": {
+    "revision": 20220312.1,
     "iceServers": [
       {
         "urls": [

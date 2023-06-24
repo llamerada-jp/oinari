@@ -53,7 +53,7 @@ async function test() {
   console.log("TEST START");
   await testCrossLinkGo();
   await testUsingController();
-  console.log("TEST FINISH");
+  console.log("SUCCESS");
 }
 
 interface SideNodeParam {

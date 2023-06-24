@@ -72,18 +72,18 @@ func (akt *accountKvsTest) TestGet() {
 			Owner:             "test-account",
 			CreatorNode:       "012345678901234567890123456789ab",
 			Uuid:              api.GenerateAccountUuid("test-account"),
-			DeletionTimestamp: "2023/04/15T17:30:40+09:00",
+			DeletionTimestamp: "2023-04-15T17:30:40+09:00",
 		},
 		State: &api.AccountState{
 			Pods: map[string]api.AccountPodState{
 				podUuid: {
 					RunningNode: "012345678901234567890123456789ab",
-					Timestamp:   "2023/04/15T17:30:40+09:00",
+					Timestamp:   "2023-04-15T17:30:40+09:00",
 				},
 			},
 			Nodes: map[string]api.AccountNodeState{
 				"012345678901234567890123456789ab": {
-					Timestamp: "2023/04/15T17:30:40+09:00",
+					Timestamp: "2023-04-15T17:30:40+09:00",
 				},
 			},
 		},
@@ -97,12 +97,12 @@ func (akt *accountKvsTest) TestGet() {
 	akt.Equal("test-account", account.Meta.Owner)
 	akt.Equal("012345678901234567890123456789ab", account.Meta.CreatorNode)
 	akt.Equal(api.GenerateAccountUuid("test-account"), account.Meta.Uuid)
-	akt.Equal("2023/04/15T17:30:40+09:00", account.Meta.DeletionTimestamp)
+	akt.Equal("2023-04-15T17:30:40+09:00", account.Meta.DeletionTimestamp)
 	akt.Len(account.State.Pods, 1)
 	akt.Equal("012345678901234567890123456789ab", account.State.Pods[podUuid].RunningNode)
-	akt.Equal("2023/04/15T17:30:40+09:00", account.State.Pods[podUuid].Timestamp)
+	akt.Equal("2023-04-15T17:30:40+09:00", account.State.Pods[podUuid].Timestamp)
 	akt.Len(account.State.Nodes, 1)
-	akt.Equal("2023/04/15T17:30:40+09:00", account.State.Nodes["012345678901234567890123456789ab"].Timestamp)
+	akt.Equal("2023-04-15T17:30:40+09:00", account.State.Nodes["012345678901234567890123456789ab"].Timestamp)
 
 	// should be remove invalid record and return nil
 	KEY = "get-account-invalid"
@@ -130,8 +130,8 @@ func (akt *accountKvsTest) TestSet() {
 			Name:              KEY,
 			Owner:             KEY,
 			CreatorNode:       "012345678901234567890123456789ab",
-			Uuid:              api.GenerateAccountUuid("test-account"),
-			DeletionTimestamp: "2023/04/15T17:30:40+09:00",
+			Uuid:              api.GenerateAccountUuid(KEY),
+			DeletionTimestamp: "2023-04-15T17:30:40+09:00",
 		},
 		State: &api.AccountState{
 			Pods:  nil, // should not be nil
@@ -150,7 +150,7 @@ func (akt *accountKvsTest) TestSet() {
 	akt.NoError(err)
 	account, err = akt.kvs.get(KEY)
 	akt.NoError(err)
-	akt.Equal("test-account", account.Meta.Name)
+	akt.Equal(KEY, account.Meta.Name)
 }
 
 func (akt *accountKvsTest) TestDelete() {

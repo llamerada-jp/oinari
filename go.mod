@@ -7,7 +7,7 @@ require (
 	github.com/chromedp/chromedp v0.9.1
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/google/uuid v1.3.0
-	github.com/llamerada-jp/colonio v0.0.0-20230618080731-5cf71ca305cd
+	github.com/llamerada-jp/colonio v0.0.0-20230625135127-919526ec6bf0
 	github.com/onsi/gomega v1.27.8
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4

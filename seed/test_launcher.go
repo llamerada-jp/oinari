@@ -61,7 +61,7 @@ func (r *testLauncher) Launch() error {
 				log.Println("(browser)", line)
 
 				switch line {
-				case "FINISH":
+				case "SUCCESS":
 					resultCh <- true
 
 				case "FAIL":
