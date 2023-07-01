@@ -3,11 +3,11 @@ module github.com/llamerada-jp/oinari
 go 1.20
 
 require (
-	github.com/chromedp/cdproto v0.0.0-20230611221135-4cd95c996604
+	github.com/chromedp/cdproto v0.0.0-20230625224106-7fafe342e117
 	github.com/chromedp/chromedp v0.9.1
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/google/uuid v1.3.0
-	github.com/llamerada-jp/colonio v0.0.0-20230625135127-919526ec6bf0
+	github.com/llamerada-jp/colonio v0.0.0-20230630232829-43c2b69fc41d
 	github.com/onsi/gomega v1.27.8
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
