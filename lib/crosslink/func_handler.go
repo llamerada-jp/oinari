@@ -16,8 +16,7 @@ func NewFuncHandler[T any](f func(param *T, tags map[string]string, writer Respo
 			var t T
 			err := json.Unmarshal(dataRaw, &t)
 			if err != nil {
-				fmt.Printf("json error:%s", dataRaw)
-				writer.ReplyError("json unmarshal error")
+				writer.ReplyError(fmt.Sprintf("json unmarshal error, %v %s", err, string(dataRaw)))
 				return
 			}
 

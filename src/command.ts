@@ -48,11 +48,21 @@ interface Pod {
 
 interface PodSpec {
   containers: Array<Container>
+  // TODO scheduler
 }
 
 interface Container {
   name: string
   image: string
+  runtime: Array<string>
+  args: Array<string>
+  env: Array<EnvVar>
+}
+
+interface EnvVar {
+  name: string
+  value: string
+  // valueFrom is not supported yet.
 }
 
 export class Commands {
@@ -84,7 +94,10 @@ export class Commands {
       return response.json();
 
     }).then((a) => {
-      let app = a as ApplicationDefinition;
+      let app = a as ApplicationDefinition
+      for (let container of app.spec.containers) {
+        container.image = new URL(container.image, url).toString();
+      }
       let name = app.metadata.name;
       if (postfix != null) {
         name = name + postfix;

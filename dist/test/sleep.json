@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "name": "sleep"
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "sleep",
+        "image": "/test/sleep.wasm",
+        "runtime": ["go:1.19"]
+      }
+    ]
+  }
+}

@@ -247,6 +247,14 @@ func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {
 					continue
 				}
 
+				envs := []cri.KeyValue{}
+				for _, one := range container.Env {
+					envs = append(envs, cri.KeyValue{
+						Key:   one.Name,
+						Value: one.Value,
+					})
+				}
+
 				res, err := mgr.cri.CreateContainer(&cri.CreateContainerRequest{
 					PodSandboxId: sandboxId,
 					Config: cri.ContainerConfig{
@@ -256,6 +264,9 @@ func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {
 						Image: cri.ImageSpec{
 							Image: container.Image,
 						},
+						Runtime: container.Runtime,
+						Args:    container.Args,
+						Envs:    envs,
 					},
 				})
 

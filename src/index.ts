@@ -18,6 +18,7 @@ import * as CL from "./crosslink";
 import * as CM from "./command";
 import * as WB from "./webrtc_bypass_handler";
 import * as CRI from "./cri";
+import * as UI_AL from "./ui/app_loader";
 
 declare function ColonioModule(): Promise<any>;
 
@@ -25,7 +26,7 @@ let rootMpx: CL.MultiPlexer;
 let crosslink: CL.Crosslink;
 let command: CM.Commands;
 
-async function initController() {
+async function initController(): Promise<void> {
   // start controller worker
   const controller = new Worker("controller.js");
 
@@ -61,10 +62,23 @@ async function initController() {
   return promise;
 }
 
-async function main() {
+function initUI() {
+  UI_AL.init(command);
+}
+
+async function main(): Promise<void> {
   // start controller
   await initController();
   command = new CM.Commands(crosslink);
+  
+  // init ui after window loaded
+  if (document.readyState !== "loading") {
+    initUI();
+  } else {
+    document.addEventListener("DOMContentLoaded", initUI, false);
+  }
+
+  // connect
   await command.connect("https://localhost:8080/seed", "dummy-account", "");
   // set a position for sample playing
   await command.setPosition(35.6594945, 139.6999859);

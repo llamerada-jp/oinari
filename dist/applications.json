@@ -1,0 +1,12 @@
+[
+  {
+    "name": "test::exit",
+    "description": "This application will be exit immediately.",
+    "url": "/test/exit.json"
+  },
+  {
+    "name": "test:sleep",
+    "description": "Wait process for 1min.",
+    "url": "/test/sleep.json"
+  }
+]

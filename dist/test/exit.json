@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "name": "exit"
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "exit",
+        "image": "/test/exit.wasm",
+        "runtime": ["go:1.19"]
+      }
+    ]
+  }
+}

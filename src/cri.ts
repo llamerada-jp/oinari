@@ -26,7 +26,7 @@ const containerIdMax: number = Math.floor(Math.pow(2, 30));
 const imageRefIdMax: number = Math.floor(Math.pow(2, 30));
 const containerStopTimeout: number = 10 * 1000;
 
-const runtimeRequired: string[] = ["go:1.19"];
+const runtimeRequired: string[] = ["go:1.19", "go:1.20"];
 
 let nodeCL: CL.Crosslink;
 
