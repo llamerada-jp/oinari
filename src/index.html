@@ -26,7 +26,7 @@
       <button type="button" class="btn btn-light btn-lg" id="loadAppButton" data-bs-toggle="modal"
         data-bs-target="#modalLoadApp"><i class="bi-box-seam"></i></button>
       <button type="button" class="btn btn-light btn-lg" id="listProcButton" data-bs-toggle="modal"
-      data-bs-target="#modalListProc"><i class="bi-compass"></i></button>
+        data-bs-target="#modalListProc"><i class="bi-compass"></i></button>
     </div>
   </nav>
 
@@ -41,7 +41,8 @@
               data-bs-target="#loadAppLibrary"><i class="bi-box-seam"></i></button>
             <button type="button" class="btn" id="loadAppCustomTab" data-bs-toggle="tab"
               data-bs-target="#loadAppCustom"><i class="bi-code"></i></button>
-            <button type="button" class="btn btn-close" id="loadAppClose" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn btn-close" id="loadAppClose" data-bs-dismiss="modal"
+              aria-label="Close"></button>
           </div>
         </div><!-- End of modal-header -->
 
@@ -66,6 +67,39 @@
             <div class="gap-2 d-flex justify-content-end">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
               <button type="button" class="btn btn-primary" id="loadAppCustomButton">Load</button>
+            </div>
+          </div>
+        </div><!-- End of modal-body -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for list proc -->
+  <div class="modal fade" id="modalListProc" tabindex="-1" aria-labelledby="modalListProcLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header" role="tablist">
+          <h1 class="modal-title fs-5">Running processes</h1>
+          <div>
+            <button type="button" class="btn active" id="listProcByAccountTab" data-bs-toggle="tab"
+              data-bs-target="#listProcByAccount"><i class="bi-person"></i></button>
+            <button type="button" class="btn" id="listProcInNodeTab" data-bs-toggle="tab"
+              data-bs-target="#listProcInNode"><i class="bi-laptop"></i></button>
+            <button type="button" class="btn" id="listProcRefresh"><i class="bi-arrow-repeat"></i></button>
+            <button type="button" class="btn btn-close" id="listProcClose" data-bs-dismiss="modal"
+              aria-label="Close"></button>
+          </div>
+        </div><!-- End of modal-header -->
+
+        <div class="modal-body tab-content">
+          <div class="tab-pane fade active show" id="listProcByAccount" role="tabpanel"
+            aria-labelledby="listProcByAccountTab" tabindex="0">
+            <div class="list-group" id="listProcByAccountList">
+            </div>
+          </div>
+          <div class="tab-pane fade" id="listProcInNode" role="tabpanel" aria-labelledby="listProcInNodeTab"
+            tabindex="0">
+            <div class="list-group" id="listProcInNodeList">
             </div>
           </div>
         </div><!-- End of modal-body -->

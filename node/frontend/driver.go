@@ -1,4 +1,4 @@
-package system
+package frontend
 
 import (
 	"log"
@@ -6,23 +6,23 @@ import (
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 )
 
-type CommandDriver interface {
+type Driver interface {
 	// send a message that tell initialization complete
 	TellInitComplete() error
 }
 
-type commandDriver struct {
+type driver struct {
 	cl crosslink.Crosslink
 }
 
-func NewCommandDriver(cl crosslink.Crosslink) CommandDriver {
-	return &commandDriver{
+func NewDriver(cl crosslink.Crosslink) Driver {
+	return &driver{
 		cl: cl,
 	}
 }
 
-func (cd *commandDriver) TellInitComplete() error {
-	cd.cl.Call("system/onInitComplete", nil, nil,
+func (cd *driver) TellInitComplete() error {
+	cd.cl.Call("frontend/onInitComplete", nil, nil,
 		func(_ []byte, err error) {
 			if err != nil {
 				log.Fatalln(err)

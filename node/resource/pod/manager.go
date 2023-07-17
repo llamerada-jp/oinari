@@ -4,41 +4,41 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/cri"
-	"github.com/llamerada-jp/oinari/node/resource/account"
-	"github.com/llamerada-jp/oinari/node/resource/node"
 )
+
+type ApplicationDigest struct {
+	Name        string `json:"name"`
+	Uuid        string `json:"uuid"`
+	RunningNode string `json:"runningNode"`
+	Owner       string `json:"owner"`
+}
 
 type Manager interface {
 	DealLocalResource(raw []byte) error
 	Loop(ctx context.Context) error
 
-	run(name string, spec *api.PodSpec) (*applicationDigest, error)
-	list() ([]applicationDigest, error)
-	terminate(uuid string) error
+	Create(name, owner, creatorNode string, spec *api.PodSpec) (*ApplicationDigest, error)
 	encouragePod(ctx context.Context, pod *api.Pod) error
 }
 
 type managerImpl struct {
-	cri        cri.CRI
-	kvs        KvsDriver
-	messaging  MessagingDriver
-	accountMgr account.Manager
-	nodeMgr    node.Manager
+	cri       cri.CRI
+	kvs       KvsDriver
+	messaging MessagingDriver
 	// key: Pod UUID, value: sandbox ID
+	localNid     string
 	sandboxIdMap map[string]string
 }
 
-func NewManager(cri cri.CRI, kvs KvsDriver, messaging MessagingDriver, accountMgr account.Manager, nodeMgr node.Manager) Manager {
+func NewManager(cri cri.CRI, kvs KvsDriver, messaging MessagingDriver, localNid string) Manager {
 	return &managerImpl{
 		cri:          cri,
 		kvs:          kvs,
 		messaging:    messaging,
-		accountMgr:   accountMgr,
-		nodeMgr:      nodeMgr,
+		localNid:     localNid,
 		sandboxIdMap: make(map[string]string),
 	}
 }
@@ -92,13 +92,13 @@ func (mgr *managerImpl) Loop(ctx context.Context) error {
 	return nil
 }
 
-func (mgr *managerImpl) run(name string, spec *api.PodSpec) (*applicationDigest, error) {
+func (mgr *managerImpl) Create(name, owner, creatorNode string, spec *api.PodSpec) (*ApplicationDigest, error) {
 	pod := &api.Pod{
 		Meta: &api.ObjectMeta{
 			Type:        api.ResourceTypePod,
 			Name:        name,
-			Owner:       mgr.accountMgr.GetAccountName(),
-			CreatorNode: mgr.nodeMgr.GetNid(),
+			Owner:       owner,
+			CreatorNode: creatorNode,
 			Uuid:        api.GeneratePodUuid(),
 		},
 		Spec: mgr.setDefaultPodSpec(spec),
@@ -113,21 +113,11 @@ func (mgr *managerImpl) run(name string, spec *api.PodSpec) (*applicationDigest,
 		return nil, err
 	}
 
-	return &applicationDigest{
+	return &ApplicationDigest{
 		Name:  name,
 		Uuid:  pod.Meta.Uuid,
 		Owner: pod.Meta.Owner,
 	}, nil
-}
-
-func (mgr *managerImpl) list() ([]applicationDigest, error) {
-	log.Fatal("TODO")
-	return nil, fmt.Errorf("TODO")
-}
-
-func (mgr *managerImpl) terminate(uuid string) error {
-	log.Fatal("TODO")
-	return fmt.Errorf("TODO")
 }
 
 func (mgr *managerImpl) setDefaultPodSpec(spec *api.PodSpec) *api.PodSpec {
@@ -157,7 +147,7 @@ func (mgr *managerImpl) schedulePod(pod *api.Pod) error {
 func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {
 	if pod.Status.Phase == api.PodPhasePending {
 		// change pod phase to `Running` and RunningNode to this node
-		pod.Status.RunningNode = mgr.nodeMgr.GetNid()
+		pod.Status.RunningNode = mgr.localNid
 
 		if pod.Meta.DeletionTimestamp != "" {
 			pod.Status.Phase = api.PodPhaseExited

@@ -45,11 +45,11 @@ async function initController(): Promise<void> {
   let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
   colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(crosslink, webrtcImpl));
 
-  // setup system module handler
-  let systemMpx = new CL.MultiPlexer();
-  rootMpx.setHandler("system", systemMpx);
+  // setup frontend module handler
+  let frontendMpx = new CL.MultiPlexer();
+  rootMpx.setHandler("frontend", frontendMpx);
   let promise = new Promise<void>((resolve) => {
-    systemMpx.setHandlerFunc("onInitComplete", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
+    frontendMpx.setHandlerFunc("onInitComplete", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
       writer.replySuccess("");
       resolve();
     });

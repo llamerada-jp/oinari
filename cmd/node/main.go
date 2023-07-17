@@ -22,7 +22,9 @@ import (
 
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
+	"github.com/llamerada-jp/oinari/node/command"
 	"github.com/llamerada-jp/oinari/node/cri"
+	"github.com/llamerada-jp/oinari/node/frontend"
 	"github.com/llamerada-jp/oinari/node/resource"
 	"github.com/llamerada-jp/oinari/node/resource/account"
 	"github.com/llamerada-jp/oinari/node/resource/node"
@@ -35,6 +37,9 @@ type nodeAgent struct {
 	// crosslink
 	cl      crosslink.Crosslink
 	rootMpx crosslink.MultiPlexer
+	// frontend driver
+	fd frontend.Driver
+
 	// colonio
 	col colonio.Colonio
 	// system
@@ -58,8 +63,8 @@ func (na *nodeAgent) initColonio() error {
 }
 
 func (na *nodeAgent) initSystem() error {
-	cd := system.NewCommandDriver(na.cl)
-	na.sys = system.NewSystem(na.col, na, cd)
+	fd := frontend.NewDriver(na.cl)
+	na.sys = system.NewSystem(na.col, na, fd)
 	go func() {
 		err := na.sys.Start(na.ctx)
 		if err != nil {
@@ -67,7 +72,7 @@ func (na *nodeAgent) initSystem() error {
 		}
 	}()
 
-	system.InitCommandHandler(na.sys, na.rootMpx)
+	command.InitSystemHandler(na.rootMpx, na.sys)
 	return nil
 }
 
@@ -81,6 +86,8 @@ func (na *nodeAgent) execute() error {
 		return err
 	}
 
+	na.fd = frontend.NewDriver(na.cl)
+
 	err = na.initColonio()
 	if err != nil {
 		return err
@@ -91,7 +98,7 @@ func (na *nodeAgent) execute() error {
 		return err
 	}
 
-	err = na.sys.TellInitComplete()
+	err = na.fd.TellInitComplete()
 	if err != nil {
 		return err
 	}
@@ -105,7 +112,8 @@ func (na *nodeAgent) OnConnect() error {
 	ctx := context.Background()
 
 	// node manager
-	nodeMgr := node.NewManager(na.col.GetLocalNid())
+	localNid := na.col.GetLocalNid()
+	nodeMgr := node.NewManager(localNid)
 
 	// account manager
 	accountKvs := account.NewKvsDriver(na.col)
@@ -115,8 +123,7 @@ func (na *nodeAgent) OnConnect() error {
 	cri := cri.NewCRI(na.cl)
 	podKvs := pod.NewKvsDriver(na.col)
 	podMsg := pod.NewMessagingDriver(na.col)
-	podMgr := pod.NewManager(cri, podKvs, podMsg, accountMgr, nodeMgr)
-	pod.InitCommandHandler(podMgr, na.rootMpx)
+	podMgr := pod.NewManager(cri, podKvs, podMsg, localNid)
 	pod.InitMessagingHandler(podMgr, na.col)
 
 	// resource manager
@@ -128,6 +135,8 @@ func (na *nodeAgent) OnConnect() error {
 			log.Fatalln(err)
 		}
 	}()
+
+	command.InitResourceHandler(na.rootMpx, accountMgr, nodeMgr, podMgr)
 
 	return nil
 }

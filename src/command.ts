@@ -1,7 +1,7 @@
 import * as CL from "./crosslink";
 
 const CL_SYSTEM_PATH: string = "system";
-const CL_MANAGER_PATH: string = "podManager";
+const CL_RESOURCE_PATH: string = "resource";
 
 export interface ConnectInfo {
   account: string
@@ -107,7 +107,7 @@ export class Commands {
       if (postfix != null) {
         name = name + postfix;
       }
-      return this.cl.call(CL_MANAGER_PATH + "/run", {
+      return this.cl.call(CL_RESOURCE_PATH + "/createPod", {
         name: name,
         spec: app.spec
       } as ManagerRunRequest);
@@ -118,15 +118,15 @@ export class Commands {
     });
   }
 
-  listApplications(): Promise<Array<ApplicationDigest>> {
-    return this.cl.call(CL_MANAGER_PATH + "/list", {}).then((r) => {
+  listProcess(): Promise<Array<ApplicationDigest>> {
+    return this.cl.call(CL_RESOURCE_PATH + "/listPod", {}).then((r) => {
       let response = r as ManagerListResponse;
       return response.digests;
     });
   }
 
-  terminateApplication(uuid: string): Promise<any> {
-    return this.cl.call(CL_MANAGER_PATH + "/terminate", {
+  terminateProcess(uuid: string): Promise<any> {
+    return this.cl.call(CL_RESOURCE_PATH + "/terminate", {
       uuid: uuid,
     } as ManagerTerminateRequest);
   }
