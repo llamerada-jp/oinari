@@ -30,6 +30,7 @@ const ACCOUNT_DELETION_THRESHOLD = KEEP_ALIVE_INTERVAL * 60
 
 type Manager interface {
 	GetAccountName() string
+	GetAccountPodState() (map[string]api.AccountPodState, error)
 	Cleanup(account *api.Account) error
 	KeepAlivePods(pods []*api.Pod) error
 }
@@ -83,6 +84,20 @@ func NewManager(ctx context.Context, account, localNid string, kvs KvsDriver) Ma
 
 func (mgr *managerImpl) GetAccountName() string {
 	return mgr.accountName
+}
+
+func (mgr *managerImpl) GetAccountPodState() (map[string]api.AccountPodState, error) {
+	acc, err := mgr.kvs.get(mgr.accountName)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO check not found
+	if acc == nil {
+		return make(map[string]api.AccountPodState), nil
+	}
+
+	return acc.State.Pods, nil
 }
 
 func (mgr *managerImpl) KeepAlivePods(pods []*api.Pod) error {

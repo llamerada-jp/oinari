@@ -1,6 +1,8 @@
 package command
 
 import (
+	"log"
+
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node/resource/account"
@@ -43,8 +45,43 @@ func InitResourceHandler(rootMpx crosslink.MultiPlexer, accountMgr account.Manag
 
 	mpx.SetHandler("listPod", crosslink.NewFuncHandler(
 		func(request *interface{}, tags map[string]string, writer crosslink.ResponseWriter) {
-			// TODO
-			writer.ReplySuccess(nil)
+			res := listPodResponse{
+				Digests: make([]pod.ApplicationDigest, 0),
+			}
+
+			uuids := make(map[string]any, 0)
+
+			// get pod uuids bound for the account
+			podState, err := accountMgr.GetAccountPodState()
+			if err != nil {
+				writer.ReplyError(err.Error())
+				return
+			}
+			for uuid := range podState {
+				uuids[uuid] = true
+			}
+
+			// get pod uuids running on local node
+			for _, uuid := range podMgr.GetLocalPodUUIDs() {
+				uuids[uuid] = true
+			}
+
+			// make pod digest
+			for uuid := range uuids {
+				p, err := podMgr.GetPodData(uuid)
+				if err != nil {
+					log.Printf("error on get pod info: %s", err.Error())
+					continue
+				}
+				res.Digests = append(res.Digests, pod.ApplicationDigest{
+					Name:        p.Meta.Name,
+					Uuid:        uuid,
+					RunningNode: p.Status.RunningNode,
+					Owner:       p.Meta.Owner,
+				})
+			}
+
+			writer.ReplySuccess(res)
 		}))
 
 	mpx.SetHandler("deletePod", crosslink.NewFuncHandler(

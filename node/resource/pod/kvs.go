@@ -10,6 +10,7 @@ import (
 type KvsDriver interface {
 	createPod(pod *api.Pod) error
 	updatePod(pod *api.Pod) error
+	getPod(uuid string) (*api.Pod, error)
 }
 
 type kvsDriverImpl struct {
@@ -48,4 +49,25 @@ func (kvs *kvsDriverImpl) updatePod(pod *api.Pod) error {
 	}
 
 	return kvs.col.KvsSet(key, raw, 0)
+}
+
+func (kvs *kvsDriverImpl) getPod(uuid string) (*api.Pod, error) {
+	key := string(api.ResourceTypePod) + "/" + uuid
+	val, err := kvs.col.KvsGet(key)
+	if err != nil {
+		return nil, err
+	}
+
+	raw, err := val.GetBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	pod := &api.Pod{}
+	err = json.Unmarshal(raw, pod)
+	if err != nil {
+		return nil, err
+	}
+
+	return pod, nil
 }

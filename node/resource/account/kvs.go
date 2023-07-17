@@ -55,7 +55,7 @@ func (kvs *kvsDriverImpl) get(name string) (*api.Account, error) {
 		return nil, err
 	}
 
-	var account api.Account
+	account := api.Account{}
 	err = json.Unmarshal(raw, &account)
 	if err != nil {
 		return nil, err

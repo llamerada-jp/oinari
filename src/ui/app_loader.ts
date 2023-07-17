@@ -61,7 +61,7 @@ async function show(): Promise<void> {
 
 async function getAppList(): Promise<void> {
   console.assert(downloading === false);
-  
+
   downloading = true;
   try {
     let absURL = new URL(applicationsURL, window.location.href);
@@ -91,22 +91,15 @@ function setupList(): void {
   }
 
   // add applications
+  let temp = document.querySelector("#loadAppLibraryListItem") as HTMLTemplateElement;
   for (const entry of applications) {
-    let name = document.createElement("div");
-    name.classList.add("fw-bold");
-    name.innerText = entry.name;
-
-    let desc = document.createElement("div");
-    desc.innerText = entry.description;
-
-    let item = document.createElement("div");
-    item.classList.add("list-group-item", "list-group-item-action");
-    item.append(name, desc);
-    item.addEventListener("click", () => {
+    let item = <HTMLElement>temp.content.cloneNode(true);
+    (<HTMLElement>item.querySelector(".appName")).innerText = entry.name;
+    (<HTMLElement>item.querySelector(".appDescription")).innerText = entry.description;
+    (<HTMLElement>item.querySelector(".list-group-item")).addEventListener("click", () => {
       closeModal();
       loadApplication(entry.url);
     });
-
     list.append(item);
   }
 }

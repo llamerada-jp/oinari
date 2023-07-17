@@ -19,6 +19,7 @@ import * as CM from "./command";
 import * as WB from "./webrtc_bypass_handler";
 import * as CRI from "./cri";
 import * as UI_AL from "./ui/app_loader";
+import * as UI_PL from "./ui/proc_list";
 import * as UI_SI from "./ui/system_info";
 
 declare function ColonioModule(): Promise<any>;
@@ -65,13 +66,14 @@ async function initController(): Promise<void> {
 
 function initUI() {
   UI_AL.init(command);
+  UI_PL.init(command);
 }
 
 async function main(): Promise<void> {
   // start controller
   await initController();
   command = new CM.Commands(crosslink);
-  
+
   // init ui after window loaded
   if (document.readyState !== "loading") {
     initUI();
@@ -83,6 +85,7 @@ async function main(): Promise<void> {
   let acTmp = Math.random().toString(32).substring(2);
   let info = await command.connect("https://localhost:8080/seed", "account-" + acTmp, "");
   UI_SI.set(info.account, info.node);
+  UI_PL.setNodeInfo(info.account, info.node);
 
   // set a position for sample playing
   await command.setPosition(35.6594945, 139.6999859);

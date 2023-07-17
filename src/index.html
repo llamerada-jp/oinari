@@ -25,8 +25,8 @@
     <div class="container-fluid gap-2 justify-content-center">
       <button type="button" class="btn btn-light btn-lg" id="loadAppButton" data-bs-toggle="modal"
         data-bs-target="#modalLoadApp"><i class="bi-box-seam"></i></button>
-      <button type="button" class="btn btn-light btn-lg" id="listProcButton" data-bs-toggle="modal"
-        data-bs-target="#modalListProc"><i class="bi-compass"></i></button>
+      <button type="button" class="btn btn-light btn-lg" id="procListButton" data-bs-toggle="modal"
+        data-bs-target="#modalProcList"><i class="bi-compass"></i></button>
     </div>
   </nav>
 
@@ -56,6 +56,12 @@
             </div>
             <div class="list-group" id="loadAppLibraryList">
             </div>
+            <template id="loadAppLibraryListItem">
+              <div class="list-group-item list-group-item-action">
+                <div class="fw-bold appName"></div>
+                <div class="appDescription"></div>
+              </div>
+            </template>
           </div>
           <div class="tab-pane fade" id="loadAppCustom" role="tabpanel" aria-labelledby="loadAppCustomTab" tabindex="0">
             <form>
@@ -74,33 +80,55 @@
     </div>
   </div>
 
-  <!-- Modal for list proc -->
-  <div class="modal fade" id="modalListProc" tabindex="-1" aria-labelledby="modalListProcLabel" aria-hidden="true">
+  <!-- Modal for proc list -->
+  <div class="modal fade" id="modalProcList" tabindex="-1" aria-labelledby="modalProcListLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header" role="tablist">
           <h1 class="modal-title fs-5">Running processes</h1>
           <div>
-            <button type="button" class="btn active" id="listProcByAccountTab" data-bs-toggle="tab"
-              data-bs-target="#listProcByAccount"><i class="bi-person"></i></button>
-            <button type="button" class="btn" id="listProcInNodeTab" data-bs-toggle="tab"
-              data-bs-target="#listProcInNode"><i class="bi-laptop"></i></button>
-            <button type="button" class="btn" id="listProcRefresh"><i class="bi-arrow-repeat"></i></button>
-            <button type="button" class="btn btn-close" id="listProcClose" data-bs-dismiss="modal"
+            <button type="button" class="btn active" id="procListByAccountTab" data-bs-toggle="tab"
+              data-bs-target="#procListByAccount"><i class="bi-person"></i></button>
+            <button type="button" class="btn" id="procListInNodeTab" data-bs-toggle="tab"
+              data-bs-target="#procListInNode"><i class="bi-laptop"></i></button>
+            <button type="button" class="btn" id="procListRefresh"><i class="bi-arrow-repeat"></i></button>
+            <button type="button" class="btn btn-close" id="procListClose" data-bs-dismiss="modal"
               aria-label="Close"></button>
           </div>
         </div><!-- End of modal-header -->
 
         <div class="modal-body tab-content">
-          <div class="tab-pane fade active show" id="listProcByAccount" role="tabpanel"
-            aria-labelledby="listProcByAccountTab" tabindex="0">
-            <div class="list-group" id="listProcByAccountList">
+          <div class="tab-pane fade active show" id="procListByAccount" role="tabpanel"
+            aria-labelledby="procListByAccountTab" tabindex="0">
+            <div class="container d-flex justify-content-center" id="procListByAccountSpinner1">
+              <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
             </div>
+            <div class="list-group" id="procListByAccountList">
+            </div>
+            <template id="procListByAccountListItem">
+              <div class="list-group-item list-group-item-action">
+                <div class="fw-bold appName"></div>
+                <div class="appRunningNode"></div>
+              </div>
+            </template>
           </div>
-          <div class="tab-pane fade" id="listProcInNode" role="tabpanel" aria-labelledby="listProcInNodeTab"
+          <div class="tab-pane fade" id="procListInNode" role="tabpanel" aria-labelledby="procListInNodeTab"
             tabindex="0">
-            <div class="list-group" id="listProcInNodeList">
+            <div class="container d-flex justify-content-center" id="procListByAccountSpinner2">
+              <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
             </div>
+            <div class="list-group" id="procListInNodeList">
+            </div>
+            <template id="procListInNodeListItem">
+              <div class="list-group-item list-group-item-action">
+                <div class="fw-bold appName"></div>
+                <div class="appOwnerAccount"></div>
+              </div>
+            </template>
           </div>
         </div><!-- End of modal-body -->
       </div>

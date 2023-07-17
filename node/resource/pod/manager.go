@@ -21,6 +21,8 @@ type Manager interface {
 	Loop(ctx context.Context) error
 
 	Create(name, owner, creatorNode string, spec *api.PodSpec) (*ApplicationDigest, error)
+	GetLocalPodUUIDs() []string
+	GetPodData(uuid string) (*api.Pod, error)
 	encouragePod(ctx context.Context, pod *api.Pod) error
 }
 
@@ -144,7 +146,21 @@ func (mgr *managerImpl) schedulePod(pod *api.Pod) error {
 	}
 }
 
+func (mgr *managerImpl) GetLocalPodUUIDs() []string {
+	uuids := make([]string, len(mgr.sandboxIdMap))
+	for uuid := range mgr.sandboxIdMap {
+		uuids = append(uuids, uuid)
+	}
+	return uuids
+}
+
+func (mgr *managerImpl) GetPodData(uuid string) (*api.Pod, error) {
+	return mgr.kvs.getPod(uuid)
+}
+
 func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {
+	// TODO check pod data in the KVS to reduce security risk
+
 	if pod.Status.Phase == api.PodPhasePending {
 		// change pod phase to `Running` and RunningNode to this node
 		pod.Status.RunningNode = mgr.localNid
