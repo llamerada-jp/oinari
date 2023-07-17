@@ -17,6 +17,7 @@ type System interface {
 	Start(ctx context.Context) error
 	TellInitComplete() error
 	GetAccount() string
+	GetNode() string
 
 	connect(url, account, token string) error
 	setPosition(latitude, longitude float64) error
@@ -52,6 +53,10 @@ func (sys *systemImpl) TellInitComplete() error {
 
 func (sys *systemImpl) GetAccount() string {
 	return sys.account
+}
+
+func (sys *systemImpl) GetNode() string {
+	return sys.colonio.GetLocalNid()
 }
 
 func (sys *systemImpl) connect(url, account, token string) error {

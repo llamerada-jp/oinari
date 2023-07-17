@@ -3,6 +3,11 @@ import * as CL from "./crosslink";
 const CL_SYSTEM_PATH: string = "system";
 const CL_MANAGER_PATH: string = "podManager";
 
+export interface ConnectInfo {
+  account: string
+  node: string
+}
+
 export interface ApplicationDigest {
   name: string
   uuid: string
@@ -71,12 +76,12 @@ export class Commands {
     this.cl = cl;
   }
 
-  connect(url: string, account: string, token: string): Promise<any> {
+  connect(url: string, account: string, token: string): Promise<ConnectInfo> {
     return this.cl.call(CL_SYSTEM_PATH + "/connect", {
       url: url,
       account: account,
       token: token,
-    });
+    }) as Promise<ConnectInfo>;
   }
 
   setPosition(lat: number, lon: number): Promise<any> {
