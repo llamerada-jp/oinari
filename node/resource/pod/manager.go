@@ -14,6 +14,7 @@ type ApplicationDigest struct {
 	Uuid        string `json:"uuid"`
 	RunningNode string `json:"runningNode"`
 	Owner       string `json:"owner"`
+	Phase       string `json:"phase"`
 }
 
 type Manager interface {
@@ -119,6 +120,7 @@ func (mgr *managerImpl) Create(name, owner, creatorNode string, spec *api.PodSpe
 		Name:  name,
 		Uuid:  pod.Meta.Uuid,
 		Owner: pod.Meta.Owner,
+		Phase: string(pod.Status.Phase),
 	}, nil
 }
 

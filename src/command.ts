@@ -13,6 +13,7 @@ export interface ApplicationDigest {
   uuid: string
   runningNode: string
   owner: string
+  phase: string
 }
 
 interface ApplicationDefinition {
@@ -24,20 +25,20 @@ interface ApplicationMetadata {
   name: string
 }
 
-interface ManagerRunRequest {
+interface CreatePodRequest {
   name: string
   spec: PodSpec
 }
 
-interface ManagerRunResponse {
+interface CreatePodResponse {
   digest: ApplicationDigest
 }
 
-interface ManagerListResponse {
+interface ListPodResponse {
   digests: Array<ApplicationDigest>
 }
 
-interface ManagerTerminateRequest {
+interface DeletePodRequest {
   uuid: string
 }
 
@@ -110,24 +111,24 @@ export class Commands {
       return this.cl.call(CL_RESOURCE_PATH + "/createPod", {
         name: name,
         spec: app.spec
-      } as ManagerRunRequest);
+      } as CreatePodRequest);
 
     }).then((r) => {
-      let response = r as ManagerRunResponse;
+      let response = r as CreatePodResponse;
       return response.digest;
     });
   }
 
   listProcess(): Promise<Array<ApplicationDigest>> {
     return this.cl.call(CL_RESOURCE_PATH + "/listPod", {}).then((r) => {
-      let response = r as ManagerListResponse;
+      let response = r as ListPodResponse;
       return response.digests;
     });
   }
 
   terminateProcess(uuid: string): Promise<any> {
-    return this.cl.call(CL_RESOURCE_PATH + "/terminate", {
+    return this.cl.call(CL_RESOURCE_PATH + "/deletePod", {
       uuid: uuid,
-    } as ManagerTerminateRequest);
+    } as DeletePodRequest);
   }
 }

@@ -15,6 +15,11 @@
  */
 
 export function set(account: string, node: string): void {
-  let el = document.getElementById("systemInfo");
-  (el as HTMLElement).innerText = account + " @" + node;
+  setText("#systemAccount", account);
+  setText("#systemNode", node);
+}
+
+function setText(query: string, text:string):void{
+  let el = document.querySelector(query) as HTMLElement;
+  el.innerText = text;
 }

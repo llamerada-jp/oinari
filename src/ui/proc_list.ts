@@ -48,14 +48,9 @@ async function reload(): Promise<void> {
     spinner?.classList.remove("d-none");
   }
 
-  // get process list
-  let procList = await command.listProcess()
-  console.log("🤔", account, node, procList);
-
   let listByAccount = document.getElementById("procListByAccountList");
-  let tempByAccount = document.getElementById("procListByAccountListItem") as HTMLTemplateElement;
   let listByNode = document.getElementById("procListInNodeList");
-  let tempByNode = document.getElementById("procListInNodeListItem") as HTMLTemplateElement;
+  let temp = document.getElementById("procListItem") as HTMLTemplateElement;
 
   // make list empty
   for (let list of [listByAccount, listByNode]) {
@@ -65,19 +60,28 @@ async function reload(): Promise<void> {
     }
   }
 
+  // get process list
+  let procList = await command.listProcess()
+
   // add list items
   for (let proc of procList) {
-    if (proc.owner === account) {
-      let item = tempByAccount.content.cloneNode(true) as HTMLElement;
-      (item.querySelector(".appName") as HTMLElement).innerText = proc.name;
-      (item.querySelector(".appRunningNode") as HTMLElement).innerText = proc.runningNode;
-      listByAccount?.append(item);
+    let content = new Map<string, string>();
+    content.set(".appName", proc.name);
+    content.set(".appPhase", proc.phase);
+    content.set(".appOwnerAccount", proc.owner);
+    content.set(".appRunningNode", proc.runningNode);
+
+    if (proc.owner === account && listByAccount != null) {
+      let item = addListItem(listByAccount, temp, content);
+      item.querySelector(".appMenuTerminate")?.addEventListener("click", () => {
+        command.terminateProcess(proc.uuid);
+      });
     }
-    if (proc.runningNode === node) {
-      let item = tempByNode.content.cloneNode(true) as HTMLElement;
-      (item.querySelector(".appName") as HTMLElement).innerText = proc.name;
-      (item.querySelector(".appOwnerAccount") as HTMLElement).innerText = proc.owner;
-      listByNode?.append(item);
+    if (proc.runningNode === node && listByNode != null) {
+      let item = addListItem(listByNode, temp, content);
+      item.querySelector(".appMenuTerminate")?.addEventListener("click", () => {
+        command.terminateProcess(proc.uuid);
+      });
     }
   }
 
@@ -91,4 +95,13 @@ async function reload(): Promise<void> {
   }
 
   processing = false;
+}
+
+function addListItem(list: HTMLElement, temp: HTMLTemplateElement, contents: Map<string, string>): HTMLElement {
+  let item = temp.content.cloneNode(true) as HTMLElement;
+  for (const [key, value] of contents) {
+    (item.querySelector(key) as HTMLElement).innerText = value;
+  }
+  list.append(item);
+  return item;
 }
