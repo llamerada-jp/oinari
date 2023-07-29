@@ -36,16 +36,22 @@ type Pod struct {
 }
 
 type PodSpec struct {
-	Containers []ContainerSpec `json:"containers"`
-	Scheduler  *SchedulerSpec  `json:"scheduler"`
+	Containers    []ContainerSpec `json:"containers"`
+	Scheduler     *SchedulerSpec  `json:"scheduler"`
+	EnableMigrate bool            `json:"enableMigrate"`
 }
 
+type RestartPolicy string
+
+var RestartPolicyAccepted = []RestartPolicy{}
+
 type ContainerSpec struct {
-	Name    string   `json:"name"`
-	Image   string   `json:"image"`
-	Runtime []string `json:"runtime"`
-	Args    []string `json:"args"`
-	Env     []EnvVar `json:"env"`
+	Name          string        `json:"name"`
+	Image         string        `json:"image"`
+	Runtime       []string      `json:"runtime"`
+	Args          []string      `json:"args"`
+	Env           []EnvVar      `json:"env"`
+	RestartPolicy RestartPolicy `json:"restartPolicy"`
 }
 
 type EnvVar struct {
@@ -58,25 +64,32 @@ type SchedulerSpec struct {
 	Type string `json:"type"`
 }
 
-type PodPhase string
+type ContainerState string
 
 const (
-	PodPhasePending   PodPhase = "Pending"
-	PodPhaseRunning   PodPhase = "Running"
-	PodPhaseMigrating PodPhase = "Migrating"
-	PodPhaseExited    PodPhase = "Exited"
+	ContainerStateWaiting    ContainerState = "Waiting"
+	ContainerStateRunning    ContainerState = "Running"
+	ContainerStateTerminated ContainerState = "Terminated"
+	ContainerStateUnknown    ContainerState = "Unknown"
 )
 
-var PodPhaseAccepted = []PodPhase{
-	PodPhasePending,
-	PodPhaseRunning,
-	PodPhaseMigrating,
-	PodPhaseExited,
+var ContainerStateAccepted = []ContainerState{
+	ContainerStateWaiting,
+	ContainerStateRunning,
+	ContainerStateTerminated,
+	ContainerStateUnknown,
+}
+
+type ContainerStatus struct {
+	ContainerID string         `json:"containerID"`
+	Image       string         `json:"image"`
+	State       ContainerState `json:"state"`
 }
 
 type PodStatus struct {
-	RunningNode string   `json:"runningNode"`
-	Phase       PodPhase `json:"phase"`
+	RunningNode       string            `json:"runningNode"`
+	TargetNode        string            `json:"targetNode"`
+	ContainerStatuses []ContainerStatus `json:"containerStatuses"`
 }
 
 func GeneratePodUuid() string {
@@ -113,7 +126,7 @@ func (pod *Pod) Validate(mustStatus bool) error {
 		return fmt.Errorf("pod status should be filled")
 	}
 
-	if err := pod.Status.validate(); err != nil {
+	if err := pod.Status.validate(len(pod.Spec.Containers)); err != nil {
 		return err
 	}
 
@@ -182,18 +195,40 @@ func (spec *PodSpec) validate() error {
 			}
 			envNames = append(envNames, e.Name)
 		}
+
+		// RestartPolicy field
+		if !slices.Contains(RestartPolicyAccepted, container.RestartPolicy) {
+			return fmt.Errorf("there is an unsupported restart policy in the container")
+		}
 	}
 
 	return nil
 }
 
-func (status *PodStatus) validate() error {
-	if !slices.Contains(PodPhaseAccepted, status.Phase) {
-		return fmt.Errorf("invalid phase in the pot status")
+func (status *PodStatus) validate(containerNum int) error {
+	// RunningNode and TargetNode field
+	if len(status.RunningNode) != 0 && ValidateNodeId(status.RunningNode) != nil {
+		return fmt.Errorf("invalid running node id specified in the pod status")
 	}
 
-	if len(status.RunningNode) != 0 && ValidateNodeId(status.RunningNode) != nil {
-		return fmt.Errorf("invalid node id specified in the pod status")
+	if len(status.TargetNode) != 0 && ValidateNodeId(status.TargetNode) != nil {
+		return fmt.Errorf("invalid target node id specified in the pod status")
+	}
+
+	if (len(status.RunningNode) == 0) != (len(status.TargetNode) == 0) {
+		return fmt.Errorf("running node and target node should be specified or both should be empty")
+	}
+
+	// ContainerStatuses field
+	if len(status.ContainerStatuses) != containerNum {
+		return fmt.Errorf("container statues count should be equal to the containers in the spec field")
+	}
+
+	for _, containerState := range status.ContainerStatuses {
+		// State field
+		if !slices.Contains(ContainerStateAccepted, containerState.State) {
+			return fmt.Errorf("there is an unsupported container state in the pod status")
+		}
 	}
 
 	return nil

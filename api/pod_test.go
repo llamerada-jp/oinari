@@ -70,10 +70,17 @@ func TestValidatePod(t *testing.T) {
 	assert.NoError(validSpec.validate())
 
 	validStatus := &PodStatus{
-		Phase:       PodPhaseRunning,
 		RunningNode: "01234567890123456789012345abcdef",
+		TargetNode:  "01234567890123456789012345abcdef",
+		ContainerStatuses: []ContainerStatus{
+			{
+				ContainerID: "dummy",
+				Image:       "http://localhost/dummy.wasm",
+				State:       ContainerStateWaiting,
+			},
+		},
 	}
-	assert.NoError(validStatus.validate())
+	assert.NoError(validStatus.validate(1))
 
 	// valid
 	for _, tc := range []struct {
@@ -280,28 +287,70 @@ func TestValidatePodStatus(t *testing.T) {
 
 	for _, status := range []*PodStatus{
 		{
-			Phase:       PodPhasePending,
 			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					ContainerID: "container1",
+					Image:       "https://localhost/dummy.wasm",
+					State:       ContainerStateRunning,
+				},
+			},
 		},
 		{
-			Phase: PodPhasePending,
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdee",
+			ContainerStatuses: []ContainerStatus{
+				{
+					ContainerID: "container1",
+					Image:       "https://localhost/dummy.wasm",
+					State:       ContainerStateWaiting,
+				},
+			},
+		},
+		{
+			ContainerStatuses: []ContainerStatus{
+				{
+					State: ContainerStateWaiting,
+				},
+			},
 		},
 	} {
-		assert.NoError(status.validate())
+		assert.NoError(status.validate(1))
 	}
 
 	for title, status := range map[string]*PodStatus{
-		"phase is not specified": {
+		"container state is not specified": {
 			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
 		},
-		"invalid phase": {
-			Phase: "???",
+		"invalid container state": {
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					State: "no",
+				},
+			},
 		},
 		"invalid node id": {
-			Phase:       PodPhaseMigrating,
 			RunningNode: "no no no",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					State: ContainerStateRunning,
+				},
+			},
+		},
+		"only running node specified": {
+			RunningNode: "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					State: "no",
+				},
+			},
 		},
 	} {
-		assert.Error(status.validate(), title)
+		assert.Error(status.validate(1), title)
 	}
 }

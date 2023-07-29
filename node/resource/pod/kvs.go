@@ -2,6 +2,7 @@ package pod
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/api"
@@ -11,6 +12,7 @@ type KvsDriver interface {
 	createPod(pod *api.Pod) error
 	updatePod(pod *api.Pod) error
 	getPod(uuid string) (*api.Pod, error)
+	deletePod(uuid string) error
 }
 
 type kvsDriverImpl struct {
@@ -51,11 +53,16 @@ func (kvs *kvsDriverImpl) updatePod(pod *api.Pod) error {
 	return kvs.col.KvsSet(key, raw, 0)
 }
 
+// return pod
 func (kvs *kvsDriverImpl) getPod(uuid string) (*api.Pod, error) {
 	key := string(api.ResourceTypePod) + "/" + uuid
 	val, err := kvs.col.KvsGet(key)
 	if err != nil {
 		return nil, err
+	}
+
+	if val.IsNil() {
+		return nil, fmt.Errorf("pod is not exists")
 	}
 
 	raw, err := val.GetBinary()
@@ -70,4 +77,11 @@ func (kvs *kvsDriverImpl) getPod(uuid string) (*api.Pod, error) {
 	}
 
 	return pod, nil
+}
+
+// set nil instead of remove record
+func (kvs *kvsDriverImpl) deletePod(uuid string) error {
+	key := string(api.ResourceTypePod) + "/" + uuid
+	// TODO check record before set nil for the record
+	return kvs.col.KvsSet(key, nil, 0)
 }

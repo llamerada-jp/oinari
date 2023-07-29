@@ -7,6 +7,7 @@ import (
 
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/cri"
+	"github.com/llamerada-jp/oinari/node/misc"
 )
 
 type ApplicationDigest struct {
@@ -24,6 +25,9 @@ type Manager interface {
 	Create(name, owner, creatorNode string, spec *api.PodSpec) (*ApplicationDigest, error)
 	GetLocalPodUUIDs() []string
 	GetPodData(uuid string) (*api.Pod, error)
+	Migrate(uuid string, targetNodeID string) error
+	Delete(uuid string) error
+	Cleanup(uuid string) error
 	encouragePod(ctx context.Context, pod *api.Pod) error
 }
 
@@ -47,45 +51,62 @@ func NewManager(cri cri.CRI, kvs KvsDriver, messaging MessagingDriver, localNid 
 }
 
 func (mgr *managerImpl) DealLocalResource(raw []byte) error {
-	var pod api.Pod
-	err := json.Unmarshal(raw, &pod)
+	pod := &api.Pod{}
+	err := json.Unmarshal(raw, pod)
 	if err != nil {
 		return err
 	}
 
-	switch pod.Status.Phase {
+	// check deletion
+	if len(pod.Meta.DeletionTimestamp) != 0 {
+		if len(pod.Status.RunningNode) == 0 || mgr.getContainerStateDigest(pod) == api.ContainerStateTerminated {
+			mgr.kvs.deletePod(pod.Meta.Uuid)
+			return nil
+		}
 
-	case api.PodPhasePending:
-		/*
-			err = mgr.accountMgr.BindPod(&pod)
-			if err != nil {
-				return err
+		return mgr.messaging.encouragePod(pod.Status.RunningNode, pod)
+	}
+
+	/*
+		err = mgr.accountMgr.BindPod(&pod)
+		if err != nil {
+			return err
+		}
+		//*/
+
+	// waiting to schedule
+	if len(pod.Status.RunningNode) == 0 {
+		return mgr.schedulePod(pod)
+	}
+
+	if pod.Status.RunningNode == pod.Status.TargetNode {
+		stateDigest := mgr.getContainerStateDigest(pod)
+		if stateDigest == api.ContainerStateTerminated || stateDigest == api.ContainerStateUnknown {
+			// TODO restart pod by the restart policy
+			return nil
+		}
+	} else {
+		stateDigest := mgr.getContainerStateDigest(pod)
+		if stateDigest == api.ContainerStateTerminated {
+			pod.Status.RunningNode = pod.Status.TargetNode
+			for _, containerStatus := range pod.Status.ContainerStatuses {
+				containerStatus.ContainerID = ""
+				containerStatus.Image = ""
+				containerStatus.State = api.ContainerStateWaiting
 			}
-			//*/
+			return mgr.kvs.updatePod(pod)
 
-		err = mgr.schedulePod(&pod)
-		if err != nil {
-			return err
+		} else if stateDigest == api.ContainerStateUnknown {
+			// TODO restart pod by the restart policy
 		}
+	}
 
-	case api.PodPhaseRunning, api.PodPhaseMigrating:
-		/*
-			err = mgr.accountMgr.BindPod(&pod)
-			if err != nil {
-				return err
-			}
-			//*/
-
-		err = mgr.messaging.encouragePod(pod.Status.RunningNode, &pod)
-		if err != nil {
-			return err
+	err = mgr.messaging.encouragePod(pod.Status.RunningNode, pod)
+	if err != nil {
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			containerStatus.State = api.ContainerStateUnknown
 		}
-
-	case api.PodPhaseExited:
-		err = mgr.messaging.encouragePod(pod.Status.RunningNode, &pod)
-		if err != nil {
-			return err
-		}
+		return mgr.kvs.updatePod(pod)
 	}
 
 	return nil
@@ -106,8 +127,15 @@ func (mgr *managerImpl) Create(name, owner, creatorNode string, spec *api.PodSpe
 		},
 		Spec: mgr.setDefaultPodSpec(spec),
 		Status: &api.PodStatus{
-			Phase: api.PodPhasePending,
+			ContainerStatuses: make([]api.ContainerStatus, 0),
 		},
+	}
+
+	for _ = range pod.Spec.Containers {
+		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses,
+			api.ContainerStatus{
+				State: api.ContainerStateWaiting,
+			})
 	}
 
 	err := mgr.kvs.createPod(pod)
@@ -148,6 +176,32 @@ func (mgr *managerImpl) schedulePod(pod *api.Pod) error {
 	}
 }
 
+func (mgr *managerImpl) getContainerStateDigest(pod *api.Pod) api.ContainerState {
+	allTerminated := true
+	hasRunning := false
+
+	for _, containerState := range pod.Status.ContainerStatuses {
+		switch containerState.State {
+		case api.ContainerStateWaiting:
+			allTerminated = false
+		case api.ContainerStateRunning:
+			allTerminated = false
+			hasRunning = true
+		case api.ContainerStateTerminated:
+		case api.ContainerStateUnknown:
+			return api.ContainerStateUnknown
+		}
+	}
+
+	if allTerminated {
+		return api.ContainerStateTerminated
+	} else if hasRunning {
+		return api.ContainerStateRunning
+	} else {
+		return api.ContainerStateWaiting
+	}
+}
+
 func (mgr *managerImpl) GetLocalPodUUIDs() []string {
 	uuids := make([]string, len(mgr.sandboxIdMap))
 	for uuid := range mgr.sandboxIdMap {
@@ -158,6 +212,52 @@ func (mgr *managerImpl) GetLocalPodUUIDs() []string {
 
 func (mgr *managerImpl) GetPodData(uuid string) (*api.Pod, error) {
 	return mgr.kvs.getPod(uuid)
+}
+
+func (mgr *managerImpl) Migrate(uuid string, targetNodeID string) error {
+	pod, err := mgr.kvs.getPod(uuid)
+	if err != nil {
+		return err
+	}
+
+	if len(pod.Status.RunningNode) == 0 {
+		pod.Status.RunningNode = targetNodeID
+		pod.Status.TargetNode = targetNodeID
+
+	} else {
+		// TODO check if migration is accepted
+
+		pod.Status.TargetNode = targetNodeID
+	}
+
+	return mgr.kvs.updatePod(pod)
+}
+
+func (mgr *managerImpl) Delete(uuid string) error {
+	pod, err := mgr.kvs.getPod(uuid)
+	if err != nil {
+		return err
+	}
+
+	if len(pod.Meta.DeletionTimestamp) != 0 {
+		pod.Meta.DeletionTimestamp = misc.GetTimestamp()
+		return mgr.kvs.updatePod(pod)
+	}
+
+	return nil
+}
+
+func (mgr *managerImpl) Cleanup(uuid string) error {
+	pod, err := mgr.kvs.getPod(uuid)
+	if err != nil {
+		return err
+	}
+
+	if mgr.getContainerStateDigest(pod) != api.ContainerStateUnknown {
+		return fmt.Errorf("target pod of cleanup should be unknown state")
+	}
+
+	return mgr.kvs.deletePod(uuid)
 }
 
 func (mgr *managerImpl) encouragePod(ctx context.Context, pod *api.Pod) error {

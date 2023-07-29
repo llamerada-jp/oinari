@@ -38,6 +38,11 @@ interface ListPodResponse {
   digests: Array<ApplicationDigest>
 }
 
+interface MigratePodRequest {
+  uuid: string
+  targetNode: string
+}
+
 interface DeletePodRequest {
   uuid: string
 }
@@ -55,6 +60,7 @@ interface Pod {
 interface PodSpec {
   containers: Array<Container>
   // TODO scheduler
+  enableMigrate: boolean
 }
 
 interface Container {
@@ -63,6 +69,7 @@ interface Container {
   runtime: Array<string>
   args: Array<string>
   env: Array<EnvVar>
+  restartPolicy: string
 }
 
 interface EnvVar {
@@ -124,6 +131,13 @@ export class Commands {
       let response = r as ListPodResponse;
       return response.digests;
     });
+  }
+
+  migrateProcess(uuid: string, targetNode: string): Promise<any> {
+    return this.cl.call(CL_RESOURCE_PATH + "/migratePod", {
+      uuid: uuid,
+      targetNode: targetNode,
+    } as MigratePodRequest)
   }
 
   terminateProcess(uuid: string): Promise<any> {
