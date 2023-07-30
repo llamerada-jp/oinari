@@ -78,7 +78,7 @@ func InitResourceHandler(rootMpx crosslink.MultiPlexer, accountMgr account.Manag
 					Uuid:        uuid,
 					RunningNode: p.Status.RunningNode,
 					Owner:       p.Meta.Owner,
-					Phase:       "TODO",
+					State:       "TODO",
 				})
 			}
 

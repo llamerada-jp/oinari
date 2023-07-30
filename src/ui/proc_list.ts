@@ -67,7 +67,7 @@ async function reload(): Promise<void> {
   for (let proc of procList) {
     let content = new Map<string, string>();
     content.set(".appName", proc.name);
-    content.set(".appPhase", proc.phase);
+    content.set(".appState", proc.state);
     content.set(".appOwnerAccount", proc.owner);
     content.set(".appRunningNode", proc.runningNode);
 

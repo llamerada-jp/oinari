@@ -43,7 +43,23 @@ type PodSpec struct {
 
 type RestartPolicy string
 
-var RestartPolicyAccepted = []RestartPolicy{}
+const (
+	RestartPolicyDisable         RestartPolicy = "Disable"
+	RestartPolicyAlways          RestartPolicy = "Always"
+	RestartPolicyStrictExited    RestartPolicy = "StrictExited"
+	RestartPolicyStrictSucceeded RestartPolicy = "StrictSucceeded"
+	RestartPolicyStrictFailed    RestartPolicy = "StrictFailed"
+	RestartPolicyOnce            RestartPolicy = "Once"
+)
+
+var RestartPolicyAccepted = []RestartPolicy{
+	RestartPolicyDisable,
+	RestartPolicyAlways,
+	RestartPolicyStrictExited,
+	RestartPolicyStrictSucceeded,
+	RestartPolicyStrictFailed,
+	RestartPolicyOnce,
+}
 
 type ContainerSpec struct {
 	Name          string        `json:"name"`

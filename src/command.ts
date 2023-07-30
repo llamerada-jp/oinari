@@ -13,7 +13,7 @@ export interface ApplicationDigest {
   uuid: string
   runningNode: string
   owner: string
-  phase: string
+  state: string
 }
 
 interface ApplicationDefinition {
