@@ -1,8 +1,23 @@
+/*
+ * Copyright 2018 Yuji Ito <llamerada.jp@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package command
 
 import (
 	"github.com/llamerada-jp/oinari/lib/crosslink"
-	"github.com/llamerada-jp/oinari/node/system"
+	"github.com/llamerada-jp/oinari/node/controller"
 )
 
 type connectRequest struct {
@@ -21,24 +36,24 @@ type setPositionRequest struct {
 	Longitude float64 `json:"longitude"`
 }
 
-func InitSystemHandler(rootMpx crosslink.MultiPlexer, sys system.System) error {
+func InitSystemHandler(rootMpx crosslink.MultiPlexer, sysCtrl controller.SystemController) error {
 	mpx := crosslink.NewMultiPlexer()
 	rootMpx.SetHandler("system", mpx)
 
 	mpx.SetHandler("connect", crosslink.NewFuncHandler(func(request *connectRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		err := sys.Connect(request.Url, request.Account, request.Token)
+		err := sysCtrl.Connect(request.Url, request.Account, request.Token)
 		if err != nil {
 			writer.ReplyError(err.Error())
 			return
 		}
 		writer.ReplySuccess(connectResponse{
-			Account: sys.GetAccount(),
-			Node:    sys.GetNode(),
+			Account: sysCtrl.GetAccount(),
+			Node:    sysCtrl.GetNode(),
 		})
 	}))
 
 	mpx.SetHandler("setPosition", crosslink.NewFuncHandler(func(request *setPositionRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		err := sys.SetPosition(request.Latitude, request.Longitude)
+		err := sysCtrl.SetPosition(request.Latitude, request.Longitude)
 		if err != nil {
 			writer.ReplyError(err.Error())
 			return

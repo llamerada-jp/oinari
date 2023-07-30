@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package account
+package kvs
 
 import (
 	"encoding/json"
@@ -22,25 +22,25 @@ import (
 	"github.com/llamerada-jp/oinari/api"
 )
 
-type KvsDriver interface {
-	get(name string) (*api.Account, error)
-	set(account *api.Account) error
-	delete(name string) error
+type AccountKvs interface {
+	Get(name string) (*api.Account, error)
+	Set(account *api.Account) error
+	Delete(name string) error
 }
 
-type kvsDriverImpl struct {
+type accountKvsImpl struct {
 	col colonio.Colonio
 }
 
-func NewKvsDriver(col colonio.Colonio) KvsDriver {
-	return &kvsDriverImpl{
+func NewAccountKvs(col colonio.Colonio) AccountKvs {
+	return &accountKvsImpl{
 		col: col,
 	}
 }
 
-func (kvs *kvsDriverImpl) get(name string) (*api.Account, error) {
-	key := kvs.getKey(name)
-	val, err := kvs.col.KvsGet(key)
+func (impl *accountKvsImpl) Get(name string) (*api.Account, error) {
+	key := impl.getKey(name)
+	val, err := impl.col.KvsGet(key)
 	// TODO: return error if err is not `not found error`
 	if err != nil {
 		return nil, nil
@@ -63,14 +63,14 @@ func (kvs *kvsDriverImpl) get(name string) (*api.Account, error) {
 
 	// delete data if it is invalid
 	if err := account.Validate(); err != nil {
-		kvs.delete(name)
+		impl.Delete(name)
 		return nil, nil
 	}
 
 	return &account, nil
 }
 
-func (kvs *kvsDriverImpl) set(account *api.Account) error {
+func (impl *accountKvsImpl) Set(account *api.Account) error {
 	if err := account.Validate(); err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (kvs *kvsDriverImpl) set(account *api.Account) error {
 		return err
 	}
 
-	err = kvs.col.KvsSet(kvs.getKey(account.Meta.Name), raw, 0)
+	err = impl.col.KvsSet(impl.getKey(account.Meta.Name), raw, 0)
 	if err != nil {
 		return err
 	}
@@ -88,12 +88,12 @@ func (kvs *kvsDriverImpl) set(account *api.Account) error {
 	return nil
 }
 
-func (kvs *kvsDriverImpl) delete(name string) error {
+func (impl *accountKvsImpl) Delete(name string) error {
 	// colonio does not have delete method on KVS, set nil instead of that
-	return kvs.col.KvsSet(kvs.getKey(name), nil, 0)
+	return impl.col.KvsSet(impl.getKey(name), nil, 0)
 }
 
 // use sha256 hash as account's uuid
-func (kvs *kvsDriverImpl) getKey(name string) string {
+func (impl *accountKvsImpl) getKey(name string) string {
 	return string(api.ResourceTypeAccount) + "/" + api.GenerateAccountUuid(name)
 }

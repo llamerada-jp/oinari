@@ -13,21 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package node
+package driver
 
 import (
-	"github.com/stretchr/testify/suite"
+	"log"
+
+	"github.com/llamerada-jp/oinari/lib/crosslink"
 )
 
-type nodeManagerTest struct {
-	suite.Suite
+type FrontendDriver interface {
+	// send a message that tell initialization complete
+	TellInitComplete() error
 }
 
-func NewNodeTest() suite.TestingSuite {
-	return &nodeManagerTest{}
+type frontendDriverImpl struct {
+	cl crosslink.Crosslink
 }
 
-func (nmt *nodeManagerTest) TestNid() {
-	mgr := NewManager("test-nid")
-	nmt.Equal("test-nid", mgr.GetNid())
+func NewFrontendDriver(cl crosslink.Crosslink) FrontendDriver {
+	return &frontendDriverImpl{
+		cl: cl,
+	}
+}
+
+func (impl *frontendDriverImpl) TellInitComplete() error {
+	impl.cl.Call("frontend/onInitComplete", nil, nil,
+		func(_ []byte, err error) {
+			if err != nil {
+				log.Fatalln(err)
+			}
+		})
+	return nil
 }

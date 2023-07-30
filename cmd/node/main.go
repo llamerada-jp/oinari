@@ -22,14 +22,14 @@ import (
 
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
-	"github.com/llamerada-jp/oinari/node/command"
+	"github.com/llamerada-jp/oinari/node"
+	"github.com/llamerada-jp/oinari/node/controller"
 	"github.com/llamerada-jp/oinari/node/cri"
-	"github.com/llamerada-jp/oinari/node/frontend"
-	"github.com/llamerada-jp/oinari/node/resource"
-	"github.com/llamerada-jp/oinari/node/resource/account"
-	"github.com/llamerada-jp/oinari/node/resource/node"
-	"github.com/llamerada-jp/oinari/node/resource/pod"
-	"github.com/llamerada-jp/oinari/node/system"
+	fd "github.com/llamerada-jp/oinari/node/frontend/driver"
+	fh "github.com/llamerada-jp/oinari/node/frontend/handler"
+	"github.com/llamerada-jp/oinari/node/kvs"
+	md "github.com/llamerada-jp/oinari/node/messaging/driver"
+	mh "github.com/llamerada-jp/oinari/node/messaging/handler"
 )
 
 type nodeAgent struct {
@@ -38,12 +38,12 @@ type nodeAgent struct {
 	cl      crosslink.Crosslink
 	rootMpx crosslink.MultiPlexer
 	// frontend driver
-	fd frontend.Driver
+	frontendDriver fd.FrontendDriver
 
 	// colonio
 	col colonio.Colonio
 	// system
-	sys system.System
+	sysCtrl controller.SystemController
 }
 
 func (na *nodeAgent) initCrosslink() error {
@@ -63,16 +63,16 @@ func (na *nodeAgent) initColonio() error {
 }
 
 func (na *nodeAgent) initSystem() error {
-	fd := frontend.NewDriver(na.cl)
-	na.sys = system.NewSystem(na.col, na, fd)
+	na.frontendDriver = fd.NewFrontendDriver(na.cl)
+	na.sysCtrl = controller.NewSystemController(na.col, na, na.frontendDriver)
 	go func() {
-		err := na.sys.Start(na.ctx)
+		err := na.sysCtrl.Start(na.ctx)
 		if err != nil {
 			log.Fatalln(err)
 		}
 	}()
 
-	command.InitSystemHandler(na.rootMpx, na.sys)
+	fh.InitSystemHandler(na.rootMpx, na.sysCtrl)
 	return nil
 }
 
@@ -86,8 +86,6 @@ func (na *nodeAgent) execute() error {
 		return err
 	}
 
-	na.fd = frontend.NewDriver(na.cl)
-
 	err = na.initColonio()
 	if err != nil {
 		return err
@@ -98,7 +96,7 @@ func (na *nodeAgent) execute() error {
 		return err
 	}
 
-	err = na.fd.TellInitComplete()
+	err = na.frontendDriver.TellInitComplete()
 	if err != nil {
 		return err
 	}
@@ -111,32 +109,36 @@ func (na *nodeAgent) execute() error {
 func (na *nodeAgent) OnConnect() error {
 	ctx := context.Background()
 
-	// node manager
+	// node controller
 	localNid := na.col.GetLocalNid()
-	nodeMgr := node.NewManager(localNid)
+	nodeCtrl := controller.NewNodeController(localNid)
 
-	// account manager
-	accountKvs := account.NewKvsDriver(na.col)
-	accountMgr := account.NewManager(ctx, na.sys.GetAccount(), nodeMgr.GetNid(), accountKvs)
+	// account controller
+	accountKvs := kvs.NewAccountKvs(na.col)
+	accountCtrl := controller.NewAccountController(ctx, na.sysCtrl.GetAccount(), nodeCtrl.GetNid(), accountKvs)
 
-	// pod manager
+	// pod controller
+	podKvs := kvs.NewPodKvs(na.col)
+	podMsg := md.NewMessagingDriver(na.col)
+	podCtrl := controller.NewPodController(podKvs, podMsg, localNid)
+
+	// container controller
 	cri := cri.NewCRI(na.cl)
-	podKvs := pod.NewKvsDriver(na.col)
-	podMsg := pod.NewMessagingDriver(na.col)
-	podMgr := pod.NewManager(cri, podKvs, podMsg, localNid)
-	pod.InitMessagingHandler(podMgr, na.col)
+	containerCtrl := controller.NewContainerController(localNid, cri, podKvs)
 
-	// resource manager
-	ld := resource.NewLocalDatastore(na.col)
-	resourceManager := resource.NewManager(ld, podMgr)
+	// manager
+	ld := node.NewLocalDatastore(na.col)
+	nodeMgr := node.NewManager(ld, podCtrl)
 	go func() {
-		err := resourceManager.Start(na.ctx)
+		err := nodeMgr.Start(na.ctx)
 		if err != nil {
 			log.Fatalln(err)
 		}
 	}()
 
-	command.InitResourceHandler(na.rootMpx, accountMgr, nodeMgr, podMgr)
+	// handlers
+	mh.InitMessagingHandler(containerCtrl, na.col)
+	fh.InitResourceHandler(na.rootMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
 
 	return nil
 }

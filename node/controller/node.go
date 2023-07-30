@@ -13,22 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package node
+package controller
 
-type Manager interface {
+type NodeController interface {
 	GetNid() string
 }
 
-type ManagerImpl struct {
+type nodeControllerImpl struct {
 	localNid string
 }
 
-func NewManager(localNid string) *ManagerImpl {
-	return &ManagerImpl{
+func NewNodeController(localNid string) NodeController {
+	return &nodeControllerImpl{
 		localNid: localNid,
 	}
 }
 
-func (mgr *ManagerImpl) GetNid() string {
-	return mgr.localNid
+func (impl *nodeControllerImpl) GetNid() string {
+	return impl.localNid
 }

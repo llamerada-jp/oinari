@@ -13,40 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package account
+package controller
 
 import (
 	"context"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
+	"github.com/llamerada-jp/oinari/node/kvs"
 	"github.com/stretchr/testify/suite"
 )
 
 const ACCOUNT = "cat"
 const NODE_ID = "012345678901234567890123456789ab"
 
-type accountManagerTest struct {
+type accountControllerTest struct {
 	suite.Suite
-	col colonio.Colonio
-	kvs KvsDriver
-	mgr *managerImpl
+	col        colonio.Colonio
+	accountKvs kvs.AccountKvs
+	impl       *accountControllerImpl
 }
 
-func NewAccountManagerTest(ctx context.Context, col colonio.Colonio) suite.TestingSuite {
-	kvs := NewKvsDriver(col)
+func NewAccountControllerTest(ctx context.Context, col colonio.Colonio) suite.TestingSuite {
+	accountKvs := kvs.NewAccountKvs(col)
 
-	return &accountManagerTest{
-		col: col,
-		kvs: kvs,
-		mgr: &managerImpl{
+	return &accountControllerTest{
+		col:        col,
+		accountKvs: accountKvs,
+		impl: &accountControllerImpl{
 			accountName: ACCOUNT,
 			localNid:    NODE_ID,
-			kvs:         kvs,
+			accountKvs:  accountKvs,
 			logs:        make(map[string]*logEntry),
 		},
 	}
 }
 
-func (amt *accountManagerTest) TestGetAccountName() {
-	amt.Equal(ACCOUNT, amt.mgr.GetAccountName())
+func (test *accountControllerTest) TestGetAccountName() {
+	test.Equal(ACCOUNT, test.impl.GetAccountName())
 }

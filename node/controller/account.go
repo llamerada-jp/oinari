@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package account
+package controller
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/node/kvs"
 	"github.com/llamerada-jp/oinari/node/misc"
 )
 
@@ -28,17 +29,17 @@ const KEEP_ALIVE_INTERVAL = 30 * time.Second
 const RESOURCE_KEEP_ALIVE_THRESHOLD = KEEP_ALIVE_INTERVAL * 6
 const ACCOUNT_DELETION_THRESHOLD = KEEP_ALIVE_INTERVAL * 60
 
-type Manager interface {
+type AccountController interface {
 	GetAccountName() string
 	GetAccountPodState() (map[string]api.AccountPodState, error)
 	Cleanup(account *api.Account) error
 	KeepAlivePods(pods []*api.Pod) error
 }
 
-type managerImpl struct {
+type accountControllerImpl struct {
 	accountName string
 	localNid    string
-	kvs         KvsDriver
+	accountKvs  kvs.AccountKvs
 	logs        map[string]*logEntry
 }
 
@@ -54,11 +55,11 @@ type timestampLog struct {
 	timestampStr string
 }
 
-func NewManager(ctx context.Context, account, localNid string, kvs KvsDriver) Manager {
-	mgr := &managerImpl{
+func NewAccountController(ctx context.Context, account, localNid string, accountKvs kvs.AccountKvs) AccountController {
+	impl := &accountControllerImpl{
 		accountName: account,
 		localNid:    localNid,
-		kvs:         kvs,
+		accountKvs:  accountKvs,
 		logs:        make(map[string]*logEntry),
 	}
 
@@ -71,23 +72,23 @@ func NewManager(ctx context.Context, account, localNid string, kvs KvsDriver) Ma
 				return
 
 			case <-ticker.C:
-				if err := mgr.keepAliveNode(); err != nil {
+				if err := impl.keepAliveNode(); err != nil {
 					log.Println(err)
 				}
-				mgr.cleanLogs()
+				impl.cleanLogs()
 			}
 		}
 	}()
 
-	return mgr
+	return impl
 }
 
-func (mgr *managerImpl) GetAccountName() string {
-	return mgr.accountName
+func (impl *accountControllerImpl) GetAccountName() string {
+	return impl.accountName
 }
 
-func (mgr *managerImpl) GetAccountPodState() (map[string]api.AccountPodState, error) {
-	acc, err := mgr.kvs.get(mgr.accountName)
+func (impl *accountControllerImpl) GetAccountPodState() (map[string]api.AccountPodState, error) {
+	acc, err := impl.accountKvs.Get(impl.accountName)
 	if err != nil {
 		return nil, err
 	}
@@ -100,26 +101,26 @@ func (mgr *managerImpl) GetAccountPodState() (map[string]api.AccountPodState, er
 	return acc.State.Pods, nil
 }
 
-func (mgr *managerImpl) KeepAlivePods(pods []*api.Pod) error {
+func (impl *accountControllerImpl) KeepAlivePods(pods []*api.Pod) error {
 	podsByAccount := make(map[string][]*api.Pod)
 	for _, pod := range pods {
 		podsByAccount[pod.Meta.Owner] = append(podsByAccount[pod.Meta.Owner], pod)
 	}
 
 	for accountName, podSlice := range podsByAccount {
-		account, err := mgr.getOrCreateAccount(accountName)
+		account, err := impl.getOrCreateAccount(accountName)
 		if err != nil {
 			return err
 		}
 
 		for _, pod := range podSlice {
 			account.State.Pods[pod.Meta.Uuid] = api.AccountPodState{
-				RunningNode: mgr.localNid,
+				RunningNode: impl.localNid,
 				Timestamp:   misc.GetTimestamp(),
 			}
 		}
 
-		err = mgr.kvs.set(account)
+		err = impl.accountKvs.Set(account)
 		if err != nil {
 			return err
 		}
@@ -128,20 +129,20 @@ func (mgr *managerImpl) KeepAlivePods(pods []*api.Pod) error {
 	return nil
 }
 
-func (mgr *managerImpl) Cleanup(account *api.Account) error {
+func (impl *accountControllerImpl) Cleanup(account *api.Account) error {
 	if err := account.Validate(); err != nil {
 		log.Printf("invalid account found %s and it will be deleted: %v", account.Meta.Name, err)
-		return mgr.kvs.delete(account.Meta.Name)
+		return impl.accountKvs.Delete(account.Meta.Name)
 	}
 
-	log, ok := mgr.logs[account.Meta.Name]
+	log, ok := impl.logs[account.Meta.Name]
 	if !ok {
 		log = &logEntry{
 			lastUpdated: time.Now(),
 			pods:        make(map[string]timestampLog),
 			nodes:       make(map[string]timestampLog),
 		}
-		mgr.logs[account.Meta.Name] = log
+		impl.logs[account.Meta.Name] = log
 	}
 
 	updateAccount := false
@@ -197,40 +198,40 @@ func (mgr *managerImpl) Cleanup(account *api.Account) error {
 	}
 
 	if updateAccount {
-		return mgr.kvs.set(account)
+		return impl.accountKvs.Set(account)
 	}
 
 	if now.After(log.lastUpdated.Add(ACCOUNT_DELETION_THRESHOLD)) {
-		return mgr.kvs.delete(account.Meta.Name)
+		return impl.accountKvs.Delete(account.Meta.Name)
 	}
 
 	return nil
 }
 
-func (mgr *managerImpl) keepAliveNode() error {
-	account, err := mgr.getOrCreateAccount(mgr.accountName)
+func (impl *accountControllerImpl) keepAliveNode() error {
+	account, err := impl.getOrCreateAccount(impl.accountName)
 	if err != nil {
 		return err
 	}
 
-	account.State.Nodes[mgr.localNid] = api.AccountNodeState{
+	account.State.Nodes[impl.localNid] = api.AccountNodeState{
 		Timestamp: misc.GetTimestamp(),
 	}
 
-	return mgr.kvs.set(account)
+	return impl.accountKvs.Set(account)
 }
 
-func (mgr *managerImpl) cleanLogs() {
+func (impl *accountControllerImpl) cleanLogs() {
 	now := time.Now()
-	for key, log := range mgr.logs {
+	for key, log := range impl.logs {
 		if now.After(log.lastChecked.Add(RESOURCE_KEEP_ALIVE_THRESHOLD * 2)) {
-			delete(mgr.logs, key)
+			delete(impl.logs, key)
 		}
 	}
 }
 
-func (mgr *managerImpl) getOrCreateAccount(accountName string) (*api.Account, error) {
-	account, err := mgr.kvs.get(accountName)
+func (impl *accountControllerImpl) getOrCreateAccount(accountName string) (*api.Account, error) {
+	account, err := impl.accountKvs.Get(accountName)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +242,7 @@ func (mgr *managerImpl) getOrCreateAccount(accountName string) (*api.Account, er
 				Type:        api.ResourceTypeAccount,
 				Name:        accountName,
 				Owner:       accountName,
-				CreatorNode: mgr.localNid,
+				CreatorNode: impl.localNid,
 				Uuid:        api.GenerateAccountUuid(accountName),
 			},
 			State: &api.AccountState{
