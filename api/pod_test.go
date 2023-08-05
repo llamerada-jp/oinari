@@ -18,6 +18,7 @@ package api
 import (
 	"testing"
 
+	"github.com/llamerada-jp/oinari/node/misc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -76,7 +77,7 @@ func TestValidatePod(t *testing.T) {
 			{
 				ContainerID: "dummy",
 				Image:       "http://localhost/dummy.wasm",
-				State:       ContainerStateWaiting,
+				State:       ContainerState{},
 			},
 		},
 	}
@@ -287,13 +288,29 @@ func TestValidatePodStatus(t *testing.T) {
 
 	for _, status := range []*PodStatus{
 		{
+			ContainerStatuses: []ContainerStatus{
+				{},
+			},
+		},
+		{
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{},
+			},
+		},
+		{
 			RunningNode: "01234567890123456789012345abcdef",
 			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{
 					ContainerID: "container1",
 					Image:       "https://localhost/dummy.wasm",
-					State:       ContainerStateRunning,
+					State: ContainerState{
+						Running: &ContainerStateRunning{
+							StartedAt: misc.GetTimestamp(),
+						},
+					},
 				},
 			},
 		},
@@ -304,14 +321,14 @@ func TestValidatePodStatus(t *testing.T) {
 				{
 					ContainerID: "container1",
 					Image:       "https://localhost/dummy.wasm",
-					State:       ContainerStateWaiting,
-				},
-			},
-		},
-		{
-			ContainerStatuses: []ContainerStatus{
-				{
-					State: ContainerStateWaiting,
+					State: ContainerState{
+						Running: &ContainerStateRunning{
+							StartedAt: misc.GetTimestamp(),
+						},
+						Terminated: &ContainerStateTerminated{
+							FinishedAt: misc.GetTimestamp(),
+						},
+					},
 				},
 			},
 		},
@@ -324,29 +341,144 @@ func TestValidatePodStatus(t *testing.T) {
 			RunningNode: "01234567890123456789012345abcdef",
 			TargetNode:  "01234567890123456789012345abcdef",
 		},
-		"invalid container state": {
-			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
-			ContainerStatuses: []ContainerStatus{
-				{
-					State: "no",
-				},
-			},
-		},
 		"invalid node id": {
 			RunningNode: "no no no",
 			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
-				{
-					State: ContainerStateRunning,
-				},
+				{},
 			},
 		},
 		"only running node specified": {
 			RunningNode: "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
+				{},
+			},
+		},
+		"invalid container id field": {
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
 				{
-					State: "no",
+					// ContainerID: "container1",
+					Image: "https://localhost/dummy.wasm",
+					State: ContainerState{
+						Running: &ContainerStateRunning{
+							StartedAt: misc.GetTimestamp(),
+						},
+					},
+				},
+			},
+		},
+		"invalid image field": {
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					ContainerID: "container1",
+					// Image: "https://localhost/dummy.wasm",
+					State: ContainerState{
+						Running: &ContainerStateRunning{
+							StartedAt: misc.GetTimestamp(),
+						},
+					},
+				},
+			},
+		},
+		"invalid running field": {
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					ContainerID: "container1",
+					Image:       "https://localhost/dummy.wasm",
+					State:       ContainerState{},
+				},
+			},
+		},
+		"invalid startedAt field": {
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					ContainerID: "container1",
+					Image:       "https://localhost/dummy.wasm",
+					State: ContainerState{
+						Running: &ContainerStateRunning{
+							// StartedAt: misc.GetTimestamp(),
+						},
+					},
+				},
+			},
+		},
+		"running should be set if terminated is set": {
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					ContainerID: "container1",
+					Image:       "https://localhost/dummy.wasm",
+					State: ContainerState{
+						Running: nil,
+						Terminated: &ContainerStateTerminated{
+							FinishedAt: misc.GetTimestamp(),
+						},
+					},
+				},
+			},
+		},
+		"finishedAt required when terminated is set": {
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					ContainerID: "container1",
+					Image:       "https://localhost/dummy.wasm",
+					State: ContainerState{
+						Running: &ContainerStateRunning{
+							StartedAt: misc.GetTimestamp(),
+						},
+						Terminated: &ContainerStateTerminated{
+							// FinishedAt: misc.GetTimestamp(),
+						},
+					},
+				},
+			},
+		},
+		"timestamp required when unknown is set": {
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					ContainerID: "container1",
+					Image:       "https://localhost/dummy.wasm",
+					State: ContainerState{
+						Running: &ContainerStateRunning{
+							StartedAt: misc.GetTimestamp(),
+						},
+						Unknown: &ContainerStateUnknown{
+							// Timestamp: misc.GetTimestamp(),
+							Reason: "the reason causes unknown status",
+						},
+					},
+				},
+			},
+		},
+		"reason required when unknown is set": {
+			RunningNode: "01234567890123456789012345abcdef",
+			TargetNode:  "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					ContainerID: "container1",
+					Image:       "https://localhost/dummy.wasm",
+					State: ContainerState{
+						Running: &ContainerStateRunning{
+							StartedAt: misc.GetTimestamp(),
+						},
+						Unknown: &ContainerStateUnknown{
+							Timestamp: misc.GetTimestamp(),
+							// Reason: "enjoy!",
+						},
+					},
 				},
 			},
 		},

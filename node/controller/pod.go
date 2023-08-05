@@ -18,6 +18,7 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/kvs"
@@ -66,7 +67,7 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) error {
 
 	// check deletion
 	if len(pod.Meta.DeletionTimestamp) != 0 {
-		if len(pod.Status.RunningNode) == 0 || impl.getContainerStateDigest(pod) == api.ContainerStateTerminated {
+		if len(pod.Status.RunningNode) == 0 || impl.checkContainerStateTerminated(pod) {
 			impl.podKvs.Delete(pod.Meta.Uuid)
 			return nil
 		}
@@ -87,23 +88,22 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) error {
 	}
 
 	if pod.Status.RunningNode == pod.Status.TargetNode {
-		stateDigest := impl.getContainerStateDigest(pod)
-		if stateDigest == api.ContainerStateTerminated || stateDigest == api.ContainerStateUnknown {
+		if impl.checkContainerStateTerminated(pod) || impl.checkContainerStateUnknown(pod) {
 			// TODO restart pod by the restart policy
 			return nil
 		}
+
 	} else {
-		stateDigest := impl.getContainerStateDigest(pod)
-		if stateDigest == api.ContainerStateTerminated {
+		if impl.checkContainerStateTerminated(pod) {
 			pod.Status.RunningNode = pod.Status.TargetNode
 			for _, containerStatus := range pod.Status.ContainerStatuses {
 				containerStatus.ContainerID = ""
 				containerStatus.Image = ""
-				containerStatus.State = api.ContainerStateWaiting
+				containerStatus.State = api.ContainerState{}
 			}
 			return impl.podKvs.Update(pod)
 
-		} else if stateDigest == api.ContainerStateUnknown {
+		} else if impl.checkContainerStateUnknown(pod) {
 			// TODO restart pod by the restart policy
 		}
 	}
@@ -111,7 +111,10 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) error {
 	err = impl.messaging.ReconcileContainer(pod.Status.RunningNode, pod.Meta.Uuid)
 	if err != nil {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			containerStatus.State = api.ContainerStateUnknown
+			containerStatus.State.Unknown = &api.ContainerStateUnknown{
+				Timestamp: misc.GetTimestamp(),
+				Reason:    fmt.Sprintf("failed to call reconciliation to %s: %w", pod.Status.RunningNode, err),
+			}
 		}
 		return impl.podKvs.Update(pod)
 	}
@@ -135,10 +138,7 @@ func (impl *podControllerImpl) Create(name, owner, creatorNode string, spec *api
 	}
 
 	for _ = range pod.Spec.Containers {
-		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses,
-			api.ContainerStatus{
-				State: api.ContainerStateWaiting,
-			})
+		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, api.ContainerStatus{})
 	}
 
 	err := impl.podKvs.Create(pod)
@@ -180,49 +180,32 @@ func (impl *podControllerImpl) schedulePod(pod *api.Pod) error {
 	}
 }
 
-func (impl *podControllerImpl) getContainerStateDigest(pod *api.Pod) api.ContainerState {
-	allTerminated := true
-	hasRunning := false
-
-	for _, containerState := range pod.Status.ContainerStatuses {
-		switch containerState.State {
-		case api.ContainerStateWaiting:
-			allTerminated = false
-		case api.ContainerStateRunning:
-			allTerminated = false
-			hasRunning = true
-		case api.ContainerStateTerminated:
-		case api.ContainerStateUnknown:
-			return api.ContainerStateUnknown
-		}
-	}
-
-	if allTerminated {
-		return api.ContainerStateTerminated
-	} else if hasRunning {
-		return api.ContainerStateRunning
-	} else {
-		return api.ContainerStateWaiting
-	}
-}
-
 func (impl *podControllerImpl) getContainerStateMessage(pod *api.Pod) string {
-	digest := impl.getContainerStateDigest(pod)
+	waiting := 0
+	running := 0
+	terminated := 0
+	unknownReasons := make([]string, 0)
 
-	if digest == api.ContainerStateRunning {
-		all := len(pod.Status.ContainerStatuses)
-		running := 0
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated != nil {
+			terminated += 1
 
-		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if containerStatus.State == api.ContainerStateRunning {
-				running += 1
-			}
+		} else if containerStatus.State.Unknown != nil {
+			unknownReasons = append(unknownReasons, containerStatus.State.Unknown.Reason)
+
+		} else if containerStatus.State.Running != nil {
+			running += 1
+
+		} else {
+			waiting += 1
 		}
-
-		return fmt.Sprintf("%s (%d/%d)", string(digest), running, all)
 	}
 
-	return string(digest)
+	message := fmt.Sprintf("waiting:%d / running:%d / terminated:%d / unknown:%d", waiting, running, terminated, len(unknownReasons))
+	if len(unknownReasons) != 0 {
+		message = fmt.Sprintf("%s\n%s", message, strings.Join(unknownReasons, "\n"))
+	}
+	return message
 }
 
 func (impl *podControllerImpl) GetPodData(uuid string) (*api.Pod, error) {
@@ -268,9 +251,29 @@ func (impl *podControllerImpl) Cleanup(uuid string) error {
 		return err
 	}
 
-	if impl.getContainerStateDigest(pod) != api.ContainerStateUnknown {
+	if impl.checkContainerStateUnknown(pod) {
 		return fmt.Errorf("target pod of cleanup should be unknown state")
 	}
 
 	return impl.podKvs.Delete(uuid)
+}
+
+func (impl *podControllerImpl) checkContainerStateTerminated(pod *api.Pod) bool {
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (impl *podControllerImpl) checkContainerStateUnknown(pod *api.Pod) bool {
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Terminated == nil && containerStatus.State.Unknown != nil {
+			return true
+		}
+	}
+
+	return false
 }

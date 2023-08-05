@@ -33,18 +33,21 @@ func InitMessagingHandler(containerController controller.ContainerController, co
 			log.Println(err)
 			return
 		}
-		var msg messaging.VitalizePod
-		err = json.Unmarshal(raw, &msg)
-		if err != nil {
-			log.Println(err)
-			return
-		}
 
-		err = containerController.Reconcile(context.Background(), msg.PodUuid)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		go func(raw []byte) {
+			var msg messaging.VitalizePod
+			err = json.Unmarshal(raw, &msg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			err = containerController.Reconcile(context.Background(), msg.PodUuid)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}(raw)
 	})
 	return nil
 }

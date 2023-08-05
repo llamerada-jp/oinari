@@ -80,25 +80,29 @@ type SchedulerSpec struct {
 	Type string `json:"type"`
 }
 
-type ContainerState string
+type ContainerStateRunning struct {
+	StartedAt string `json:"startedAt"`
+}
 
-const (
-	ContainerStateWaiting    ContainerState = "Waiting"
-	ContainerStateRunning    ContainerState = "Running"
-	ContainerStateTerminated ContainerState = "Terminated"
-	ContainerStateUnknown    ContainerState = "Unknown"
-)
+type ContainerStateTerminated struct {
+	FinishedAt string `json:"finishedAt"`
+	ExitCode   int    `json:"exitCode"`
+}
 
-var ContainerStateAccepted = []ContainerState{
-	ContainerStateWaiting,
-	ContainerStateRunning,
-	ContainerStateTerminated,
-	ContainerStateUnknown,
+type ContainerStateUnknown struct {
+	Timestamp string `json:"timestamp"`
+	Reason    string `json:"reason"`
+}
+
+type ContainerState struct {
+	Running    *ContainerStateRunning    `json:"running,omitempty"`
+	Terminated *ContainerStateTerminated `json:"terminated,omitempty"`
+	Unknown    *ContainerStateUnknown    `json:"unknown,omitempty"`
 }
 
 type ContainerStatus struct {
-	ContainerID string         `json:"containerID"`
-	Image       string         `json:"image"`
+	ContainerID string         `json:"containerID,omitempty"`
+	Image       string         `json:"image,omitempty"`
 	State       ContainerState `json:"state"`
 }
 
@@ -241,9 +245,55 @@ func (status *PodStatus) validate(containerNum int) error {
 	}
 
 	for _, containerState := range status.ContainerStatuses {
-		// State field
-		if !slices.Contains(ContainerStateAccepted, containerState.State) {
-			return fmt.Errorf("there is an unsupported container state in the pod status")
+		if len(containerState.ContainerID) != 0 || len(containerState.Image) != 0 ||
+			containerState.State.Running != nil {
+			if len(containerState.ContainerID) == 0 {
+				return fmt.Errorf("container ID should be set when container is running")
+			}
+
+			if len(containerState.Image) == 0 {
+				return fmt.Errorf("image should be set when container is running")
+			}
+
+			if containerState.State.Running == nil {
+				return fmt.Errorf("running should be set when container ID or image is filled")
+			}
+
+			if len(containerState.State.Running.StartedAt) == 0 {
+				return fmt.Errorf("startedAt field should be set when container is running")
+			}
+
+			if err := ValidateTimestamp(containerState.State.Running.StartedAt); err != nil {
+				return fmt.Errorf("wrong format of startedAt field in containerState: %w", err)
+			}
+		}
+
+		if containerState.State.Terminated != nil {
+			if containerState.State.Running == nil {
+				return fmt.Errorf("running field should be set when container was terminated")
+			}
+
+			if len(containerState.State.Terminated.FinishedAt) == 0 {
+				return fmt.Errorf("finishedAd field should be set when container was terminated")
+			}
+
+			if err := ValidateTimestamp(containerState.State.Terminated.FinishedAt); err != nil {
+				return fmt.Errorf("wrong format of finishedAd field in containerState: %w", err)
+			}
+		}
+
+		if containerState.State.Unknown != nil {
+			if len(containerState.State.Unknown.Reason) == 0 {
+				return fmt.Errorf("reason field should be set when container is unknown")
+			}
+
+			if len(containerState.State.Unknown.Timestamp) == 0 {
+				return fmt.Errorf("timestamp field should be set when container is unknown")
+			}
+
+			if err := ValidateTimestamp(containerState.State.Unknown.Timestamp); err != nil {
+				return fmt.Errorf("wrong format of timestamp field in containerState: %w", err)
+			}
 		}
 	}
 

@@ -19,10 +19,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/cri"
 	"github.com/llamerada-jp/oinari/node/kvs"
+	"github.com/llamerada-jp/oinari/node/misc"
 )
 
 type ContainerController interface {
@@ -30,32 +32,72 @@ type ContainerController interface {
 	Reconcile(ctx context.Context, podUuid string) error
 }
 
+type reconcileState struct {
+	running   bool
+	sandboxID string
+}
+
 type containerControllerImpl struct {
 	localNid string
 	cri      cri.CRI
 	podKvs   kvs.PodKvs
-	// key: Pod UUID, value: sandbox ID
-	sandboxIdMap map[string]string
+	// key: Pod UUID
+	reconcileStates map[string]*reconcileState
+	mtx             sync.Mutex
 }
 
 func NewContainerController(localNid string, cri cri.CRI, podKvs kvs.PodKvs) ContainerController {
 	return &containerControllerImpl{
-		localNid:     localNid,
-		cri:          cri,
-		podKvs:       podKvs,
-		sandboxIdMap: make(map[string]string),
+		localNid:        localNid,
+		cri:             cri,
+		podKvs:          podKvs,
+		reconcileStates: make(map[string]*reconcileState),
 	}
 }
 
 func (impl *containerControllerImpl) GetLocalPodUUIDs() []string {
-	uuids := make([]string, len(impl.sandboxIdMap))
-	for uuid := range impl.sandboxIdMap {
+	uuids := make([]string, len(impl.reconcileStates))
+	for uuid := range impl.reconcileStates {
 		uuids = append(uuids, uuid)
 	}
 	return uuids
 }
 
 func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUuid string) error {
+	state, running := func() (*reconcileState, bool) {
+		impl.mtx.Lock()
+		defer impl.mtx.Unlock()
+
+		state, ok := impl.reconcileStates[podUuid]
+		if !ok {
+			state = &reconcileState{}
+			impl.reconcileStates[podUuid] = state
+		}
+
+		running := state.running
+		state.running = true
+
+		return state, running
+	}()
+
+	// skip when other reconcile running
+	if running {
+		return nil
+	}
+
+	// set running flg and delete instance if required when end of reconcile
+	deleteFlg := false
+	defer func() {
+		impl.mtx.Lock()
+		defer impl.mtx.Unlock()
+
+		state.running = false
+
+		if deleteFlg || len(state.sandboxID) == 0 {
+			delete(impl.reconcileStates, podUuid)
+		}
+	}()
+
 	pod, err := impl.podKvs.Get(podUuid)
 	if err != nil {
 		return err
@@ -63,51 +105,54 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUuid stri
 
 	// force stop container if running node is not this node
 	if pod.Status.RunningNode != impl.localNid {
-		return impl.removeSandbox(podUuid)
+		if len(state.sandboxID) != 0 {
+			if err = impl.removeSandbox(state.sandboxID); err != nil {
+				return err
+			}
+			deleteFlg = true
+		}
+		return nil
 	}
 
 	// terminate containers if deletion timestamp has set
-	if len(pod.Meta.DeletionTimestamp) != 0 {
-		sandboxId, exists := impl.sandboxIdMap[podUuid]
-		if !exists {
-			return impl.updatePodInfoDelete(pod, "")
+	if len(pod.Meta.DeletionTimestamp) != 0 || pod.Status.TargetNode != pod.Status.RunningNode {
+		if len(state.sandboxID) == 0 {
+			return impl.updatePodInfo(state, pod)
 		}
 
-		terminated, err := impl.letTerminate(sandboxId)
+		terminated, err := impl.letTerminate(state.sandboxID)
 		if err != nil {
 			return err
 		}
 
-		// remove sandbox if containers have terminated
-		if terminated {
-			if err = impl.removeSandbox(podUuid); err != nil {
-				return err
-			}
-		}
-
-		if err = impl.updatePodInfoDelete(pod, sandboxId); err != nil {
+		if err = impl.updatePodInfo(state, pod); err != nil {
 			return err
 		}
 
-		delete(impl.sandboxIdMap, podUuid)
+		if terminated {
+			// remove sandbox if containers have terminated
+			if err = impl.removeSandbox(podUuid); err != nil {
+				return err
+			}
+
+			deleteFlg = true
+		}
 		return nil
 	}
 
 	// make containers running as necessary
-	sandboxId, err := impl.letRunning(pod)
+	err = impl.letRunning(state, pod)
 	if err != nil {
 		return err
 	}
 
-	return impl.updatePodInfoRunning(pod, sandboxId)
+	return impl.updatePodInfo(state, pod)
 }
 
 // return sandboxId
-func (impl *containerControllerImpl) letRunning(pod *api.Pod) (string, error) {
-	sandboxId, sandboxExists := impl.sandboxIdMap[pod.Meta.Uuid]
-
+func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.Pod) error {
 	// create sandbox if it isn't exist
-	if !sandboxExists {
+	if len(state.sandboxID) == 0 {
 		res, err := impl.cri.RunPodSandbox(&cri.RunPodSandboxRequest{
 			Config: cri.PodSandboxConfig{
 				Metadata: cri.PodSandboxMetadata{
@@ -118,19 +163,18 @@ func (impl *containerControllerImpl) letRunning(pod *api.Pod) (string, error) {
 			},
 		})
 		if err != nil {
-			return "", err
+			return err
 		}
 
-		sandboxId = res.PodSandboxId
-		impl.sandboxIdMap[pod.Meta.Uuid] = sandboxId
+		state.sandboxID = res.PodSandboxId
 	}
 
 	// make containers as map[container name]ContainerStatus
 	sandboxStatus, err := impl.cri.PodSandboxStatus(&cri.PodSandboxStatusRequest{
-		PodSandboxId: sandboxId,
+		PodSandboxId: state.sandboxID,
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
 	containers := make(map[string]cri.ContainerStatus)
 	for _, containerStatus := range sandboxStatus.ContainersStatuses {
@@ -140,7 +184,7 @@ func (impl *containerControllerImpl) letRunning(pod *api.Pod) (string, error) {
 	// make images as map[image url]true
 	imageList, err := impl.cri.ListImages(&cri.ListImagesRequest{})
 	if err != nil {
-		return "", err
+		return err
 	}
 	images := make(map[string]bool)
 	for _, image := range imageList.Images {
@@ -150,7 +194,7 @@ func (impl *containerControllerImpl) letRunning(pod *api.Pod) (string, error) {
 	// load image if necessary
 	for idx, spec := range pod.Spec.Containers {
 		status := pod.Status.ContainerStatuses[idx]
-		if status.State != api.ContainerStateWaiting {
+		if status.State.Running != nil {
 			continue
 		}
 
@@ -166,18 +210,18 @@ func (impl *containerControllerImpl) letRunning(pod *api.Pod) (string, error) {
 				},
 			})
 			if err != nil {
-				return "", err
+				return err
 			}
 			images[spec.Image] = true
 		}
 	}
 
 	for idx, spec := range pod.Spec.Containers {
-		status := pod.Status.ContainerStatuses[idx]
+		status := &pod.Status.ContainerStatuses[idx]
 		_, containerExists := containers[spec.Name]
 
 		// start containers if they are not exist
-		if status.State == api.ContainerStateWaiting && !containerExists {
+		if status.State.Running == nil && !containerExists {
 			envs := []cri.KeyValue{}
 			for _, one := range spec.Env {
 				envs = append(envs, cri.KeyValue{
@@ -187,7 +231,7 @@ func (impl *containerControllerImpl) letRunning(pod *api.Pod) (string, error) {
 			}
 
 			res, err := impl.cri.CreateContainer(&cri.CreateContainerRequest{
-				PodSandboxId: sandboxId,
+				PodSandboxId: state.sandboxID,
 				Config: cri.ContainerConfig{
 					Metadata: cri.ContainerMetadata{
 						Name: spec.Name,
@@ -206,7 +250,11 @@ func (impl *containerControllerImpl) letRunning(pod *api.Pod) (string, error) {
 			}
 
 			status.ContainerID = res.ContainerId
-			status.State = api.ContainerStateRunning
+			status.State = api.ContainerState{
+				Running: &api.ContainerStateRunning{
+					StartedAt: misc.GetTimestamp(),
+				},
+			}
 
 			_, err = impl.cri.StartContainer(&cri.StartContainerRequest{
 				ContainerId: res.ContainerId,
@@ -218,78 +266,100 @@ func (impl *containerControllerImpl) letRunning(pod *api.Pod) (string, error) {
 		}
 	}
 
-	return sandboxId, nil
+	return nil
 }
 
-func (impl *containerControllerImpl) updatePodInfoRunning(pod *api.Pod, sandboxId string) error {
-	// make containers as map[container name]ContainerStatus
-	sandboxStatus, err := impl.cri.PodSandboxStatus(&cri.PodSandboxStatusRequest{
-		PodSandboxId: sandboxId,
-	})
-	if err != nil {
-		return err
-	}
+func (impl *containerControllerImpl) letTerminate(sandboxId string) (bool, error) {
+	// TODO: send exit signal when any container running
 
+	// TODO: skip processing when all container exited
+
+	// TODO: force exit all containers after timeout
+}
+
+func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *api.Pod) error {
+	// make containers as map[container name]ContainerStatus
 	containerStatuses := make(map[string]*cri.ContainerStatus)
-	for _, containerStatus := range sandboxStatus.ContainersStatuses {
-		containerStatuses[containerStatus.Metadata.Name] = &containerStatus
+	if len(state.sandboxID) != 0 {
+		sandboxStatus, err := impl.cri.PodSandboxStatus(&cri.PodSandboxStatusRequest{
+			PodSandboxId: state.sandboxID,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, containerStatus := range sandboxStatus.ContainersStatuses {
+			containerStatuses[containerStatus.Metadata.Name] = &containerStatus
+		}
 	}
 
 	for idx, spec := range pod.Spec.Containers {
-		status := pod.Status.ContainerStatuses[idx]
+		status := &pod.Status.ContainerStatuses[idx]
 		container, containerExists := containerStatuses[spec.Name]
 
-		if status.ContainerID != container.ID {
-			impl.removeSandbox(sandboxId)
-			return fmt.Errorf("found a wrong container id")
-		}
-
-		if status.State == api.ContainerStateTerminated {
-			if container.State != cri.ContainerExited {
-				impl.removeSandbox(sandboxId)
-				return fmt.Errorf("container should be terminated")
+		if !containerExists {
+			if status.State.Terminated == nil && status.State.Unknown == nil {
+				status.State.Unknown = &api.ContainerStateUnknown{
+					Timestamp: misc.GetTimestamp(),
+					Reason:    "the container not found",
+				}
 			}
 			continue
 		}
 
-		if !containerExists {
-			status.State = api.ContainerStateUnknown
+		if (container.State == cri.ContainerRunning || container.State == cri.ContainerExited) && status.State.Running == nil {
+			status.ContainerID = container.ID
+			status.Image = container.Image.Image
+			status.State.Running = &api.ContainerStateRunning{
+				StartedAt: misc.GetTimestamp(),
+			}
+			status.State.Unknown = nil
 		}
 
-		switch container.State {
-		case cri.ContainerCreated:
-			status.State = api.ContainerStateRunning
-		case cri.ContainerRunning:
-			status.State = api.ContainerStateRunning
-		case cri.ContainerExited:
-			status.State = api.ContainerStateTerminated
-		case cri.ContainerUnknown:
-			status.State = api.ContainerStateUnknown
+		if status.ContainerID != container.ID {
+			impl.removeSandbox(state.sandboxID)
+			if status.State.Unknown == nil {
+				status.State.Unknown = &api.ContainerStateUnknown{
+					Timestamp: misc.GetTimestamp(),
+					Reason:    fmt.Sprintf("container id is different from actual (%s)", container.ID),
+				}
+			}
+			continue
+		}
+
+		if container.State == cri.ContainerExited && status.State.Terminated == nil {
+			status.State.Terminated = &api.ContainerStateTerminated{
+				FinishedAt: container.FinishedAt,
+				ExitCode:   container.ExitCode,
+			}
+			status.State.Unknown = nil
+		}
+
+		if status.State.Terminated == nil && status.State.Unknown == nil && container.State == cri.ContainerUnknown {
+			status.State.Unknown = &api.ContainerStateUnknown{
+				Timestamp: misc.GetTimestamp(),
+				Reason:    "container status could not get",
+			}
+		}
+
+		if status.State.Terminated != nil && container.State != cri.ContainerExited && container.State != cri.ContainerUnknown {
+			impl.removeSandbox(state.sandboxID)
+			return fmt.Errorf("container should be terminated")
 		}
 
 		delete(containerStatuses, spec.Name)
 	}
 
-	if err = impl.podKvs.Update(pod); err != nil {
+	if err := impl.podKvs.Update(pod); err != nil {
 		return err
 	}
 
 	if len(containerStatuses) > 0 {
-		impl.removeSandbox(sandboxId)
+		impl.removeSandbox(state.sandboxID)
 		return fmt.Errorf("found differences in spec of pod between running containers")
 	}
 
 	return nil
-}
-
-func (impl *containerControllerImpl) letTerminate(podUuid string) (bool, error) {
-	// TODO: send exit signal when any container running
-	// TODO: skip processing when all container exited
-	// TODO: force exit all containers after timeout
-}
-
-func (impl *containerControllerImpl) updatePodInfoDelete(pod *api.Pod, sandboxId string) error {
-
 }
 
 func (impl *containerControllerImpl) removeSandbox(sandboxId string) error {
