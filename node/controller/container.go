@@ -17,6 +17,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/llamerada-jp/oinari/api"
@@ -221,7 +222,64 @@ func (impl *containerControllerImpl) letRunning(pod *api.Pod) (string, error) {
 }
 
 func (impl *containerControllerImpl) updatePodInfoRunning(pod *api.Pod, sandboxId string) error {
+	// make containers as map[container name]ContainerStatus
+	sandboxStatus, err := impl.cri.PodSandboxStatus(&cri.PodSandboxStatusRequest{
+		PodSandboxId: sandboxId,
+	})
+	if err != nil {
+		return err
+	}
 
+	containerStatuses := make(map[string]*cri.ContainerStatus)
+	for _, containerStatus := range sandboxStatus.ContainersStatuses {
+		containerStatuses[containerStatus.Metadata.Name] = &containerStatus
+	}
+
+	for idx, spec := range pod.Spec.Containers {
+		status := pod.Status.ContainerStatuses[idx]
+		container, containerExists := containerStatuses[spec.Name]
+
+		if status.ContainerID != container.ID {
+			impl.removeSandbox(sandboxId)
+			return fmt.Errorf("found a wrong container id")
+		}
+
+		if status.State == api.ContainerStateTerminated {
+			if container.State != cri.ContainerExited {
+				impl.removeSandbox(sandboxId)
+				return fmt.Errorf("container should be terminated")
+			}
+			continue
+		}
+
+		if !containerExists {
+			status.State = api.ContainerStateUnknown
+		}
+
+		switch container.State {
+		case cri.ContainerCreated:
+			status.State = api.ContainerStateRunning
+		case cri.ContainerRunning:
+			status.State = api.ContainerStateRunning
+		case cri.ContainerExited:
+			status.State = api.ContainerStateTerminated
+		case cri.ContainerUnknown:
+			status.State = api.ContainerStateUnknown
+		}
+
+		delete(containerStatuses, spec.Name)
+	}
+
+	if err = impl.podKvs.Update(pod); err != nil {
+		return err
+	}
+
+	if len(containerStatuses) > 0 {
+		impl.removeSandbox(sandboxId)
+		return fmt.Errorf("found differences in spec of pod between running containers")
+	}
+
+	return nil
 }
 
 func (impl *containerControllerImpl) letTerminate(podUuid string) (bool, error) {
