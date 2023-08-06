@@ -65,23 +65,20 @@ async function reload(): Promise<void> {
 
   // add list items
   for (let proc of procList) {
-    let content = new Map<string, string>();
+    let content = new Map<string, string | clickEventCB>();
     content.set(".appName", proc.name);
     content.set(".appState", proc.state);
     content.set(".appOwnerAccount", proc.owner);
     content.set(".appRunningNode", proc.runningNode);
+    content.set(".appMenuTerminate", () => {
+      command.terminateProcess(proc.uuid);
+    });
 
     if (proc.owner === account && listByAccount != null) {
-      let item = addListItem(listByAccount, temp, content);
-      item.querySelector(".appMenuTerminate")?.addEventListener("click", () => {
-        command.terminateProcess(proc.uuid);
-      });
+      addListItem(listByAccount, temp, content);
     }
     if (proc.runningNode === node && listByNode != null) {
-      let item = addListItem(listByNode, temp, content);
-      item.querySelector(".appMenuTerminate")?.addEventListener("click", () => {
-        command.terminateProcess(proc.uuid);
-      });
+      addListItem(listByNode, temp, content);
     }
   }
 
@@ -97,11 +94,16 @@ async function reload(): Promise<void> {
   processing = false;
 }
 
-function addListItem(list: HTMLElement, temp: HTMLTemplateElement, contents: Map<string, string>): HTMLElement {
+type clickEventCB = () => void;
+
+function addListItem(list: HTMLElement, temp: HTMLTemplateElement, contents: Map<string, string | clickEventCB>): void {
   let item = temp.content.cloneNode(true) as HTMLElement;
   for (const [key, value] of contents) {
-    (item.querySelector(key) as HTMLElement).innerText = value;
+    if (typeof value === "string") {
+      (item.querySelector(key) as HTMLElement).innerText = value;
+    } else {
+      item.querySelector(key)?.addEventListener("click", value);
+    }
   }
   list.append(item);
-  return item;
 }

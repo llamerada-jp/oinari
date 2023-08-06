@@ -31,6 +31,9 @@ type connectResponse struct {
 	Node    string `json:"node"`
 }
 
+type closeRequest struct {
+}
+
 type setPositionRequest struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -50,6 +53,15 @@ func InitSystemHandler(rootMpx crosslink.MultiPlexer, sysCtrl controller.SystemC
 			Account: sysCtrl.GetAccount(),
 			Node:    sysCtrl.GetNode(),
 		})
+	}))
+
+	mpx.SetHandler("disconnect", crosslink.NewFuncHandler(func(param *closeRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+		err := sysCtrl.Disconnect()
+		if err != nil {
+			writer.ReplyError(err.Error())
+			return
+		}
+		writer.ReplySuccess(nil)
 	}))
 
 	mpx.SetHandler("setPosition", crosslink.NewFuncHandler(func(request *setPositionRequest, tags map[string]string, writer crosslink.ResponseWriter) {

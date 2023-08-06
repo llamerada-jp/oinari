@@ -33,8 +33,9 @@ type ContainerController interface {
 }
 
 type reconcileState struct {
-	running   bool
-	sandboxID string
+	running    bool
+	willDelete bool
+	sandboxID  string
 }
 
 type containerControllerImpl struct {
@@ -85,15 +86,13 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUuid stri
 		return nil
 	}
 
-	// set running flg and delete instance if required when end of reconcile
-	deleteFlg := false
 	defer func() {
 		impl.mtx.Lock()
 		defer impl.mtx.Unlock()
 
 		state.running = false
 
-		if deleteFlg || len(state.sandboxID) == 0 {
+		if state.willDelete {
 			delete(impl.reconcileStates, podUuid)
 		}
 	}()
@@ -109,24 +108,31 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUuid stri
 			if err = impl.removeSandbox(state.sandboxID); err != nil {
 				return err
 			}
-			deleteFlg = true
+			state.willDelete = true
 		}
 		return nil
 	}
 
 	// terminate containers if deletion timestamp has set
-	if len(pod.Meta.DeletionTimestamp) != 0 || pod.Status.TargetNode != pod.Status.RunningNode {
+	if len(pod.Meta.DeletionTimestamp) != 0 || (len(pod.Spec.TargetNode) != 0 && pod.Spec.TargetNode != pod.Status.RunningNode) {
 		if len(state.sandboxID) == 0 {
 			return impl.updatePodInfo(state, pod)
 		}
 
-		terminated, err := impl.letTerminate(state.sandboxID)
-		if err != nil {
+		if err := impl.letTerminate(state); err != nil {
 			return err
 		}
 
 		if err = impl.updatePodInfo(state, pod); err != nil {
 			return err
+		}
+
+		terminated := true
+		for _, containerStates := range pod.Status.ContainerStatuses {
+			if containerStates.State.Terminated == nil {
+				terminated = false
+				break
+			}
 		}
 
 		if terminated {
@@ -135,8 +141,9 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUuid stri
 				return err
 			}
 
-			deleteFlg = true
+			state.willDelete = true
 		}
+
 		return nil
 	}
 
@@ -163,6 +170,7 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 			},
 		})
 		if err != nil {
+			state.willDelete = true
 			return err
 		}
 
@@ -269,12 +277,34 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 	return nil
 }
 
-func (impl *containerControllerImpl) letTerminate(sandboxId string) (bool, error) {
+func (impl *containerControllerImpl) letTerminate(state *reconcileState) error {
 	// TODO: send exit signal when any container running
+	containers, err := impl.cri.ListContainers(&cri.ListContainersRequest{
+		Filter: &cri.ContainerFilter{
+			PodSandboxId: state.sandboxID,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, container := range containers.Containers {
+		if container.State == cri.ContainerExited {
+			continue
+		}
+
+		_, err = impl.cri.StopContainer(&cri.StopContainerRequest{
+			ContainerId: container.ID,
+		})
+		if err != nil {
+			log.Printf("failed to stop container :%w", err)
+		}
+	}
 
 	// TODO: skip processing when all container exited
-
 	// TODO: force exit all containers after timeout
+
+	return nil
 }
 
 func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *api.Pod) error {

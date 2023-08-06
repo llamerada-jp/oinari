@@ -37,6 +37,7 @@ type Pod struct {
 
 type PodSpec struct {
 	Containers    []ContainerSpec `json:"containers"`
+	TargetNode    string          `json:"targetNode"`
 	Scheduler     *SchedulerSpec  `json:"scheduler"`
 	EnableMigrate bool            `json:"enableMigrate"`
 }
@@ -108,7 +109,6 @@ type ContainerStatus struct {
 
 type PodStatus struct {
 	RunningNode       string            `json:"runningNode"`
-	TargetNode        string            `json:"targetNode"`
 	ContainerStatuses []ContainerStatus `json:"containerStatuses"`
 }
 
@@ -222,6 +222,10 @@ func (spec *PodSpec) validate() error {
 		}
 	}
 
+	if len(spec.TargetNode) != 0 && ValidateNodeId(spec.TargetNode) != nil {
+		return fmt.Errorf("invalid target node id specified in the pod spec")
+	}
+
 	return nil
 }
 
@@ -229,14 +233,6 @@ func (status *PodStatus) validate(containerNum int) error {
 	// RunningNode and TargetNode field
 	if len(status.RunningNode) != 0 && ValidateNodeId(status.RunningNode) != nil {
 		return fmt.Errorf("invalid running node id specified in the pod status")
-	}
-
-	if len(status.TargetNode) != 0 && ValidateNodeId(status.TargetNode) != nil {
-		return fmt.Errorf("invalid target node id specified in the pod status")
-	}
-
-	if (len(status.RunningNode) == 0) != (len(status.TargetNode) == 0) {
-		return fmt.Errorf("running node and target node should be specified or both should be empty")
 	}
 
 	// ContainerStatuses field

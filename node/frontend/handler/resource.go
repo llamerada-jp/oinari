@@ -36,6 +36,11 @@ type listPodResponse struct {
 	Digests []controller.ApplicationDigest `json:"digests"`
 }
 
+type migratePodRequest struct {
+	Uuid       string `json:"uuid"`
+	TargetNode string `json:"targetNode"`
+}
+
 type deletePodRequest struct {
 	Uuid string `json:"uuid"`
 }
@@ -81,26 +86,40 @@ func InitResourceHandler(rootMpx crosslink.MultiPlexer, accCtrl controller.Accou
 
 			// make pod digest
 			for uuid := range uuids {
-				p, err := podCtrl.GetPodData(uuid)
+				pod, err := podCtrl.GetPodData(uuid)
 				if err != nil {
 					log.Printf("error on get pod info: %s", err.Error())
 					continue
 				}
 				res.Digests = append(res.Digests, controller.ApplicationDigest{
-					Name:        p.Meta.Name,
+					Name:        pod.Meta.Name,
 					Uuid:        uuid,
-					RunningNode: p.Status.RunningNode,
-					Owner:       p.Meta.Owner,
-					State:       "TODO",
+					RunningNode: pod.Status.RunningNode,
+					Owner:       pod.Meta.Owner,
+					State:       podCtrl.GetContainerStateMessage(pod),
 				})
 			}
 
 			writer.ReplySuccess(res)
 		}))
 
+	mpx.SetHandler("migratePod", crosslink.NewFuncHandler(
+		func(param *migratePodRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+			err := podCtrl.Migrate(param.Uuid, param.TargetNode)
+			if err != nil {
+				writer.ReplyError(err.Error())
+				return
+			}
+			writer.ReplySuccess(nil)
+		}))
+
 	mpx.SetHandler("deletePod", crosslink.NewFuncHandler(
 		func(param *deletePodRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-			// TODO
+			err := podCtrl.Delete(param.Uuid)
+			if err != nil {
+				writer.ReplyError(err.Error())
+				return
+			}
 			writer.ReplySuccess(nil)
 		}))
 }

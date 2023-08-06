@@ -81,6 +81,11 @@ async function main(): Promise<void> {
     document.addEventListener("DOMContentLoaded", initUI, false);
   }
 
+  // try to close when close window or tab
+  window.addEventListener('beforeunload', function() {
+    command.disconnect();
+  });
+
   // connect
   let acTmp = Math.random().toString(32).substring(2);
   let info = await command.connect("https://localhost:8080/seed", "account-" + acTmp, "");

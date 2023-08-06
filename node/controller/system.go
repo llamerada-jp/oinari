@@ -32,6 +32,7 @@ type EventHandler interface {
 type SystemController interface {
 	Start(ctx context.Context) error
 	Connect(url, account, token string) error
+	Disconnect() error
 
 	GetAccount() string
 	GetNode() string
@@ -83,6 +84,15 @@ func (impl *systemControllerImpl) Connect(url, account, token string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (impl *systemControllerImpl) Disconnect() error {
+	err := impl.colonio.Disconnect()
+	if err != nil {
+		return err
+	}
+	impl.account = ""
 	return nil
 }
 

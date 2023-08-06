@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/kvs"
@@ -39,6 +40,7 @@ type PodController interface {
 
 	Create(name, owner, creatorNode string, spec *api.PodSpec) (*ApplicationDigest, error)
 	GetPodData(uuid string) (*api.Pod, error)
+	GetContainerStateMessage(pod *api.Pod) string
 	Migrate(uuid string, targetNodeID string) error
 	Delete(uuid string) error
 	Cleanup(uuid string) error
@@ -87,7 +89,7 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) error {
 		return impl.schedulePod(pod)
 	}
 
-	if pod.Status.RunningNode == pod.Status.TargetNode {
+	if pod.Status.RunningNode == pod.Spec.TargetNode {
 		if impl.checkContainerStateTerminated(pod) || impl.checkContainerStateUnknown(pod) {
 			// TODO restart pod by the restart policy
 			return nil
@@ -95,7 +97,7 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) error {
 
 	} else {
 		if impl.checkContainerStateTerminated(pod) {
-			pod.Status.RunningNode = pod.Status.TargetNode
+			pod.Status.RunningNode = pod.Spec.TargetNode
 			for _, containerStatus := range pod.Status.ContainerStatuses {
 				containerStatus.ContainerID = ""
 				containerStatus.Image = ""
@@ -113,7 +115,7 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) error {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			containerStatus.State.Unknown = &api.ContainerStateUnknown{
 				Timestamp: misc.GetTimestamp(),
-				Reason:    fmt.Sprintf("failed to call reconciliation to %s: %w", pod.Status.RunningNode, err),
+				Reason:    fmt.Sprintf("failed to call reconciliation to %s: %s", pod.Status.RunningNode, err.Error()),
 			}
 		}
 		return impl.podKvs.Update(pod)
@@ -151,11 +153,18 @@ func (impl *podControllerImpl) Create(name, owner, creatorNode string, spec *api
 		Name:  name,
 		Uuid:  pod.Meta.Uuid,
 		Owner: pod.Meta.Owner,
-		State: impl.getContainerStateMessage(pod),
+		State: impl.GetContainerStateMessage(pod),
 	}, nil
 }
 
 func (impl *podControllerImpl) setDefaultPodSpec(spec *api.PodSpec) *api.PodSpec {
+	for idx := range spec.Containers {
+		container := &spec.Containers[idx]
+		if len(container.RestartPolicy) == 0 {
+			container.RestartPolicy = api.RestartPolicyDisable
+		}
+	}
+
 	if spec.Scheduler == nil {
 		spec.Scheduler = &api.SchedulerSpec{
 			Type: "creator",
@@ -171,8 +180,8 @@ func (impl *podControllerImpl) schedulePod(pod *api.Pod) error {
 
 	switch pod.Spec.Scheduler.Type {
 	case "creator":
+		pod.Spec.TargetNode = pod.Meta.CreatorNode
 		pod.Status.RunningNode = pod.Meta.CreatorNode
-		pod.Status.TargetNode = pod.Meta.CreatorNode
 		return impl.podKvs.Update(pod)
 
 	default:
@@ -180,7 +189,7 @@ func (impl *podControllerImpl) schedulePod(pod *api.Pod) error {
 	}
 }
 
-func (impl *podControllerImpl) getContainerStateMessage(pod *api.Pod) string {
+func (impl *podControllerImpl) GetContainerStateMessage(pod *api.Pod) string {
 	waiting := 0
 	running := 0
 	terminated := 0
@@ -219,30 +228,36 @@ func (impl *podControllerImpl) Migrate(uuid string, targetNodeID string) error {
 	}
 
 	if len(pod.Status.RunningNode) == 0 {
+		pod.Spec.TargetNode = targetNodeID
 		pod.Status.RunningNode = targetNodeID
-		pod.Status.TargetNode = targetNodeID
 
 	} else {
 		// TODO check if migration is accepted
 
-		pod.Status.TargetNode = targetNodeID
+		pod.Spec.TargetNode = targetNodeID
 	}
 
 	return impl.podKvs.Update(pod)
 }
 
 func (impl *podControllerImpl) Delete(uuid string) error {
-	pod, err := impl.podKvs.Get(uuid)
-	if err != nil {
-		return err
-	}
+	// making loop because colonio does not have lock feature yet.
+	for {
+		pod, err := impl.podKvs.Get(uuid)
+		if err != nil {
+			return nil
+		}
 
-	if len(pod.Meta.DeletionTimestamp) != 0 {
-		pod.Meta.DeletionTimestamp = misc.GetTimestamp()
-		return impl.podKvs.Update(pod)
-	}
+		if len(pod.Meta.DeletionTimestamp) == 0 {
+			pod.Meta.DeletionTimestamp = misc.GetTimestamp()
+			err = impl.podKvs.Update(pod)
+			if err != nil {
+				return err
+			}
+		}
 
-	return nil
+		time.Sleep(3 * time.Second)
+	}
 }
 
 func (impl *podControllerImpl) Cleanup(uuid string) error {

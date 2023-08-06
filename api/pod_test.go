@@ -72,7 +72,6 @@ func TestValidatePod(t *testing.T) {
 
 	validStatus := &PodStatus{
 		RunningNode: "01234567890123456789012345abcdef",
-		TargetNode:  "01234567890123456789012345abcdef",
 		ContainerStatuses: []ContainerStatus{
 			{
 				ContainerID: "dummy",
@@ -294,14 +293,12 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		{
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{},
 			},
 		},
 		{
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{
 					ContainerID: "container1",
@@ -316,7 +313,6 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		{
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdee",
 			ContainerStatuses: []ContainerStatus{
 				{
 					ContainerID: "container1",
@@ -339,11 +335,9 @@ func TestValidatePodStatus(t *testing.T) {
 	for title, status := range map[string]*PodStatus{
 		"container state is not specified": {
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 		},
 		"invalid node id": {
 			RunningNode: "no no no",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{},
 			},
@@ -356,7 +350,6 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		"invalid container id field": {
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{
 					// ContainerID: "container1",
@@ -371,7 +364,6 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		"invalid image field": {
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{
 					ContainerID: "container1",
@@ -386,7 +378,6 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		"invalid running field": {
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{
 					ContainerID: "container1",
@@ -397,7 +388,6 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		"invalid startedAt field": {
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{
 					ContainerID: "container1",
@@ -412,7 +402,6 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		"running should be set if terminated is set": {
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{
 					ContainerID: "container1",
@@ -428,7 +417,6 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		"finishedAt required when terminated is set": {
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{
 					ContainerID: "container1",
@@ -446,7 +434,6 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		"timestamp required when unknown is set": {
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{
 					ContainerID: "container1",
@@ -465,7 +452,6 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		"reason required when unknown is set": {
 			RunningNode: "01234567890123456789012345abcdef",
-			TargetNode:  "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{
 					ContainerID: "container1",

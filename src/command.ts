@@ -92,6 +92,10 @@ export class Commands {
     }) as Promise<ConnectInfo>;
   }
 
+  disconnect(): Promise<any> {
+    return this.cl.call(CL_SYSTEM_PATH + "/disconnect", {});
+  }
+
   setPosition(lat: number, lon: number): Promise<any> {
     return this.cl.call(CL_SYSTEM_PATH + "/setPosition", {
       latitude: lat,
