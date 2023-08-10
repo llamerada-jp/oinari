@@ -139,7 +139,7 @@ func (impl *podControllerImpl) Create(name, owner, creatorNode string, spec *api
 		},
 	}
 
-	for _ = range pod.Spec.Containers {
+	for range pod.Spec.Containers {
 		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, api.ContainerStatus{})
 	}
 
@@ -256,7 +256,7 @@ func (impl *podControllerImpl) Delete(uuid string) error {
 			}
 		}
 
-		time.Sleep(3 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 }
 

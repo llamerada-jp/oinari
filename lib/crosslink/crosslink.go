@@ -115,7 +115,7 @@ func (cl *crosslinkImpl) serve(id uint32, dtaRaw, tagRaw []byte) {
 		id:         id,
 	}
 
-	cl.handler.Serve(dtaRaw, tags, rw)
+	go cl.handler.Serve(dtaRaw, tags, rw)
 }
 
 func (cl *crosslinkImpl) replyFromJs(id uint32, responseRaw []byte, message string) {
@@ -126,10 +126,10 @@ func (cl *crosslinkImpl) replyFromJs(id uint32, responseRaw []byte, message stri
 	defer delete(cl.cbMap, id)
 
 	if message != "" {
-		cb(nil, errors.New(message))
+		go cb(nil, errors.New(message))
 		return
 	}
-	cb(responseRaw, nil)
+	go cb(responseRaw, nil)
 }
 
 func (rw *rwImpl) ReplySuccess(response any) {

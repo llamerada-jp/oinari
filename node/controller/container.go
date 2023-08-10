@@ -253,7 +253,7 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 				},
 			})
 			if err != nil {
-				log.Printf("failed to create container: %w", err)
+				log.Printf("failed to create container: %s", err.Error())
 				continue
 			}
 
@@ -268,7 +268,7 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 				ContainerId: res.ContainerId,
 			})
 			if err != nil {
-				log.Printf("failed to start container: %w", err)
+				log.Printf("failed to start container: %s", err.Error())
 				continue
 			}
 		}
@@ -297,7 +297,7 @@ func (impl *containerControllerImpl) letTerminate(state *reconcileState) error {
 			ContainerId: container.ID,
 		})
 		if err != nil {
-			log.Printf("failed to stop container :%w", err)
+			log.Printf("failed to stop container :%s", err.Error())
 		}
 	}
 
@@ -407,7 +407,7 @@ func (impl *containerControllerImpl) removeSandbox(sandboxId string) error {
 			ContainerId: container.ID,
 		})
 		if err != nil {
-			log.Printf("failed to remove container: %w", err)
+			log.Printf("failed to remove container: %s", err.Error())
 		}
 	}
 

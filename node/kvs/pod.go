@@ -42,13 +42,13 @@ func NewPodKvs(col colonio.Colonio) PodKvs {
 
 func (impl *podKvsImpl) Create(pod *api.Pod) error {
 	if err := pod.Validate(true); err != nil {
-		return err
+		return fmt.Errorf("failed to create pod data: %w", err)
 	}
 
 	key := string(api.ResourceTypePod) + "/" + pod.Meta.Uuid
 	raw, err := json.Marshal(pod)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create pod data: %w", err)
 	}
 
 	return impl.col.KvsSet(key, raw, colonio.KvsProhibitOverwrite)
@@ -56,13 +56,13 @@ func (impl *podKvsImpl) Create(pod *api.Pod) error {
 
 func (impl *podKvsImpl) Update(pod *api.Pod) error {
 	if err := pod.Validate(true); err != nil {
-		return err
+		return fmt.Errorf("failed to update pod data: %w", err)
 	}
 
 	key := string(api.ResourceTypePod) + "/" + pod.Meta.Uuid
 	raw, err := json.Marshal(pod)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update pod data: %w", err)
 	}
 
 	return impl.col.KvsSet(key, raw, 0)
@@ -73,7 +73,7 @@ func (impl *podKvsImpl) Get(uuid string) (*api.Pod, error) {
 	key := string(api.ResourceTypePod) + "/" + uuid
 	val, err := impl.col.KvsGet(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get pod data: %w", err)
 	}
 
 	if val.IsNil() {
@@ -82,7 +82,7 @@ func (impl *podKvsImpl) Get(uuid string) (*api.Pod, error) {
 
 	raw, err := val.GetBinary()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get pod data: %w", err)
 	}
 
 	pod := &api.Pod{}
@@ -98,5 +98,8 @@ func (impl *podKvsImpl) Get(uuid string) (*api.Pod, error) {
 func (impl *podKvsImpl) Delete(uuid string) error {
 	key := string(api.ResourceTypePod) + "/" + uuid
 	// TODO check record before set nil for the record
-	return impl.col.KvsSet(key, nil, 0)
+	if err := impl.col.KvsSet(key, nil, 0); err != nil {
+		return fmt.Errorf("failed to delete pod data: %w", err)
+	}
+	return nil
 }

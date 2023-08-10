@@ -62,9 +62,10 @@ func TestValidatePod(t *testing.T) {
 	validSpec := &PodSpec{
 		Containers: []ContainerSpec{
 			{
-				Name:    "test",
-				Image:   "http://localhost/dummy.wasm",
-				Runtime: []string{"go:1.20"},
+				Name:          "test",
+				Image:         "http://localhost/dummy.wasm",
+				Runtime:       []string{"go:1.20"},
+				RestartPolicy: RestartPolicyAlways,
 			},
 		},
 	}
@@ -76,7 +77,11 @@ func TestValidatePod(t *testing.T) {
 			{
 				ContainerID: "dummy",
 				Image:       "http://localhost/dummy.wasm",
-				State:       ContainerState{},
+				State: ContainerState{
+					Running: &ContainerStateRunning{
+						StartedAt: misc.GetTimestamp(),
+					},
+				},
 			},
 		},
 	}
@@ -141,6 +146,20 @@ func TestValidatePod(t *testing.T) {
 				Spec: validSpec,
 			},
 		},
+		"empty uuid": {
+			mustStatus: false,
+			pod: &Pod{
+				Meta: &ObjectMeta{
+					Type:              ResourceTypePod,
+					Name:              "name",
+					Owner:             "owner",
+					CreatorNode:       "01234567890123456789012345678901",
+					Uuid:              "",
+					DeletionTimestamp: "",
+				},
+				Spec: validSpec,
+			},
+		},
 		"invalid meta": {
 			mustStatus: false,
 			pod: &Pod{
@@ -189,20 +208,23 @@ func TestValidatePodSpec(t *testing.T) {
 							Value: "val",
 						},
 					},
+					RestartPolicy: RestartPolicyAlways,
 				},
 			},
 		},
 		"multi container": {
 			Containers: []ContainerSpec{
 				{
-					Name:    "c1",
-					Image:   "http://localhost/test1.wasm",
-					Runtime: []string{"go:1.20"},
+					Name:          "c1",
+					Image:         "http://localhost/test1.wasm",
+					Runtime:       []string{"go:1.20"},
+					RestartPolicy: RestartPolicyAlways,
 				},
 				{
-					Name:    "c2",
-					Image:   "http://localhost/test2.wasm",
-					Runtime: []string{"go:1.19"},
+					Name:          "c2",
+					Image:         "http://localhost/test2.wasm",
+					Runtime:       []string{"go:1.19"},
+					RestartPolicy: RestartPolicyOnce,
 				},
 			},
 		},
@@ -220,22 +242,25 @@ func TestValidatePodSpec(t *testing.T) {
 			Containers: []ContainerSpec{
 				{
 					// Name:    "test",
-					Image:   "http://localhost/test.wasm",
-					Runtime: []string{"go:1.20"},
+					Image:         "http://localhost/test.wasm",
+					Runtime:       []string{"go:1.20"},
+					RestartPolicy: RestartPolicyAlways,
 				},
 			},
 		},
 		"duplicate container name": {
 			Containers: []ContainerSpec{
 				{
-					Name:    "test",
-					Image:   "http://localhost/test1.wasm",
-					Runtime: []string{"go:1.20"},
+					Name:          "test",
+					Image:         "http://localhost/test1.wasm",
+					Runtime:       []string{"go:1.20"},
+					RestartPolicy: RestartPolicyAlways,
 				},
 				{
-					Name:    "test",
-					Image:   "http://localhost/test2.wasm",
-					Runtime: []string{"go:1.19"},
+					Name:          "test",
+					Image:         "http://localhost/test2.wasm",
+					Runtime:       []string{"go:1.19"},
+					RestartPolicy: RestartPolicyAlways,
 				},
 			},
 		},
@@ -244,16 +269,28 @@ func TestValidatePodSpec(t *testing.T) {
 				{
 					Name: "test",
 					// Image:   "http://localhost/test.wasm",
+					Runtime:       []string{"go:1.20"},
+					RestartPolicy: RestartPolicyAlways,
+				},
+			},
+		},
+		"no restart policy": {
+			Containers: []ContainerSpec{
+				{
+					Name:    "test",
+					Image:   "http://localhost/test.wasm",
 					Runtime: []string{"go:1.20"},
+					//RestartPolicy: RestartPolicyAlways,
 				},
 			},
 		},
 		"invalid runtime": {
 			Containers: []ContainerSpec{
 				{
-					Name:    "test",
-					Image:   "http://localhost/test.wasm",
-					Runtime: []string{"??"},
+					Name:          "test",
+					Image:         "http://localhost/test.wasm",
+					Runtime:       []string{"??"},
+					RestartPolicy: RestartPolicyAlways,
 				},
 			},
 		},
@@ -274,6 +311,7 @@ func TestValidatePodSpec(t *testing.T) {
 							Value: "val2",
 						},
 					},
+					RestartPolicy: RestartPolicyAlways,
 				},
 			},
 		},
@@ -338,12 +376,6 @@ func TestValidatePodStatus(t *testing.T) {
 		},
 		"invalid node id": {
 			RunningNode: "no no no",
-			ContainerStatuses: []ContainerStatus{
-				{},
-			},
-		},
-		"only running node specified": {
-			RunningNode: "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{
 				{},
 			},

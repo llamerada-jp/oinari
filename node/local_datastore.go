@@ -54,6 +54,10 @@ func (ld *localDatastore) GetResources() ([]LocalResource, error) {
 		if err != nil {
 			return nil, err
 		}
+		// skip nil value. it is workaround because colonio is not provide feature to delete kvs entry.
+		if v.IsNil() {
+			continue
+		}
 		raw, err := v.GetBinary()
 		if err != nil {
 			return nil, err
