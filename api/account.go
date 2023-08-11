@@ -38,8 +38,24 @@ type AccountPodState struct {
 	Timestamp   string `json:"timestamp"`
 }
 
+type NodeType string
+
+const (
+	NodeTypeMobile      NodeType = "Mobile"
+	NodeTypeSmallDevice NodeType = "SmallDevice"
+	NodeTypePC          NodeType = "PC"
+	NodeTypeServer      NodeType = "Server"
+	NodeTypeGrass       NodeType = "Grass"
+	NodeTypeOther       NodeType = "Other"
+)
+
 type AccountNodeState struct {
-	Timestamp string `json:"timestamp"`
+	Name      string   `json:"name"`
+	Timestamp string   `json:"timestamp"`
+	NodeType  NodeType `json:"nodeType"`
+	Latitude  float64  `json:"latitude"`
+	Longitude float64  `json:"longitude"`
+	Altitude  float64  `json:"altitude"`
 }
 
 // use sha256 hash as account's uuid

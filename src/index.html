@@ -135,10 +135,42 @@
                     aria-expanded="false"></button>
                   <ul class="dropdown-menu">
                     <li><a class="dropdown-item appMenuTerminate" href="#">Terminate</a></li>
+                    <li><a class="dropdown-item appMenuMigrate" href="#">Migrate</a></li>
                   </ul>
                 </div>
               </div>
             </div>
+          </template>
+        </div><!-- End of modal-body -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for migrate -->
+  <div class="modal fade" id="modalMigrate" tabindex="-1" aria-labelledby="modalMigrateLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header" role="tablist">
+          <h1 class="modal-title fs-5">Running processes</h1>
+          <div>
+            <button type="button" class="btn" id="migrateRefresh"><i class="bi-arrow-repeat"></i></button>
+            <button type="button" class="btn btn-close" id="migrateClose" data-bs-dismiss="modal"
+              aria-label="Close"></button>
+          </div>
+        </div><!-- End of modal-header -->
+
+        <div class="modal-body">
+          <div class="container d-flex justify-content-center" id="migrateListSpinner">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <div class="list-group" id="migrateList">
+          </div>
+          <template id="migrateListItem">
+            <h6 class="fw-bold nodeName"></h6>&nbsp;
+            <small class="opacity-75 nodeID"></small>
+            <small class="opacity-75 nodeInfo"></small>
           </template>
         </div><!-- End of modal-body -->
       </div>

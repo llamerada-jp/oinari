@@ -19,6 +19,7 @@ import * as CM from "./command";
 import * as WB from "./webrtc_bypass_handler";
 import * as CRI from "./cri";
 import * as UI_AL from "./ui/app_loader";
+import * as UI_MI from "./ui/migrate";
 import * as UI_PL from "./ui/proc_list";
 import * as UI_SI from "./ui/system_info";
 
@@ -66,6 +67,7 @@ async function initController(): Promise<void> {
 
 function initUI() {
   UI_AL.init(command);
+  UI_MI.init(command);
   UI_PL.init(command);
 }
 

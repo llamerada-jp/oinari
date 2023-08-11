@@ -15,6 +15,8 @@
  */
 
 import * as CM from "../command";
+import * as MI from "./migrate";
+import * as Util from "./util";
 
 let command: CM.Commands;
 let processing: boolean = false;
@@ -54,18 +56,15 @@ async function reload(): Promise<void> {
 
   // make list empty
   for (let list of [listByAccount, listByNode]) {
-    list?.classList.add("d-none");
-    while (list?.firstChild) {
-      list.removeChild(list.firstChild);
-    }
+    Util.makeListEmptyHide(list);
   }
 
   // get process list
-  let procList = await command.listProcess()
+  let procList = await command.listProcess();
 
   // add list items
   for (let proc of procList) {
-    let content = new Map<string, string | clickEventCB>();
+    let content = new Map<string, string | Util.clickEventCB>();
     content.set(".appName", proc.name);
     content.set(".appState", proc.state);
     content.set(".appOwnerAccount", proc.owner);
@@ -73,12 +72,15 @@ async function reload(): Promise<void> {
     content.set(".appMenuTerminate", () => {
       command.terminateProcess(proc.uuid);
     });
+    content.set(".appMenuMigrate", () => {
+      MI.showMigrateModal(proc.uuid);
+    });
 
     if (proc.owner === account && listByAccount != null) {
-      addListItem(listByAccount, temp, content);
+      Util.addListItem(listByAccount, temp, content);
     }
     if (proc.runningNode === node && listByNode != null) {
-      addListItem(listByNode, temp, content);
+      Util.addListItem(listByNode, temp, content);
     }
   }
 
@@ -88,22 +90,8 @@ async function reload(): Promise<void> {
     spinner?.classList.add("d-none");
   }
   for (let list of [listByAccount, listByNode]) {
-    list?.classList.remove("d-none");
+    Util.makeListShow(list);
   }
 
   processing = false;
-}
-
-type clickEventCB = () => void;
-
-function addListItem(list: HTMLElement, temp: HTMLTemplateElement, contents: Map<string, string | clickEventCB>): void {
-  let item = temp.content.cloneNode(true) as HTMLElement;
-  for (const [key, value] of contents) {
-    if (typeof value === "string") {
-      (item.querySelector(key) as HTMLElement).innerText = value;
-    } else {
-      item.querySelector(key)?.addEventListener("click", value);
-    }
-  }
-  list.append(item);
 }
