@@ -17,26 +17,25 @@ package controller
 
 import (
 	"context"
-	"math"
-	"math/rand"
-	"time"
+	"fmt"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
+	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/frontend/driver"
+	"golang.org/x/exp/slices"
 )
 
 type EventHandler interface {
-	OnConnect() error
+	OnConnect(nodeName string, nodeType api.NodeType) error
 }
 
 type SystemController interface {
 	Start(ctx context.Context) error
-	Connect(url, account, token string) error
+	Connect(url, account, token, nodeName, nodeType string) error
 	Disconnect() error
 
 	GetAccount() string
 	GetNode() string
-	SetPosition(latitude, longitude float64) error
 }
 
 type systemControllerImpl struct {
@@ -44,10 +43,6 @@ type systemControllerImpl struct {
 	evh            EventHandler
 	frontendDriver driver.FrontendDriver
 	account        string
-}
-
-func init() {
-	rand.Seed(time.Now().UnixMicro())
 }
 
 func NewSystemController(col colonio.Colonio, evh EventHandler, frontendDriver driver.FrontendDriver) SystemController {
@@ -71,15 +66,19 @@ func (impl *systemControllerImpl) GetNode() string {
 	return impl.colonio.GetLocalNid()
 }
 
-func (impl *systemControllerImpl) Connect(url, account, token string) error {
+func (impl *systemControllerImpl) Connect(url, account, token, nodeName, nodeType string) error {
+	if !slices.Contains(api.NodeTypeAccepted, api.NodeType(nodeType)) {
+		return fmt.Errorf("unsupported node type specified")
+	}
+
 	err := impl.colonio.Connect(url, token)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to colonio.Connect: %w", err)
 	}
 
 	impl.account = account
 
-	err = impl.evh.OnConnect()
+	err = impl.evh.OnConnect(nodeName, api.NodeType(nodeType))
 	if err != nil {
 		return err
 	}
@@ -94,10 +93,4 @@ func (impl *systemControllerImpl) Disconnect() error {
 	}
 	impl.account = ""
 	return nil
-}
-
-func (impl *systemControllerImpl) SetPosition(latitude, longitude float64) error {
-	// convert L/L to radian
-	_, _, err := impl.colonio.SetPosition(longitude*math.Pi/180.0, latitude*math.Pi/180.0)
-	return err
 }

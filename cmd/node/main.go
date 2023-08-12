@@ -17,10 +17,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
+	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node"
 	"github.com/llamerada-jp/oinari/node/controller"
@@ -106,38 +106,40 @@ func (na *nodeAgent) execute() error {
 }
 
 // implement system events
-func (na *nodeAgent) OnConnect() error {
+func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	ctx := context.Background()
 
-	// node controller
+	account := na.sysCtrl.GetAccount()
 	localNid := na.col.GetLocalNid()
-	nodeCtrl := controller.NewNodeController(localNid)
 
-	// account controller
-	accountKvs := kvs.NewAccountKvs(na.col)
-	accountCtrl := controller.NewAccountController(ctx, na.sysCtrl.GetAccount(), nodeCtrl.GetNid(), accountKvs)
-
-	// pod controller
-	podKvs := kvs.NewPodKvs(na.col)
-	podMsg := md.NewMessagingDriver(na.col)
-	podCtrl := controller.NewPodController(podKvs, podMsg, localNid)
-
-	// container controller
+	// CRI
 	cri := cri.NewCRI(na.cl)
+
+	// messaging
+	messaging := md.NewMessagingDriver(na.col)
+
+	// KVS
+	accountKvs := kvs.NewAccountKvs(na.col)
+	podKvs := kvs.NewPodKvs(na.col)
+
+	// controllers
+	accountCtrl := controller.NewAccountController(ctx, account, localNid, accountKvs)
 	containerCtrl := controller.NewContainerController(localNid, cri, podKvs)
+	nodeCtrl := controller.NewNodeController(ctx, na.col, messaging, account, nodeName, nodeType)
+	podCtrl := controller.NewPodController(podKvs, messaging, localNid)
 
 	// manager
-	ld := node.NewLocalDatastore(na.col)
-	nodeMgr := node.NewManager(ld, podCtrl)
+	localDs := node.NewLocalDatastore(na.col)
+	manager := node.NewManager(localDs, accountCtrl, podCtrl)
 	go func() {
-		err := nodeMgr.Start(na.ctx)
+		err := manager.Start(na.ctx)
 		if err != nil {
 			log.Fatalln(err)
 		}
 	}()
 
 	// handlers
-	mh.InitMessagingHandler(containerCtrl, na.col)
+	mh.InitMessagingHandler(na.col, containerCtrl, nodeCtrl)
 	fh.InitResourceHandler(na.rootMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
 
 	return nil
@@ -147,6 +149,6 @@ func main() {
 	na := &nodeAgent{}
 	err := na.execute()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }

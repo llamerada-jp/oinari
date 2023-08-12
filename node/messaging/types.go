@@ -15,6 +15,23 @@
  */
 package messaging
 
+import "github.com/llamerada-jp/oinari/api"
+
+const (
+	MessageNameReconcileContainer = "reconcileContainer"
+	MessageNamePublishNode        = "publishNode"
+)
+
 type VitalizePod struct {
 	PodUuid string `json:"podUuid"`
+}
+
+type PublishNode struct {
+	Name      string       `json:"name"`
+	ID        string       `json:"id"`
+	Account   string       `json:"account"`
+	NodeType  api.NodeType `json:"nodeType"`
+	Latitude  float64      `json:"latitude"`
+	Longitude float64      `json:"longitude"`
+	Altitude  float64      `json:"altitude"`
 }

@@ -17,12 +17,15 @@ package driver
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
+	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/messaging"
 )
 
 type MessagingDriver interface {
+	PublishNode(r float64, nid, name, account string, nodeType api.NodeType, latitude, longitude, altitude float64) error
 	ReconcileContainer(nid, uuid string) error
 }
 
@@ -41,11 +44,35 @@ func (d *messagingDriverImpl) ReconcileContainer(nid, podUuid string) error {
 		PodUuid: podUuid,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal reconcileContainer message: %w", err)
 	}
-	_, err = d.colonio.MessagingPost(nid, "reconcileContainer", raw, 0)
+
+	_, err = d.colonio.MessagingPost(nid, messaging.MessageNameReconcileContainer, raw, 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to post reconcileContainer message: %w", err)
 	}
+
+	return nil
+}
+
+func (d *messagingDriverImpl) PublishNode(r float64, nid, name, account string, nodeType api.NodeType, latitude, longitude, altitude float64) error {
+	raw, err := json.Marshal(messaging.PublishNode{
+		Name:      name,
+		ID:        nid,
+		Account:   account,
+		NodeType:  nodeType,
+		Latitude:  latitude,
+		Longitude: longitude,
+		Altitude:  altitude,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal publishNode message: %w", err)
+	}
+
+	err = d.colonio.SpreadPost(latitude, longitude, r, messaging.MessageNamePublishNode, raw, 0)
+	if err != nil {
+		return fmt.Errorf("failed to spread publishNode message: %w", err)
+	}
+
 	return nil
 }

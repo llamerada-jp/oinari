@@ -23,6 +23,20 @@ import (
 	"github.com/llamerada-jp/oinari/node/controller"
 )
 
+type setPositionRequest struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Altitude  float64 `json:"altitude"`
+}
+
+type SetPublicityRequest struct {
+	Range float64 `json:"range"`
+}
+
+type ListNodeResponse struct {
+	Nodes []controller.NodeState `json:"nodes"`
+}
+
 type createPodRequest struct {
 	Name string       `json:"name"`
 	Spec *api.PodSpec `json:"spec"`
@@ -49,6 +63,65 @@ func InitResourceHandler(rootMpx crosslink.MultiPlexer, accCtrl controller.Accou
 	mpx := crosslink.NewMultiPlexer()
 	rootMpx.SetHandler("resource", mpx)
 
+	// node resource
+	mpx.SetHandler("setPosition", crosslink.NewFuncHandler(func(request *setPositionRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+		err := nodeCtrl.SetPosition(request.Latitude, request.Longitude, request.Altitude)
+		if err != nil {
+			writer.ReplyError(err.Error())
+			return
+		}
+		writer.ReplySuccess(nil)
+	}))
+
+	mpx.SetHandler("setPublicity", crosslink.NewFuncHandler(func(request *SetPublicityRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+		err := nodeCtrl.SetPublicity(request.Range)
+		if err != nil {
+			writer.ReplyError(err.Error())
+			return
+		}
+		writer.ReplySuccess(nil)
+	}))
+
+	mpx.SetHandler("listNode", crosslink.NewFuncHandler(func(request *interface{}, tags map[string]string, writer crosslink.ResponseWriter) {
+		nodes, err := nodeCtrl.ListNode()
+		if err != nil {
+			writer.ReplyError(err.Error())
+		}
+
+		ids := make(map[string]bool)
+		for _, node := range nodes {
+			ids[node.ID] = true
+		}
+
+		nodeState, err := accCtrl.GetNodeState()
+		if err != nil {
+			writer.ReplyError(err.Error())
+		}
+		account := accCtrl.GetAccountName()
+		for nodeID, state := range nodeState {
+			// skip duplicate node
+			if ids[nodeID] == true {
+				continue
+			}
+			nodes = append(nodes, controller.NodeState{
+				Name:      state.Name,
+				ID:        nodeID,
+				Account:   account,
+				NodeType:  state.NodeType,
+				Latitude:  state.Latitude,
+				Longitude: state.Longitude,
+				Altitude:  state.Altitude,
+			})
+		}
+
+		res := ListNodeResponse{
+			Nodes: nodes,
+		}
+
+		writer.ReplySuccess(res)
+	}))
+
+	// pod resource
 	mpx.SetHandler("createPod", crosslink.NewFuncHandler(
 		func(request *createPodRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 			digest, err := podCtrl.Create(request.Name, accCtrl.GetAccountName(), nodeCtrl.GetNid(), request.Spec)
@@ -70,7 +143,7 @@ func InitResourceHandler(rootMpx crosslink.MultiPlexer, accCtrl controller.Accou
 			uuids := make(map[string]any, 0)
 
 			// get pod uuids bound for the account
-			podState, err := accCtrl.GetAccountPodState()
+			podState, err := accCtrl.GetPodState()
 			if err != nil {
 				writer.ReplyError(err.Error())
 				return

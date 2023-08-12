@@ -21,9 +21,11 @@ import (
 )
 
 type connectRequest struct {
-	Url     string `json:"url"`
-	Account string `json:"account"`
-	Token   string `json:"token"`
+	Url      string `json:"url"`
+	Account  string `json:"account"`
+	Token    string `json:"token"`
+	NodeName string `json:"nodeName"`
+	NodeType string `json:"nodeType"`
 }
 
 type connectResponse struct {
@@ -34,17 +36,12 @@ type connectResponse struct {
 type closeRequest struct {
 }
 
-type setPositionRequest struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
 func InitSystemHandler(rootMpx crosslink.MultiPlexer, sysCtrl controller.SystemController) error {
 	mpx := crosslink.NewMultiPlexer()
 	rootMpx.SetHandler("system", mpx)
 
 	mpx.SetHandler("connect", crosslink.NewFuncHandler(func(request *connectRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		err := sysCtrl.Connect(request.Url, request.Account, request.Token)
+		err := sysCtrl.Connect(request.Url, request.Account, request.Token, request.NodeName, request.NodeType)
 		if err != nil {
 			writer.ReplyError(err.Error())
 			return
@@ -57,15 +54,6 @@ func InitSystemHandler(rootMpx crosslink.MultiPlexer, sysCtrl controller.SystemC
 
 	mpx.SetHandler("disconnect", crosslink.NewFuncHandler(func(param *closeRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		err := sysCtrl.Disconnect()
-		if err != nil {
-			writer.ReplyError(err.Error())
-			return
-		}
-		writer.ReplySuccess(nil)
-	}))
-
-	mpx.SetHandler("setPosition", crosslink.NewFuncHandler(func(request *setPositionRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		err := sysCtrl.SetPosition(request.Latitude, request.Longitude)
 		if err != nil {
 			writer.ReplyError(err.Error())
 			return

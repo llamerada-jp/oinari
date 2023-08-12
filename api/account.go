@@ -19,6 +19,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+
+	"golang.org/x/exp/slices"
 )
 
 type Account struct {
@@ -48,6 +50,15 @@ const (
 	NodeTypeGrass       NodeType = "Grass"
 	NodeTypeOther       NodeType = "Other"
 )
+
+var NodeTypeAccepted = []NodeType{
+	NodeTypeMobile,
+	NodeTypeSmallDevice,
+	NodeTypePC,
+	NodeTypeServer,
+	NodeTypeGrass,
+	NodeTypeOther,
+}
 
 type AccountNodeState struct {
 	Name      string   `json:"name"`
@@ -114,6 +125,9 @@ func (state *AccountState) validate() error {
 		}
 		if err := ValidateTimestamp(nodeState.Timestamp); err != nil {
 			return fmt.Errorf("there is an invalid timestamp for nodes: %w", err)
+		}
+		if !slices.Contains(NodeTypeAccepted, nodeState.NodeType) {
+			return fmt.Errorf("there is an unsupported node type in the node state")
 		}
 	}
 

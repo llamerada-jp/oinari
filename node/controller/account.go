@@ -17,6 +17,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -25,15 +26,16 @@ import (
 	"github.com/llamerada-jp/oinari/node/misc"
 )
 
-const KEEP_ALIVE_INTERVAL = 30 * time.Second
-const RESOURCE_KEEP_ALIVE_THRESHOLD = KEEP_ALIVE_INTERVAL * 6
-const ACCOUNT_DELETION_THRESHOLD = KEEP_ALIVE_INTERVAL * 60
+const ACCOUNT_STATE_RESOURCE_LIFETIME = 180 * time.Second
+const ACCOUNT_LIFETIME = 600 * time.Second
 
 type AccountController interface {
+	DealLocalResource(raw []byte) error
+
 	GetAccountName() string
-	GetAccountPodState() (map[string]api.AccountPodState, error)
-	Cleanup(account *api.Account) error
-	KeepAlivePods(pods []*api.Pod) error
+	GetPodState() (map[string]api.AccountPodState, error)
+	GetNodeState() (map[string]api.AccountNodeState, error)
+	UpdateLocalState(pods map[string]api.AccountPodState, nodeID string, nodeState api.AccountNodeState) error
 }
 
 type accountControllerImpl struct {
@@ -56,41 +58,26 @@ type timestampLog struct {
 }
 
 func NewAccountController(ctx context.Context, account, localNid string, accountKvs kvs.AccountKvs) AccountController {
-	impl := &accountControllerImpl{
+	return &accountControllerImpl{
 		accountName: account,
 		localNid:    localNid,
 		accountKvs:  accountKvs,
 		logs:        make(map[string]*logEntry),
 	}
+}
 
-	// kick keep alive for each interval
-	go func() {
-		ticker := time.NewTicker(KEEP_ALIVE_INTERVAL)
-		for {
-			select {
-			case <-ctx.Done():
-				return
+func (impl *accountControllerImpl) DealLocalResource(raw []byte) error {
 
-			case <-ticker.C:
-				if err := impl.keepAliveNode(); err != nil {
-					log.Println(err)
-				}
-				impl.cleanLogs()
-			}
-		}
-	}()
-
-	return impl
 }
 
 func (impl *accountControllerImpl) GetAccountName() string {
 	return impl.accountName
 }
 
-func (impl *accountControllerImpl) GetAccountPodState() (map[string]api.AccountPodState, error) {
+func (impl *accountControllerImpl) GetPodState() (map[string]api.AccountPodState, error) {
 	acc, err := impl.accountKvs.Get(impl.accountName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get account record: %s", err)
 	}
 
 	// TODO check not found
@@ -101,32 +88,18 @@ func (impl *accountControllerImpl) GetAccountPodState() (map[string]api.AccountP
 	return acc.State.Pods, nil
 }
 
-func (impl *accountControllerImpl) KeepAlivePods(pods []*api.Pod) error {
-	podsByAccount := make(map[string][]*api.Pod)
-	for _, pod := range pods {
-		podsByAccount[pod.Meta.Owner] = append(podsByAccount[pod.Meta.Owner], pod)
+func (impl *accountControllerImpl) GetNodeState() (map[string]api.AccountNodeState, error) {
+	acc, err := impl.accountKvs.Get(impl.accountName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get account record: %s", err)
 	}
 
-	for accountName, podSlice := range podsByAccount {
-		account, err := impl.getOrCreateAccount(accountName)
-		if err != nil {
-			return err
-		}
-
-		for _, pod := range podSlice {
-			account.State.Pods[pod.Meta.Uuid] = api.AccountPodState{
-				RunningNode: impl.localNid,
-				Timestamp:   misc.GetTimestamp(),
-			}
-		}
-
-		err = impl.accountKvs.Set(account)
-		if err != nil {
-			return err
-		}
+	// TODO check not found
+	if acc == nil {
+		return make(map[string]api.AccountNodeState), nil
 	}
 
-	return nil
+	return acc.State.Nodes, nil
 }
 
 func (impl *accountControllerImpl) Cleanup(account *api.Account) error {
@@ -203,6 +176,34 @@ func (impl *accountControllerImpl) Cleanup(account *api.Account) error {
 
 	if now.After(log.lastUpdated.Add(ACCOUNT_DELETION_THRESHOLD)) {
 		return impl.accountKvs.Delete(account.Meta.Name)
+	}
+
+	return nil
+}
+
+func (impl *accountControllerImpl) UpdateLocalState(pods map[string]api.AccountPodState, nodeID string, nodeState api.AccountNodeState) error {
+	podsByAccount := make(map[string][]*api.Pod)
+	for _, pod := range pods {
+		podsByAccount[pod.Meta.Owner] = append(podsByAccount[pod.Meta.Owner], pod)
+	}
+
+	for accountName, podSlice := range podsByAccount {
+		account, err := impl.getOrCreateAccount(accountName)
+		if err != nil {
+			return err
+		}
+
+		for _, pod := range podSlice {
+			account.State.Pods[pod.Meta.Uuid] = api.AccountPodState{
+				RunningNode: impl.localNid,
+				Timestamp:   misc.GetTimestamp(),
+			}
+		}
+
+		err = impl.accountKvs.Set(account)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

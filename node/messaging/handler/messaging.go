@@ -25,26 +25,59 @@ import (
 	"github.com/llamerada-jp/oinari/node/messaging"
 )
 
-func InitMessagingHandler(containerController controller.ContainerController, col colonio.Colonio) error {
-	col.MessagingSetHandler("reconcileContainer", func(mr *colonio.MessagingRequest, mrw colonio.MessagingResponseWriter) {
+func InitMessagingHandler(col colonio.Colonio, containerCtrl controller.ContainerController, nodeCtrl controller.NodeController) error {
+	// reconcile container
+	col.MessagingSetHandler(messaging.MessageNameReconcileContainer, func(mr *colonio.MessagingRequest, mrw colonio.MessagingResponseWriter) {
 		raw, err := mr.Message.GetBinary()
 		defer mrw.Write(nil)
 		if err != nil {
-			log.Println(err)
+			log.Printf("failed to read reconcileContainer message: %s", err.Error())
 			return
 		}
 
 		go func(raw []byte) {
 			var msg messaging.VitalizePod
-			err = json.Unmarshal(raw, &msg)
+			err := json.Unmarshal(raw, &msg)
 			if err != nil {
-				log.Println(err)
+				log.Printf("failed to unmarshal reconcileContainer message: %s", err.Error())
 				return
 			}
 
-			err = containerController.Reconcile(context.Background(), msg.PodUuid)
+			err = containerCtrl.Reconcile(context.Background(), msg.PodUuid)
 			if err != nil {
-				log.Println(err)
+				log.Printf("failed on ContainerController.Reconcile: %s", err.Error())
+				return
+			}
+		}(raw)
+	})
+
+	// publish node
+	col.SpreadSetHandler(messaging.MessageNamePublishNode, func(sr *colonio.SpreadRequest) {
+		raw, err := sr.Message.GetBinary()
+		if err != nil {
+			log.Printf("failed to read publishNode message: %s", err.Error())
+			return
+		}
+
+		go func(raw []byte) {
+			var msg messaging.PublishNode
+			err := json.Unmarshal(raw, &msg)
+			if err != nil {
+				log.Printf("failed to unmarshal publishNode message: %s", err.Error())
+				return
+			}
+
+			err = nodeCtrl.ReceivePublishingNode(controller.NodeState{
+				Name:      msg.Name,
+				ID:        msg.ID,
+				Account:   msg.Account,
+				NodeType:  msg.NodeType,
+				Latitude:  msg.Latitude,
+				Longitude: msg.Longitude,
+				Altitude:  msg.Altitude,
+			})
+			if err != nil {
+				log.Printf("failed on NodeController.ReceivePublishingNode: %s", err.Error())
 				return
 			}
 		}(raw)

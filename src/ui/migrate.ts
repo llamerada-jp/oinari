@@ -55,12 +55,15 @@ async function reload(): Promise<void> {
   Util.makeListEmptyHide(listEl);
 
   let temp = document.getElementById(tempID) as HTMLTemplateElement;
-  let nodeList = await command.listNodes();
+  let nodeList = await command.listNode();
   for (let node of nodeList) {
     let content = new Map<string, string | Util.clickEventCB>();
-    content.set(".nodeName", "dummy name")
-    content.set(".nodeID", "dummy ID")
-    content.set(".nodeInfo", "dummy info")
+    content.set(".nodeName", node.name);
+    content.set(".nodeID", node.id);
+    content.set(".nodeType", node.nodeType);
+    content.set(".nodeLatitude", node.latitude.toString());
+    content.set(".nodeLongitude", node.longitude.toString());
+    content.set(".nodeAltitude", node.altitude.toString());
     Util.addListItem(listEl, temp, content);
   }
 

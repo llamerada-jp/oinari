@@ -90,12 +90,19 @@ async function main(): Promise<void> {
 
   // connect
   let acTmp = Math.random().toString(32).substring(2);
-  let info = await command.connect("https://localhost:8080/seed", "account-" + acTmp, "");
+  let nnTmp = Math.random().toString(32).substring(2);
+  let info = await command.connect("https://localhost:8080/seed", 
+    "account-" + acTmp, 
+    "",
+    "node-" + nnTmp,
+    "PC");
   UI_SI.set(info.account, info.node);
   UI_PL.setNodeInfo(info.account, info.node);
 
   // set a position for sample playing
-  await command.setPosition(35.6594945, 139.6999859);
+  await command.setPosition(35.6594945, 139.6999859, 0);
+  // publish node info
+  await command.setPublicity(10.0);
 }
 
 main();

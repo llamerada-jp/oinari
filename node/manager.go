@@ -29,37 +29,46 @@ type Manager interface {
 }
 
 type manager struct {
-	ld      LocalDatastore
-	podCtrl controller.PodController
+	localDs     LocalDatastore
+	accountCtrl controller.AccountController
+	podCtrl     controller.PodController
 }
 
-func NewManager(ld LocalDatastore, podCtrl controller.PodController) Manager {
+func NewManager(ld LocalDatastore, accountCtrl controller.AccountController, podCtrl controller.PodController) Manager {
 	return &manager{
-		ld:      ld,
-		podCtrl: podCtrl,
+		localDs:     ld,
+		accountCtrl: accountCtrl,
+		podCtrl:     podCtrl,
 	}
 }
 
 func (mgr *manager) Start(ctx context.Context) error {
-	ticker := time.NewTicker(time.Second * 3)
-	defer ticker.Stop()
+	tickerDealLR := time.NewTicker(3 * time.Second)
+	defer tickerDealLR.Stop()
+	tickerKeepAlive := time.NewTicker(30 * time.Second)
+	defer tickerKeepAlive.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 
-		case <-ticker.C:
-			err := mgr.loop(ctx)
-			if err != nil {
+		case <-tickerDealLR.C:
+			if err := mgr.dealLocalResource(); err != nil {
 				log.Println(err)
 			}
+
+		case <-tickerKeepAlive.C:
+			if err := mgr.keepAlive(); err != nil {
+				log.Println(err)
+			}
+
 		}
 	}
 }
 
-func (mgr *manager) loop(ctx context.Context) error {
-	resources, err := mgr.ld.GetResources()
+func (mgr *manager) dealLocalResource() error {
+	resources, err := mgr.localDs.GetResources()
 	if err != nil {
 		return err
 	}
@@ -68,6 +77,8 @@ func (mgr *manager) loop(ctx context.Context) error {
 		switch resource.ResourceType {
 		case api.ResourceTypePod:
 			err = mgr.podCtrl.DealLocalResource(resource.RecordRaw)
+		case api.ResourceTypeAccount:
+			err = mgr.accountCtrl.DealLocalResource(resource.RecordRaw)
 		}
 		if err != nil {
 			return err
@@ -75,4 +86,7 @@ func (mgr *manager) loop(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (mgr *manager) keepAlive() error {
 }

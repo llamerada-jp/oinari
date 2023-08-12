@@ -16,6 +16,20 @@ export interface ApplicationDigest {
   state: string
 }
 
+export interface NodeState {
+  name: string
+  id: string
+  account: string
+  nodeType: string
+  latitude: number
+  longitude: number
+  altitude: number
+}
+
+interface ListNodeResponse {
+  nodes: Array<NodeState>
+}
+
 interface ApplicationDefinition {
   metadata: ApplicationMetadata
   spec: PodSpec
@@ -84,11 +98,13 @@ export class Commands {
     this.cl = cl;
   }
 
-  connect(url: string, account: string, token: string): Promise<ConnectInfo> {
+  connect(url: string, account: string, token: string, nodeName: string, nodeType: string): Promise<ConnectInfo> {
     return this.cl.call(CL_SYSTEM_PATH + "/connect", {
       url: url,
       account: account,
       token: token,
+      nodeName: nodeName,
+      nodeType: nodeType,
     }) as Promise<ConnectInfo>;
   }
 
@@ -96,10 +112,24 @@ export class Commands {
     return this.cl.call(CL_SYSTEM_PATH + "/disconnect", {});
   }
 
-  setPosition(lat: number, lon: number): Promise<any> {
-    return this.cl.call(CL_SYSTEM_PATH + "/setPosition", {
+  setPosition(lat: number, lon: number, alt: number): Promise<any> {
+    return this.cl.call(CL_RESOURCE_PATH + "/setNodePosition", {
       latitude: lat,
       longitude: lon,
+      altitude: alt,
+    });
+  }
+
+  setPublicity(range: number): Promise<any> {
+    return this.cl.call(CL_RESOURCE_PATH + "/setNodePublicity", {
+      range: range,
+    });
+  }
+
+  listNode(): Promise<Array<NodeState>> {
+    return this.cl.call(CL_RESOURCE_PATH + "/listNode", {}).then((r) => {
+      let response = r as ListNodeResponse;
+      return response.nodes;
     });
   }
 
