@@ -28,14 +28,22 @@ import (
 )
 
 type ContainerController interface {
-	GetLocalPodUUIDs() []string
+	GetContainerInfos() []*ContainerInfo
 	Reconcile(ctx context.Context, podUuid string) error
 }
 
+type ContainerInfo struct {
+	PodUUID   string
+	Owner     string
+	SandboxID string
+}
+
 type reconcileState struct {
-	running    bool
-	willDelete bool
-	sandboxID  string
+	// true if reconcile running
+	running bool
+	// will delete when reconcile finished
+	willDelete    bool
+	containerInfo ContainerInfo
 }
 
 type containerControllerImpl struct {
@@ -56,23 +64,27 @@ func NewContainerController(localNid string, cri cri.CRI, podKvs kvs.PodKvs) Con
 	}
 }
 
-func (impl *containerControllerImpl) GetLocalPodUUIDs() []string {
-	uuids := make([]string, len(impl.reconcileStates))
-	for uuid := range impl.reconcileStates {
-		uuids = append(uuids, uuid)
+func (impl *containerControllerImpl) GetContainerInfos() []*ContainerInfo {
+	infos := make([]*ContainerInfo, len(impl.reconcileStates))
+	for _, state := range impl.reconcileStates {
+		infos = append(infos, &state.containerInfo)
 	}
-	return uuids
+	return infos
 }
 
-func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUuid string) error {
+func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUUID string) error {
 	state, running := func() (*reconcileState, bool) {
 		impl.mtx.Lock()
 		defer impl.mtx.Unlock()
 
-		state, ok := impl.reconcileStates[podUuid]
+		state, ok := impl.reconcileStates[podUUID]
 		if !ok {
-			state = &reconcileState{}
-			impl.reconcileStates[podUuid] = state
+			state = &reconcileState{
+				containerInfo: ContainerInfo{
+					PodUUID: podUUID,
+				},
+			}
+			impl.reconcileStates[podUUID] = state
 		}
 
 		running := state.running
@@ -93,19 +105,21 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUuid stri
 		state.running = false
 
 		if state.willDelete {
-			delete(impl.reconcileStates, podUuid)
+			delete(impl.reconcileStates, podUUID)
 		}
 	}()
 
-	pod, err := impl.podKvs.Get(podUuid)
+	pod, err := impl.podKvs.Get(podUUID)
 	if err != nil {
 		return err
 	}
 
+	state.containerInfo.Owner = pod.Meta.Owner
+
 	// force stop container if running node is not this node
 	if pod.Status.RunningNode != impl.localNid {
-		if len(state.sandboxID) != 0 {
-			if err = impl.removeSandbox(state.sandboxID); err != nil {
+		if len(state.containerInfo.SandboxID) != 0 {
+			if err = impl.removeSandbox(state.containerInfo.SandboxID); err != nil {
 				return err
 			}
 			state.willDelete = true
@@ -115,7 +129,7 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUuid stri
 
 	// terminate containers if deletion timestamp has set
 	if len(pod.Meta.DeletionTimestamp) != 0 || (len(pod.Spec.TargetNode) != 0 && pod.Spec.TargetNode != pod.Status.RunningNode) {
-		if len(state.sandboxID) == 0 {
+		if len(state.containerInfo.SandboxID) == 0 {
 			return impl.updatePodInfo(state, pod)
 		}
 
@@ -137,7 +151,7 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUuid stri
 
 		if terminated {
 			// remove sandbox if containers have terminated
-			if err = impl.removeSandbox(podUuid); err != nil {
+			if err = impl.removeSandbox(podUUID); err != nil {
 				return err
 			}
 
@@ -159,7 +173,7 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUuid stri
 // return sandboxId
 func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.Pod) error {
 	// create sandbox if it isn't exist
-	if len(state.sandboxID) == 0 {
+	if len(state.containerInfo.SandboxID) == 0 {
 		res, err := impl.cri.RunPodSandbox(&cri.RunPodSandboxRequest{
 			Config: cri.PodSandboxConfig{
 				Metadata: cri.PodSandboxMetadata{
@@ -174,12 +188,12 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 			return err
 		}
 
-		state.sandboxID = res.PodSandboxId
+		state.containerInfo.SandboxID = res.PodSandboxId
 	}
 
 	// make containers as map[container name]ContainerStatus
 	sandboxStatus, err := impl.cri.PodSandboxStatus(&cri.PodSandboxStatusRequest{
-		PodSandboxId: state.sandboxID,
+		PodSandboxId: state.containerInfo.SandboxID,
 	})
 	if err != nil {
 		return err
@@ -239,7 +253,7 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 			}
 
 			res, err := impl.cri.CreateContainer(&cri.CreateContainerRequest{
-				PodSandboxId: state.sandboxID,
+				PodSandboxId: state.containerInfo.SandboxID,
 				Config: cri.ContainerConfig{
 					Metadata: cri.ContainerMetadata{
 						Name: spec.Name,
@@ -281,7 +295,7 @@ func (impl *containerControllerImpl) letTerminate(state *reconcileState) error {
 	// TODO: send exit signal when any container running
 	containers, err := impl.cri.ListContainers(&cri.ListContainersRequest{
 		Filter: &cri.ContainerFilter{
-			PodSandboxId: state.sandboxID,
+			PodSandboxId: state.containerInfo.SandboxID,
 		},
 	})
 	if err != nil {
@@ -310,9 +324,9 @@ func (impl *containerControllerImpl) letTerminate(state *reconcileState) error {
 func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *api.Pod) error {
 	// make containers as map[container name]ContainerStatus
 	containerStatuses := make(map[string]*cri.ContainerStatus)
-	if len(state.sandboxID) != 0 {
+	if len(state.containerInfo.SandboxID) != 0 {
 		sandboxStatus, err := impl.cri.PodSandboxStatus(&cri.PodSandboxStatusRequest{
-			PodSandboxId: state.sandboxID,
+			PodSandboxId: state.containerInfo.SandboxID,
 		})
 		if err != nil {
 			return err
@@ -347,7 +361,7 @@ func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *a
 		}
 
 		if status.ContainerID != container.ID {
-			impl.removeSandbox(state.sandboxID)
+			impl.removeSandbox(state.containerInfo.SandboxID)
 			if status.State.Unknown == nil {
 				status.State.Unknown = &api.ContainerStateUnknown{
 					Timestamp: misc.GetTimestamp(),
@@ -373,7 +387,7 @@ func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *a
 		}
 
 		if status.State.Terminated != nil && container.State != cri.ContainerExited && container.State != cri.ContainerUnknown {
-			impl.removeSandbox(state.sandboxID)
+			impl.removeSandbox(state.containerInfo.SandboxID)
 			return fmt.Errorf("container should be terminated")
 		}
 
@@ -385,7 +399,7 @@ func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *a
 	}
 
 	if len(containerStatuses) > 0 {
-		impl.removeSandbox(state.sandboxID)
+		impl.removeSandbox(state.containerInfo.SandboxID)
 		return fmt.Errorf("found differences in spec of pod between running containers")
 	}
 

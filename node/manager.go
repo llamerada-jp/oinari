@@ -17,11 +17,13 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/controller"
+	"github.com/llamerada-jp/oinari/node/misc"
 )
 
 type Manager interface {
@@ -29,16 +31,22 @@ type Manager interface {
 }
 
 type manager struct {
-	localDs     LocalDatastore
-	accountCtrl controller.AccountController
-	podCtrl     controller.PodController
+	localDs       LocalDatastore
+	accountCtrl   controller.AccountController
+	containerCtrl controller.ContainerController
+	nodeCtrl      controller.NodeController
+	podCtrl       controller.PodController
 }
 
-func NewManager(ld LocalDatastore, accountCtrl controller.AccountController, podCtrl controller.PodController) Manager {
+func NewManager(ld LocalDatastore, accountCtrl controller.AccountController,
+	containerCtrl controller.ContainerController, nodeCtrl controller.NodeController,
+	podCtrl controller.PodController) Manager {
 	return &manager{
-		localDs:     ld,
-		accountCtrl: accountCtrl,
-		podCtrl:     podCtrl,
+		localDs:       ld,
+		accountCtrl:   accountCtrl,
+		containerCtrl: containerCtrl,
+		nodeCtrl:      nodeCtrl,
+		podCtrl:       podCtrl,
 	}
 }
 
@@ -74,14 +82,21 @@ func (mgr *manager) dealLocalResource() error {
 	}
 
 	for _, resource := range resources {
-		switch resource.ResourceType {
+		willDelete := false
+		switch resource.resourceType {
 		case api.ResourceTypePod:
-			err = mgr.podCtrl.DealLocalResource(resource.RecordRaw)
+			willDelete, err = mgr.podCtrl.DealLocalResource(resource.recordRaw)
 		case api.ResourceTypeAccount:
-			err = mgr.accountCtrl.DealLocalResource(resource.RecordRaw)
+			willDelete, err = mgr.accountCtrl.DealLocalResource(resource.recordRaw)
+		}
+		if willDelete {
+			err := mgr.localDs.DeleteResource(resource.key)
+			if err != nil {
+				return fmt.Errorf("failed to delete local resource (%s) : %w", resource.key, err)
+			}
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to deal local resource (%s) : %w", resource.key, err)
 		}
 	}
 
@@ -89,4 +104,34 @@ func (mgr *manager) dealLocalResource() error {
 }
 
 func (mgr *manager) keepAlive() error {
+	localAccount := mgr.accountCtrl.GetAccountName()
+	localNodeID := mgr.nodeCtrl.GetNid()
+
+	accPodStates := make(map[string]map[string]api.AccountPodState)
+	accPodStates[localAccount] = make(map[string]api.AccountPodState)
+	for _, info := range mgr.containerCtrl.GetContainerInfos() {
+		podStates, ok := accPodStates[info.Owner]
+		if !ok {
+			podStates = make(map[string]api.AccountPodState)
+			accPodStates[info.Owner] = podStates
+		}
+		podStates[info.PodUUID] = api.AccountPodState{
+			RunningNode: localNodeID,
+			Timestamp:   misc.GetTimestamp(),
+		}
+	}
+
+	for account, podStates := range accPodStates {
+		if account == localAccount {
+			if err := mgr.accountCtrl.UpdatePodAndNodeState(account, podStates, localNodeID, mgr.nodeCtrl.GetNodeState()); err != nil {
+				return fmt.Errorf("failed to update account state (%s): %w", account, err)
+			}
+		} else {
+			if err := mgr.accountCtrl.UpdatePodAndNodeState(account, podStates, "", nil); err != nil {
+				return fmt.Errorf("failed to update account state (%s): %w", account, err)
+			}
+		}
+	}
+
+	return nil
 }

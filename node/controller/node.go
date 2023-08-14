@@ -45,6 +45,7 @@ type NodeRecord struct {
 
 type NodeController interface {
 	GetNid() string
+	GetNodeState() *api.AccountNodeState
 	ReceivePublishingNode(state NodeState) error
 	SetPosition(latitude, longitude, altitude float64) error
 	SetPublicity(r float64) error
@@ -107,6 +108,16 @@ func NewNodeController(ctx context.Context, col colonio.Colonio, messaging drive
 
 func (impl *nodeControllerImpl) GetNid() string {
 	return impl.nodeID
+}
+
+func (impl *nodeControllerImpl) GetNodeState() *api.AccountNodeState {
+	return &api.AccountNodeState{
+		Name:      impl.nodeName,
+		NodeType:  impl.nodeType,
+		Latitude:  impl.latitude,
+		Longitude: impl.longitude,
+		Altitude:  impl.altitude,
+	}
 }
 
 func (impl *nodeControllerImpl) ReceivePublishingNode(state NodeState) error {

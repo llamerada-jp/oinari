@@ -24,11 +24,13 @@ import (
 )
 
 type LocalResource struct {
-	ResourceType api.ResourceType
-	RecordRaw    []byte
+	key          string
+	resourceType api.ResourceType
+	recordRaw    []byte
 }
 
 type LocalDatastore interface {
+	DeleteResource(key string) error
 	GetResources() ([]LocalResource, error)
 }
 
@@ -42,6 +44,10 @@ func NewLocalDatastore(col colonio.Colonio) LocalDatastore {
 	}
 }
 
+func (ld *localDatastore) DeleteResource(key string) error {
+	return ld.col.KvsSet(key, nil, 0)
+}
+
 func (ld *localDatastore) GetResources() ([]LocalResource, error) {
 	resources := make([]LocalResource, 0)
 
@@ -52,7 +58,7 @@ func (ld *localDatastore) GetResources() ([]LocalResource, error) {
 	for _, key := range localData.GetKeys() {
 		v, err := localData.GetValue(key)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get local resource value: %w", err)
 		}
 		// skip nil value. it is workaround because colonio is not provide feature to delete kvs entry.
 		if v.IsNil() {
@@ -60,15 +66,16 @@ func (ld *localDatastore) GetResources() ([]LocalResource, error) {
 		}
 		raw, err := v.GetBinary()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get local resource binary: %w", err)
 		}
 		resourceEntry := strings.Split(key, "/")
 		if len(resourceEntry) != 2 {
 			return nil, fmt.Errorf("local value key is not supported format:%s", key)
 		}
 		resources = append(resources, LocalResource{
-			ResourceType: api.ResourceType(resourceEntry[0]),
-			RecordRaw:    raw,
+			key:          key,
+			resourceType: api.ResourceType(resourceEntry[0]),
+			recordRaw:    raw,
 		})
 	}
 

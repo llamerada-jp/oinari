@@ -36,7 +36,7 @@ type ApplicationDigest struct {
 }
 
 type PodController interface {
-	DealLocalResource(raw []byte) error
+	DealLocalResource(raw []byte) (bool, error)
 
 	Create(name, owner, creatorNode string, spec *api.PodSpec) (*ApplicationDigest, error)
 	GetPodData(uuid string) (*api.Pod, error)
@@ -60,21 +60,23 @@ func NewPodController(podKvs kvs.PodKvs, messaging driver.MessagingDriver, local
 	}
 }
 
-func (impl *podControllerImpl) DealLocalResource(raw []byte) error {
+func (impl *podControllerImpl) DealLocalResource(raw []byte) (bool, error) {
 	pod := &api.Pod{}
-	err := json.Unmarshal(raw, pod)
-	if err != nil {
-		return err
+	if err := json.Unmarshal(raw, pod); err != nil {
+		return true, fmt.Errorf("failed to unmarshal pod record: %w", err)
+	}
+
+	if err := pod.Validate(true); err != nil {
+		return true, fmt.Errorf("failed to validate pod record: %w", err)
 	}
 
 	// check deletion
 	if len(pod.Meta.DeletionTimestamp) != 0 {
 		if len(pod.Status.RunningNode) == 0 || impl.checkContainerStateTerminated(pod) {
-			impl.podKvs.Delete(pod.Meta.Uuid)
-			return nil
+			return true, nil
 		}
 
-		return impl.messaging.ReconcileContainer(pod.Status.RunningNode, pod.Meta.Uuid)
+		return false, impl.messaging.ReconcileContainer(pod.Status.RunningNode, pod.Meta.Uuid)
 	}
 
 	/*
@@ -86,13 +88,13 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) error {
 
 	// waiting to schedule
 	if len(pod.Status.RunningNode) == 0 {
-		return impl.schedulePod(pod)
+		return false, impl.schedulePod(pod)
 	}
 
 	if pod.Status.RunningNode == pod.Spec.TargetNode {
 		if impl.checkContainerStateTerminated(pod) || impl.checkContainerStateUnknown(pod) {
 			// TODO restart pod by the restart policy
-			return nil
+			return false, nil
 		}
 
 	} else {
@@ -103,25 +105,25 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) error {
 				containerStatus.Image = ""
 				containerStatus.State = api.ContainerState{}
 			}
-			return impl.podKvs.Update(pod)
+			return false, impl.podKvs.Update(pod)
 
 		} else if impl.checkContainerStateUnknown(pod) {
 			// TODO restart pod by the restart policy
 		}
 	}
 
-	err = impl.messaging.ReconcileContainer(pod.Status.RunningNode, pod.Meta.Uuid)
-	if err != nil {
+	// TODO: consider the interval of RPC
+	if err := impl.messaging.ReconcileContainer(pod.Status.RunningNode, pod.Meta.Uuid); err != nil {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			containerStatus.State.Unknown = &api.ContainerStateUnknown{
 				Timestamp: misc.GetTimestamp(),
 				Reason:    fmt.Sprintf("failed to call reconciliation to %s: %s", pod.Status.RunningNode, err.Error()),
 			}
 		}
-		return impl.podKvs.Update(pod)
+		return false, impl.podKvs.Update(pod)
 	}
 
-	return nil
+	return false, nil
 }
 
 func (impl *podControllerImpl) Create(name, owner, creatorNode string, spec *api.PodSpec) (*ApplicationDigest, error) {

@@ -130,7 +130,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 
 	// manager
 	localDs := node.NewLocalDatastore(na.col)
-	manager := node.NewManager(localDs, accountCtrl, podCtrl)
+	manager := node.NewManager(localDs, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
 	go func() {
 		err := manager.Start(na.ctx)
 		if err != nil {

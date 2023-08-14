@@ -17,25 +17,24 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/kvs"
-	"github.com/llamerada-jp/oinari/node/misc"
 )
 
 const ACCOUNT_STATE_RESOURCE_LIFETIME = 180 * time.Second
 const ACCOUNT_LIFETIME = 600 * time.Second
 
 type AccountController interface {
-	DealLocalResource(raw []byte) error
+	DealLocalResource(raw []byte) (bool, error)
 
 	GetAccountName() string
 	GetPodState() (map[string]api.AccountPodState, error)
 	GetNodeState() (map[string]api.AccountNodeState, error)
-	UpdateLocalState(pods map[string]api.AccountPodState, nodeID string, nodeState api.AccountNodeState) error
+	UpdatePodAndNodeState(account string, pods map[string]api.AccountPodState, nodeID string, nodeState *api.AccountNodeState) error
 }
 
 type accountControllerImpl struct {
@@ -66,8 +65,88 @@ func NewAccountController(ctx context.Context, account, localNid string, account
 	}
 }
 
-func (impl *accountControllerImpl) DealLocalResource(raw []byte) error {
+func (impl *accountControllerImpl) DealLocalResource(raw []byte) (bool, error) {
+	account := &api.Account{}
+	if err := json.Unmarshal(raw, account); err != nil {
+		return true, fmt.Errorf("failed to unmarshal account record: %w", err)
+	}
 
+	if err := account.Validate(); err != nil {
+		return true, fmt.Errorf("failed to validate account record: %w", err)
+	}
+
+	impl.cleanLogs()
+	log, ok := impl.logs[account.Meta.Name]
+	if !ok {
+		log = &logEntry{
+			lastUpdated: time.Now(),
+			pods:        make(map[string]timestampLog),
+			nodes:       make(map[string]timestampLog),
+		}
+		impl.logs[account.Meta.Name] = log
+	}
+
+	updateAccount := false
+	now := time.Now()
+	log.lastChecked = now
+
+	for key, pod := range account.State.Pods {
+		podLog, ok := log.pods[key]
+		if !ok || podLog.timestampStr != pod.Timestamp {
+			log.pods[key] = timestampLog{
+				lastUpdated:  now,
+				timestampStr: pod.Timestamp,
+			}
+			log.lastUpdated = now
+			continue
+		}
+		if now.After(podLog.lastUpdated.Add(ACCOUNT_STATE_RESOURCE_LIFETIME)) {
+			delete(account.State.Pods, key)
+			updateAccount = true
+			delete(log.pods, key)
+			log.lastUpdated = now
+		}
+	}
+	for key, podLog := range log.pods {
+		if now.After(podLog.lastUpdated.Add(ACCOUNT_STATE_RESOURCE_LIFETIME * 2)) {
+			delete(log.pods, key)
+			log.lastUpdated = now
+		}
+	}
+
+	for key, node := range account.State.Nodes {
+		nodeLog, ok := log.nodes[key]
+		if !ok || nodeLog.timestampStr != node.Timestamp {
+			log.nodes[key] = timestampLog{
+				lastUpdated:  now,
+				timestampStr: node.Timestamp,
+			}
+			log.lastUpdated = now
+			continue
+		}
+		if now.After(nodeLog.lastUpdated.Add(ACCOUNT_STATE_RESOURCE_LIFETIME)) {
+			delete(account.State.Nodes, key)
+			updateAccount = true
+			delete(log.nodes, key)
+			log.lastUpdated = now
+		}
+	}
+	for key, nodeLog := range log.nodes {
+		if now.After(nodeLog.lastUpdated.Add(ACCOUNT_STATE_RESOURCE_LIFETIME * 2)) {
+			delete(log.nodes, key)
+			log.lastUpdated = now
+		}
+	}
+
+	if updateAccount {
+		return false, impl.accountKvs.Set(account)
+	}
+
+	if now.After(log.lastUpdated.Add(ACCOUNT_LIFETIME)) {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (impl *accountControllerImpl) GetAccountName() string {
@@ -102,130 +181,31 @@ func (impl *accountControllerImpl) GetNodeState() (map[string]api.AccountNodeSta
 	return acc.State.Nodes, nil
 }
 
-func (impl *accountControllerImpl) Cleanup(account *api.Account) error {
-	if err := account.Validate(); err != nil {
-		log.Printf("invalid account found %s and it will be deleted: %v", account.Meta.Name, err)
-		return impl.accountKvs.Delete(account.Meta.Name)
-	}
-
-	log, ok := impl.logs[account.Meta.Name]
-	if !ok {
-		log = &logEntry{
-			lastUpdated: time.Now(),
-			pods:        make(map[string]timestampLog),
-			nodes:       make(map[string]timestampLog),
-		}
-		impl.logs[account.Meta.Name] = log
-	}
-
-	updateAccount := false
-	now := time.Now()
-	log.lastChecked = now
-
-	for key, pod := range account.State.Pods {
-		podLog, ok := log.pods[key]
-		if !ok || podLog.timestampStr != pod.Timestamp {
-			log.pods[key] = timestampLog{
-				lastUpdated:  now,
-				timestampStr: pod.Timestamp,
-			}
-			log.lastUpdated = now
-			continue
-		}
-		if now.After(podLog.lastUpdated.Add(RESOURCE_KEEP_ALIVE_THRESHOLD)) {
-			delete(account.State.Pods, key)
-			updateAccount = true
-			delete(log.pods, key)
-			log.lastUpdated = now
-		}
-	}
-	for key, podLog := range log.pods {
-		if now.After(podLog.lastUpdated.Add(RESOURCE_KEEP_ALIVE_THRESHOLD * 2)) {
-			delete(log.pods, key)
-			log.lastUpdated = now
-		}
-	}
-
-	for key, node := range account.State.Nodes {
-		nodeLog, ok := log.nodes[key]
-		if !ok || nodeLog.timestampStr != node.Timestamp {
-			log.nodes[key] = timestampLog{
-				lastUpdated:  now,
-				timestampStr: node.Timestamp,
-			}
-			log.lastUpdated = now
-			continue
-		}
-		if now.After(nodeLog.lastUpdated.Add(RESOURCE_KEEP_ALIVE_THRESHOLD)) {
-			delete(account.State.Nodes, key)
-			updateAccount = true
-			delete(log.nodes, key)
-			log.lastUpdated = now
-		}
-	}
-	for key, nodeLog := range log.nodes {
-		if now.After(nodeLog.lastUpdated.Add(RESOURCE_KEEP_ALIVE_THRESHOLD * 2)) {
-			delete(log.nodes, key)
-			log.lastUpdated = now
-		}
-	}
-
-	if updateAccount {
-		return impl.accountKvs.Set(account)
-	}
-
-	if now.After(log.lastUpdated.Add(ACCOUNT_DELETION_THRESHOLD)) {
-		return impl.accountKvs.Delete(account.Meta.Name)
-	}
-
-	return nil
-}
-
-func (impl *accountControllerImpl) UpdateLocalState(pods map[string]api.AccountPodState, nodeID string, nodeState api.AccountNodeState) error {
-	podsByAccount := make(map[string][]*api.Pod)
-	for _, pod := range pods {
-		podsByAccount[pod.Meta.Owner] = append(podsByAccount[pod.Meta.Owner], pod)
-	}
-
-	for accountName, podSlice := range podsByAccount {
-		account, err := impl.getOrCreateAccount(accountName)
-		if err != nil {
-			return err
-		}
-
-		for _, pod := range podSlice {
-			account.State.Pods[pod.Meta.Uuid] = api.AccountPodState{
-				RunningNode: impl.localNid,
-				Timestamp:   misc.GetTimestamp(),
-			}
-		}
-
-		err = impl.accountKvs.Set(account)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (impl *accountControllerImpl) keepAliveNode() error {
-	account, err := impl.getOrCreateAccount(impl.accountName)
+func (impl *accountControllerImpl) UpdatePodAndNodeState(account string, pods map[string]api.AccountPodState, nodeID string, nodeState *api.AccountNodeState) error {
+	record, err := impl.getOrCreateAccount(account)
 	if err != nil {
 		return err
 	}
 
-	account.State.Nodes[impl.localNid] = api.AccountNodeState{
-		Timestamp: misc.GetTimestamp(),
+	for podUUID, podState := range pods {
+		record.State.Pods[podUUID] = podState
 	}
 
-	return impl.accountKvs.Set(account)
+	if nodeState != nil {
+		record.State.Nodes[nodeID] = *nodeState
+	}
+
+	if err := impl.accountKvs.Set(record); err != nil {
+		return fmt.Errorf("failed to update account record (%s): %w", account, err)
+	}
+
+	return nil
 }
 
 func (impl *accountControllerImpl) cleanLogs() {
 	now := time.Now()
 	for key, log := range impl.logs {
-		if now.After(log.lastChecked.Add(RESOURCE_KEEP_ALIVE_THRESHOLD * 2)) {
+		if now.After(log.lastChecked.Add(ACCOUNT_STATE_RESOURCE_LIFETIME * 2)) {
 			delete(impl.logs, key)
 		}
 	}

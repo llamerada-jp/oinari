@@ -153,8 +153,8 @@ func InitResourceHandler(rootMpx crosslink.MultiPlexer, accCtrl controller.Accou
 			}
 
 			// get pod uuids running on local node
-			for _, uuid := range containerCtrl.GetLocalPodUUIDs() {
-				uuids[uuid] = true
+			for _, info := range containerCtrl.GetContainerInfos() {
+				uuids[info.PodUUID] = true
 			}
 
 			// make pod digest
