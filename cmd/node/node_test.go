@@ -36,10 +36,6 @@ func TestMain(t *testing.T) {
 	rootMpx := crosslink.NewMultiPlexer()
 	cl := crosslink.NewCrosslink("crosslink", rootMpx)
 
-	// run tests that can be run offline.
-	suite.Run(t, cri.NewCriTest(cl))
-	suite.Run(t, controller.NewNodeControllerTest())
-
 	// setup colonio
 	config := colonio.NewConfig()
 	col, err := colonio.NewColonio(config)
@@ -48,7 +44,15 @@ func TestMain(t *testing.T) {
 	assert.NoError(t, err)
 	defer col.Disconnect()
 
-	// run tests that requires colonio
+	// run tests that can be run offline.
+	suite.Run(t, cri.NewCriTest(cl))
+
+	// test kvs
 	suite.Run(t, kvs.NewAccountKvsTest(ctx, col))
+
+	// test controller
 	suite.Run(t, controller.NewAccountControllerTest(ctx, col))
+	suite.Run(t, controller.NewNodeControllerTest())
+
+	// test manager
 }

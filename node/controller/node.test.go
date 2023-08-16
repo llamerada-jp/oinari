@@ -21,13 +21,21 @@ import (
 
 type nodeControllerTest struct {
 	suite.Suite
+	impl *nodeControllerImpl
 }
 
+const (
+	nodeID = "test-nid"
+)
+
 func NewNodeControllerTest() suite.TestingSuite {
-	return &nodeControllerTest{}
+	return &nodeControllerTest{
+		impl: &nodeControllerImpl{
+			nodeID: nodeID,
+		},
+	}
 }
 
 func (test *nodeControllerTest) TestNid() {
-	impl := NewNodeController("test-nid")
-	test.Equal("test-nid", impl.GetNid())
+	test.Equal(nodeID, test.impl.GetNid())
 }

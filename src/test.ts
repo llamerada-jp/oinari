@@ -58,20 +58,29 @@ async function test() {
 
 interface SideNodeParam {
   account: string
-  longitude: number
+  nodeName: string
+  nodeType: string
   latitude: number
+  longitude: number
+  altitude: number
 }
 
 const SIDE_NODE_PARAMS: Record<string, SideNodeParam> = {
   "0": {
     account: "cat",
+    nodeName: "cat home",
+    nodeType: "PC",
     latitude: 45,
     longitude: 100,
+    altitude: 0,
   },
   "1": {
     account: "dog",
+    nodeName: "dog home",
+    nodeType: "PC",
     latitude: 45,
     longitude: 101,
+    altitude: 1,
   }
 };
 
@@ -106,8 +115,8 @@ async function sidenode(param: SideNodeParam) {
   systemMpx.setHandlerFunc("onInitComplete", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
     writer.replySuccess("");
     command = new CM.Commands(crosslink);
-    command.connect("https://localhost:8080/seed", param.account, "").then(() => {
-      return command.setPosition(param.latitude, param.longitude);
+    command.connect("https://localhost:8080/seed", param.account, "", param.nodeName, param.nodeType).then(() => {
+      return command.setPosition(param.latitude, param.longitude, param.altitude);
 
     }).then(() => {
       console.log("STANDBY");
