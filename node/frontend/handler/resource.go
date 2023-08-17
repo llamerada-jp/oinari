@@ -64,7 +64,7 @@ func InitResourceHandler(rootMpx crosslink.MultiPlexer, accCtrl controller.Accou
 	rootMpx.SetHandler("resource", mpx)
 
 	// node resource
-	mpx.SetHandler("setPosition", crosslink.NewFuncHandler(func(request *setPositionRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+	mpx.SetHandler("setNodePosition", crosslink.NewFuncHandler(func(request *setPositionRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		err := nodeCtrl.SetPosition(request.Latitude, request.Longitude, request.Altitude)
 		if err != nil {
 			writer.ReplyError(err.Error())
@@ -73,7 +73,7 @@ func InitResourceHandler(rootMpx crosslink.MultiPlexer, accCtrl controller.Accou
 		writer.ReplySuccess(nil)
 	}))
 
-	mpx.SetHandler("setPublicity", crosslink.NewFuncHandler(func(request *SetPublicityRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+	mpx.SetHandler("setNodePublicity", crosslink.NewFuncHandler(func(request *SetPublicityRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		err := nodeCtrl.SetPublicity(request.Range)
 		if err != nil {
 			writer.ReplyError(err.Error())

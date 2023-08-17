@@ -137,9 +137,11 @@ func TestAccountStateValidate(t *testing.T) {
 			Nodes: map[string]AccountNodeState{
 				"01234567890123456789012345abcdef": {
 					Timestamp: "2021-04-09T14:00:40+09:00",
+					NodeType:  "PC",
 				},
 				"01234567890123456789012345abcde0": {
 					Timestamp: "2021-04-09T14:00:40Z",
+					NodeType:  "PC",
 				},
 			},
 		},
@@ -190,9 +192,11 @@ func TestAccountStateValidate(t *testing.T) {
 			Nodes: map[string]AccountNodeState{
 				"01234567890123456789012345abcdef": {
 					Timestamp: "2021-04-09T14:00:40+09:00",
+					NodeType:  "PC",
 				},
 				"01234567890123456789012345abcdez": {
 					Timestamp: "2021-04-09T14:00:40Z",
+					NodeType:  "PC",
 				},
 			},
 		},
@@ -201,9 +205,20 @@ func TestAccountStateValidate(t *testing.T) {
 			Nodes: map[string]AccountNodeState{
 				"01234567890123456789012345abcdef": {
 					Timestamp: "2021-04-09T14:00:40+09:00",
+					NodeType:  "PC",
 				},
 				"01234567890123456789012345abcde0": {
 					Timestamp: "",
+					NodeType:  "PC",
+				},
+			},
+		},
+		"invalid node type": {
+			Pods: make(map[string]AccountPodState),
+			Nodes: map[string]AccountNodeState{
+				"01234567890123456789012345abcdef": {
+					Timestamp: "2021-04-09T14:00:40+09:00",
+					NodeType:  "",
 				},
 			},
 		},
