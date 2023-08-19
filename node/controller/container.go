@@ -65,7 +65,10 @@ func NewContainerController(localNid string, cri cri.CRI, podKvs kvs.PodKvs) Con
 }
 
 func (impl *containerControllerImpl) GetContainerInfos() []*ContainerInfo {
-	infos := make([]*ContainerInfo, len(impl.reconcileStates))
+	impl.mtx.Lock()
+	defer impl.mtx.Unlock()
+
+	infos := make([]*ContainerInfo, 0)
 	for _, state := range impl.reconcileStates {
 		infos = append(infos, &state.containerInfo)
 	}

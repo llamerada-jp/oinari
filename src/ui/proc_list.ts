@@ -73,6 +73,7 @@ async function reload(): Promise<void> {
       command.terminateProcess(proc.uuid);
     });
     content.set(".appMenuMigrate", () => {
+      Util.closeModal("procListClose");
       MI.showMigrateModal(proc.uuid);
     });
 

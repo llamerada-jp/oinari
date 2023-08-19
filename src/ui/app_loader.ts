@@ -15,6 +15,7 @@
  */
 
 import * as CM from "../command";
+import * as Util from "./util";
 
 interface AppEntry {
   name: string
@@ -97,7 +98,7 @@ function setupList(): void {
     (<HTMLElement>item.querySelector(".appName")).innerText = entry.name;
     (<HTMLElement>item.querySelector(".appDescription")).innerText = entry.description;
     (<HTMLElement>item.querySelector(".list-group-item")).addEventListener("click", () => {
-      closeModal();
+      Util.closeModal("loadAppClose");
       loadApplication(entry.url);
     });
     list.append(item);
@@ -113,7 +114,7 @@ function setupCustom(): void {
       return;
     }
 
-    closeModal();
+    Util.closeModal("loadAppClose");
     loadApplication(url);
   });
 }
@@ -126,14 +127,4 @@ function loadApplication(url: string) {
     // https://getbootstrap.com/docs/5.0/components/toasts/
     console.error(e);
   }
-}
-
-function closeModal(): void {
-  // I want to use bootstrap.Modal.getInstance causes an extra backdrop and doesn't fade when calling the hide method.
-  // This code is ugly workaround.
-  let closer = document.getElementById('loadAppClose');
-  if (closer == null) {
-    throw new Error("HTMLElement of modal closer is not found");
-  }
-  closer.dispatchEvent(new Event("click"));
 }

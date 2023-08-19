@@ -8,8 +8,10 @@
   <script src="https://polyfill.io/v3/polyfill.min.js?features=default" crossorigin="anonymous"></script>
   <script src="./colonio.js"></script>
   <script src="./index.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.4.1/mdb.min.css" rel="stylesheet" />
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.4.1/mdb.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
   <link rel="stylesheet" type="text/css" href="./style.css" />
 </head>
@@ -17,11 +19,15 @@
 <body>
   <!-- Menu on bottom-->
   <nav class="navbar fixed-bottom navbar-light bg-light">
-    <div class="container-fluid gap-2 justify-content-center">
-      <button type="button" class="btn btn-light btn-lg" id="loadAppButton" data-bs-toggle="modal"
-        data-bs-target="#modalLoadApp"><i class="bi-box-seam"></i></button>
-      <button type="button" class="btn btn-light btn-lg" id="procListButton" data-bs-toggle="modal"
-        data-bs-target="#modalProcList"><i class="bi-compass"></i></button>
+    <div class="container-fluid justify-content-center">
+      <button type="button" class="btn btn-light" id="loadAppButton" data-mdb-toggle="modal"
+        data-mdb-target="#modalLoadApp">
+        <i class="fas bi-box-seam fa-2x"></i>
+      </button>
+      <button type="button" class="btn btn-light" id="procListButton" data-mdb-toggle="modal"
+        data-mdb-target="#modalProcList">
+        <i class="fas bi-compass fa-2x"></i>
+      </button>
     </div>
   </nav>
 
@@ -30,13 +36,17 @@
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header" role="tablist">
-          <h1 class="modal-title fs-5">Load application</h1>
+          <h5 class="modal-title">Launch an application</h5>
           <div>
-            <button type="button" class="btn active" id="loadAppLibraryTab" data-bs-toggle="tab"
-              data-bs-target="#loadAppLibrary"><i class="bi-box-seam"></i></button>
-            <button type="button" class="btn" id="loadAppCustomTab" data-bs-toggle="tab"
-              data-bs-target="#loadAppCustom"><i class="bi-code"></i></button>
-            <button type="button" class="btn btn-close" id="loadAppClose" data-bs-dismiss="modal"
+            <button type="button" class="btn btn-light active" id="loadAppLibraryTab" data-mdb-toggle="tab"
+              data-mdb-target="#loadAppLibrary">
+              <i class="fas bi-box-seam fa-lg"></i>
+            </button>
+            <button type="button" class="btn btn-light" id="loadAppCustomTab" data-mdb-toggle="tab"
+              data-mdb-target="#loadAppCustom">
+              <i class="fas bi-code fa-lg"></i>
+            </button>
+            <button type="button" class="btn-close" id="loadAppClose" data-mdb-dismiss="modal"
               aria-label="Close"></button>
           </div>
         </div><!-- End of modal-header -->
@@ -66,7 +76,7 @@
               </div>
             </form>
             <div class="gap-2 d-flex justify-content-end">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">Cancel</button>
               <button type="button" class="btn btn-primary" id="loadAppCustomButton">Load</button>
             </div>
           </div>
@@ -80,14 +90,20 @@
     <div class="modal-dialog modal-xl modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header" role="tablist">
-          <h1 class="modal-title fs-5">Running processes</h1>
+          <h5 class="modal-title">Running processes</h5>
           <div>
-            <button type="button" class="btn active" id="procListByAccountTab" data-bs-toggle="tab"
-              data-bs-target="#procListByAccount"><i class="bi-person"></i></button>
-            <button type="button" class="btn" id="procListInNodeTab" data-bs-toggle="tab"
-              data-bs-target="#procListInNode"><i class="bi-laptop"></i></button>
-            <button type="button" class="btn" id="procListRefresh"><i class="bi-arrow-repeat"></i></button>
-            <button type="button" class="btn btn-close" id="procListClose" data-bs-dismiss="modal"
+            <button type="button" class="btn btn-light active" id="procListByAccountTab" data-mdb-toggle="tab"
+              data-mdb-target="#procListByAccount">
+              <i class="fas bi-person fa-lg"></i>
+            </button>
+            <button type="button" class="btn btn-light" id="procListInNodeTab" data-mdb-toggle="tab"
+              data-mdb-target="#procListInNode">
+              <i class="fas bi-laptop fa-lg"></i>
+            </button>
+            <button type="button" class="btn btn-light" id="procListRefresh">
+              <i class="fsa bi-arrow-repeat fa-lg"></i>
+            </button>
+            <button type="button" class="btn-close" id="procListClose" data-mdb-dismiss="modal"
               aria-label="Close"></button>
           </div>
         </div><!-- End of modal-header -->
@@ -131,11 +147,12 @@
               </div>
               <div class="dflex flew-column align-self-center">
                 <div class="dropdown">
-                  <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown"
+                  <button type="button" class="btn btn-light dropdown-toggle" data-mdb-toggle="dropdown"
                     aria-expanded="false"></button>
                   <ul class="dropdown-menu">
                     <li><a class="dropdown-item appMenuTerminate" href="#">Terminate</a></li>
-                    <li><a class="dropdown-item appMenuMigrate" href="#">Migrate</a></li>
+                    <li><a class="dropdown-item appMenuMigrate" href="#" data-mdb-toggle="modal"
+                        data-mdb-target="#modalMigrate">Migrate</a></li>
                   </ul>
                 </div>
               </div>
@@ -151,10 +168,12 @@
     <div class="modal-dialog modal-xl modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header" role="tablist">
-          <h1 class="modal-title fs-5">Running processes</h1>
+          <h5 class="modal-title">Migrate a process</h5>
           <div>
-            <button type="button" class="btn" id="migrateRefresh"><i class="bi-arrow-repeat"></i></button>
-            <button type="button" class="btn btn-close" id="migrateClose" data-bs-dismiss="modal"
+            <button type="button" class="btn btn-light" id="migrateRefresh">
+              <i class="fas bi-arrow-repeat fa-lg"></i>
+            </button>
+            <button type="button" class="btn-close" id="migrateClose" data-mdb-dismiss="modal"
               aria-label="Close"></button>
           </div>
         </div><!-- End of modal-header -->
@@ -171,7 +190,8 @@
             <h6 class="fw-bold nodeName"></h6>&nbsp;
             <small class="opacity-75 nodeType"></small>:<small class="opacity-75 nodeID"></small>
             <i class="bi-pin-map"></i>
-            <small class="opacity-75 nodeLatitude"></small>, <small class="opacity-75 nodeLongitude"></small>,  <small class="opacity-75 nodeAltitude"></small>
+            <small class="opacity-75 nodeLatitude"></small>, <small class="opacity-75 nodeLongitude"></small>, <small
+              class="opacity-75 nodeAltitude"></small>
           </template>
         </div><!-- End of modal-body -->
       </div>
@@ -186,7 +206,7 @@
           <i class="bi-person-circle"></i>&nbsp;
           <span id="systemAccount">connecting</span>
         </div>
-        <div >
+        <div>
           <i class="bi-laptop"></i>&nbsp;
           <span id="systemNode">connecting</span>
         </div>

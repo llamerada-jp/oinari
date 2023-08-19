@@ -133,7 +133,13 @@ func (impl *nodeControllerImpl) ReceivePublishingNode(state NodeState) error {
 }
 
 func (impl *nodeControllerImpl) SetPosition(latitude, longitude, altitude float64) error {
-	_, _, err := impl.col.SetPosition(latitude, longitude)
+	if latitude < -90.0 || 90 < latitude {
+		return fmt.Errorf("latitude should between -90.0 and 90deg")
+	}
+	if longitude < -180 || 180 < longitude {
+		return fmt.Errorf("longitude should between -180.0 and 180deg")
+	}
+	_, _, err := impl.col.SetPosition(math.Pi*longitude/180.0, math.Pi*latitude/180.0)
 	if err != nil {
 		return fmt.Errorf("failed to set position of colonio: %w", err)
 	}

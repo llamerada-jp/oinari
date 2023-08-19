@@ -112,6 +112,9 @@ export class Commands {
     return this.cl.call(CL_SYSTEM_PATH + "/disconnect", {});
   }
 
+  // lat: latitude[degree]
+  // lon: longitude[degree]
+  // alt: altitude[meter]
   setPosition(lat: number, lon: number, alt: number): Promise<any> {
     return this.cl.call(CL_RESOURCE_PATH + "/setNodePosition", {
       latitude: lat,

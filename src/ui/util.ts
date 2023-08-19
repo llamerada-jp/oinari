@@ -28,6 +28,16 @@ export function addListItem(list: HTMLElement, temp: HTMLTemplateElement, conten
   list.append(item);
 }
 
+export function closeModal(elName: string): void {
+  // I want to use bootstrap.Modal.getInstance causes an extra backdrop and doesn't fade when calling the hide method.
+  // This code is ugly workaround.
+  let closer = document.getElementById(elName);
+  if (closer == null) {
+    throw new Error("HTMLElement of modal closer is not found");
+  }
+  closer.dispatchEvent(new Event("click"));
+}
+
 export function makeListEmptyHide(list: HTMLElement | null): void {
   if (list == null) return;
   list.classList.add("d-none");
