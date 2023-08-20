@@ -7,8 +7,10 @@ TS_FILES := $(shell find ./src/ -name *.ts) src/colonio.d.ts src/colonio_go.d.ts
 OINARI_FILES := dist/wasm_exec.js dist/404.html dist/error.html dist/index.html
 MAP_FILES := dist/colonio.wasm.map dist/colonio_go.js.map
 
+.PHONY: build
 build: $(COLONIO_FILES) $(OINARI_FILES) build-go build-ts
 
+.PHONY: build-go
 build-go: $(GO_FILES) go.mod go.sum
 	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/node/*.go
 	GOOS=js GOARCH=wasm go build -o ./dist/test/exit.wasm ./cmd/app/exit/*.go
@@ -18,6 +20,7 @@ build-go: $(GO_FILES) go.mod go.sum
 	GOOS=js GOARCH=wasm go test -o ./dist/test/test_api.wasm -c ./api/
 	GOOS=js GOARCH=wasm go test -o ./dist/test/test_node.wasm -c ./cmd/node/
 
+.PHONY: build-ts
 build-ts: $(TS_FILES) package.json tsconfig.json webpack.config.js
 	npm run build
 	mv ./dist/test.js ./dist/test/test.js

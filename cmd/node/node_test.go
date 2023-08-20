@@ -16,42 +16,32 @@
 package main
 
 import (
-	"context"
 	"testing"
 
-	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node/controller"
 	"github.com/llamerada-jp/oinari/node/cri"
 	"github.com/llamerada-jp/oinari/node/kvs"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
 func TestMain(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// ctx, cancel := context.WithCancel(context.Background())
+	// defer cancel()
 
 	// setup crosslink
 	rootMpx := crosslink.NewMultiPlexer()
 	cl := crosslink.NewCrosslink("crosslink", rootMpx)
 
-	// setup colonio
-	config := colonio.NewConfig()
-	col, err := colonio.NewColonio(config)
-	assert.NoError(t, err)
-	err = col.Connect("https://localhost:8080/seed", "")
-	assert.NoError(t, err)
-	defer col.Disconnect()
-
-	// run tests that can be run offline.
+	// test cri
 	suite.Run(t, cri.NewCriTest(cl))
 
 	// test kvs
-	suite.Run(t, kvs.NewAccountKvsTest(ctx, col))
+	suite.Run(t, kvs.NewAccountKvsTest())
+	suite.Run(t, kvs.NewPodKvsTest())
 
 	// test controller
-	suite.Run(t, controller.NewAccountControllerTest(ctx, col))
+	suite.Run(t, controller.NewAccountControllerTest())
 	suite.Run(t, controller.NewNodeControllerTest())
 
 	// test manager

@@ -42,7 +42,7 @@ async function testUsingController() {
 
   // run wasm test programs
   for (const file of TESTS) {
-    console.log("testing", file);
+    console.log("testing " + file);
     await crosslink.call("run", {
       file: file,
     });

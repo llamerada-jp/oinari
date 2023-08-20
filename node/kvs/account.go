@@ -41,9 +41,11 @@ func NewAccountKvs(col colonio.Colonio) AccountKvs {
 func (impl *accountKvsImpl) Get(name string) (*api.Account, error) {
 	key := impl.getKey(name)
 	val, err := impl.col.KvsGet(key)
-	// TODO: return error if err is not `not found error`
 	if err != nil {
-		return nil, nil
+		if err == colonio.ErrKvsNotFound {
+			return nil, nil
+		}
+		return nil, err
 	}
 
 	if val.IsNil() {

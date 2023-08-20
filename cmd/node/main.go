@@ -123,7 +123,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	podKvs := kvs.NewPodKvs(na.col)
 
 	// controllers
-	accountCtrl := controller.NewAccountController(ctx, account, localNid, accountKvs)
+	accountCtrl := controller.NewAccountController(account, localNid, accountKvs)
 	containerCtrl := controller.NewContainerController(localNid, cri, podKvs)
 	nodeCtrl := controller.NewNodeController(ctx, na.col, messaging, account, nodeName, nodeType)
 	podCtrl := controller.NewPodController(podKvs, messaging, localNid)

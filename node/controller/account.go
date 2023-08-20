@@ -16,7 +16,6 @@
 package controller
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -56,7 +55,7 @@ type timestampLog struct {
 	timestampStr string
 }
 
-func NewAccountController(ctx context.Context, account, localNid string, accountKvs kvs.AccountKvs) AccountController {
+func NewAccountController(account, localNid string, accountKvs kvs.AccountKvs) AccountController {
 	return &accountControllerImpl{
 		accountName: account,
 		localNid:    localNid,

@@ -16,25 +16,25 @@
 package kvs
 
 import (
-	"context"
 	"encoding/json"
 
-	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/node/misc"
 	"github.com/stretchr/testify/suite"
 )
 
 type accountKvsTest struct {
 	suite.Suite
-	col colonio.Colonio
-	acc *accountKvsImpl
+	col  *misc.ColonioMock
+	impl *accountKvsImpl
 }
 
-func NewAccountKvsTest(ctx context.Context, col colonio.Colonio) suite.TestingSuite {
+func NewAccountKvsTest() suite.TestingSuite {
+	colonioMock := misc.NewColonioMock()
 	return &accountKvsTest{
-		col: col,
-		acc: &accountKvsImpl{
-			col: col,
+		col: colonioMock,
+		impl: &accountKvsImpl{
+			col: colonioMock,
 		},
 	}
 }
@@ -42,28 +42,28 @@ func NewAccountKvsTest(ctx context.Context, col colonio.Colonio) suite.TestingSu
 func (test *accountKvsTest) TestGet() {
 	// return nil if the record is not exist
 	KEY := "get-not-exist"
-	KEY_RAW := test.acc.getKey(KEY)
+	KEY_RAW := test.impl.getKey(KEY)
 	_, err := test.col.KvsGet(KEY_RAW)
 	test.Error(err)
-	account, err := test.acc.Get(KEY)
+	account, err := test.impl.Get(KEY)
 	test.NoError(err)
 	test.Nil(account)
 
 	// return nil if the record is nil
 	KEY = "get-account-nil"
-	KEY_RAW = test.acc.getKey(KEY)
+	KEY_RAW = test.impl.getKey(KEY)
 	err = test.col.KvsSet(KEY_RAW, nil, 0)
 	test.NoError(err)
 	record, err := test.col.KvsGet(KEY_RAW)
 	test.NoError(err)
 	test.True(record.IsNil())
-	account, err = test.acc.Get(KEY)
+	account, err = test.impl.Get(KEY)
 	test.NoError(err)
 	test.Nil(account)
 
 	// can get valid account record
 	KEY = "get-account-valid"
-	KEY_RAW = test.acc.getKey(KEY)
+	KEY_RAW = test.impl.getKey(KEY)
 	podUuid := api.GeneratePodUuid()
 	account = &api.Account{
 		Meta: &api.ObjectMeta{
@@ -92,6 +92,9 @@ func (test *accountKvsTest) TestGet() {
 	test.NoError(err)
 	err = test.col.KvsSet(KEY_RAW, raw, 0)
 	test.NoError(err)
+	account, err = test.impl.Get(KEY)
+	test.NoError(err)
+
 	test.Equal(api.ResourceTypeAccount, account.Meta.Type)
 	test.Equal("test-account", account.Meta.Name)
 	test.Equal("test-account", account.Meta.Owner)
@@ -106,13 +109,13 @@ func (test *accountKvsTest) TestGet() {
 
 	// should be remove invalid record and return nil
 	KEY = "get-account-invalid"
-	KEY_RAW = test.acc.getKey(KEY)
+	KEY_RAW = test.impl.getKey(KEY)
 	account.State.Nodes = nil
 	raw, err = json.Marshal(account)
 	test.NoError(err)
 	err = test.col.KvsSet(KEY_RAW, raw, 0)
 	test.NoError(err)
-	account, err = test.acc.Get(KEY)
+	account, err = test.impl.Get(KEY)
 	test.NoError(err)
 	test.Nil(account)
 	record, err = test.col.KvsGet(KEY_RAW)
@@ -123,7 +126,7 @@ func (test *accountKvsTest) TestGet() {
 func (test *accountKvsTest) TestSet() {
 	// fail when set invalid record
 	KEY := "set-account-invalid"
-	KEY_RAW := test.acc.getKey(KEY)
+	KEY_RAW := test.impl.getKey(KEY)
 	account := &api.Account{
 		Meta: &api.ObjectMeta{
 			Type:              api.ResourceTypeAccount,
@@ -138,25 +141,25 @@ func (test *accountKvsTest) TestSet() {
 			Nodes: make(map[string]api.AccountNodeState),
 		},
 	}
-	err := test.acc.Set(account)
+	err := test.impl.Set(account)
 	test.Error(err)
 	_, err = test.col.KvsGet(KEY_RAW)
 	test.Error(err)
 
 	// can set with the valid record
 	account.State.Pods = make(map[string]api.AccountPodState)
-	err = test.acc.Set(account)
-	defer test.acc.Delete(KEY)
+	err = test.impl.Set(account)
+	defer test.impl.Delete(KEY)
 	test.NoError(err)
-	account, err = test.acc.Get(KEY)
+	account, err = test.impl.Get(KEY)
 	test.NoError(err)
 	test.Equal(KEY, account.Meta.Name)
 }
 
 func (test *accountKvsTest) TestDelete() {
 	KEY := "delete-account"
-	KEY_RAW := test.acc.getKey(KEY)
-	test.acc.Delete(KEY)
+	KEY_RAW := test.impl.getKey(KEY)
+	test.impl.Delete(KEY)
 	raw, err := test.col.KvsGet(KEY_RAW)
 	test.NoError(err)
 	test.True(raw.IsNil())

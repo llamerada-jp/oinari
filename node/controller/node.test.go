@@ -39,3 +39,5 @@ func NewNodeControllerTest() suite.TestingSuite {
 func (test *nodeControllerTest) TestNid() {
 	test.Equal(nodeID, test.impl.GetNid())
 }
+
+// TODO add tests

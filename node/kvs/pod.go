@@ -17,6 +17,7 @@ package kvs
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
@@ -51,7 +52,25 @@ func (impl *podKvsImpl) Create(pod *api.Pod) error {
 		return fmt.Errorf("failed to create pod data: %w", err)
 	}
 
-	return impl.col.KvsSet(key, raw, colonio.KvsProhibitOverwrite)
+	val, err := impl.col.KvsGet(key)
+	if errors.Is(err, colonio.ErrKvsNotFound) {
+		err = impl.col.KvsSet(key, raw, colonio.KvsProhibitOverwrite)
+		if err != nil {
+			return fmt.Errorf("failed to set pod data with prohibit overwrite option: %w", err)
+		}
+		return nil
+	}
+
+	// TODO: this implement might occur collision, fix this after delete feature is implemented in colonio
+	if val.IsNil() {
+		err = impl.col.KvsSet(key, raw, 0)
+		if err != nil {
+			return fmt.Errorf("failed to set pod data: %w", err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("there is an duplicate uuid pod data")
 }
 
 func (impl *podKvsImpl) Update(pod *api.Pod) error {
@@ -63,6 +82,14 @@ func (impl *podKvsImpl) Update(pod *api.Pod) error {
 	raw, err := json.Marshal(pod)
 	if err != nil {
 		return fmt.Errorf("failed to update pod data: %w", err)
+	}
+
+	val, err := impl.col.KvsGet(key)
+	if err != nil {
+		return fmt.Errorf("failed to check for the existence of the data: %w", err)
+	}
+	if val.IsNil() {
+		return fmt.Errorf("the data might be deleted")
 	}
 
 	return impl.col.KvsSet(key, raw, 0)
