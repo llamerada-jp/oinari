@@ -19,5 +19,9 @@ package misc
 import "time"
 
 func GetTimestamp() string {
-	return time.Now().Format(time.RFC3339)
+	return TimeToTimestamp(time.Now())
+}
+
+func TimeToTimestamp(t time.Time) string {
+	return t.Format(time.RFC3339)
 }

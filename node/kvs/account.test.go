@@ -41,37 +41,37 @@ func NewAccountKvsTest() suite.TestingSuite {
 
 func (test *accountKvsTest) TestGet() {
 	// return nil if the record is not exist
-	KEY := "get-not-exist"
-	KEY_RAW := test.impl.getKey(KEY)
-	_, err := test.col.KvsGet(KEY_RAW)
+	accountName := "get-not-exist"
+	key := test.impl.getKey(accountName)
+	_, err := test.col.KvsGet(key)
 	test.Error(err)
-	account, err := test.impl.Get(KEY)
+	accountGet, err := test.impl.Get(accountName)
 	test.NoError(err)
-	test.Nil(account)
+	test.Nil(accountGet)
 
 	// return nil if the record is nil
-	KEY = "get-account-nil"
-	KEY_RAW = test.impl.getKey(KEY)
-	err = test.col.KvsSet(KEY_RAW, nil, 0)
+	accountName = "get-account-nil"
+	key = test.impl.getKey(accountName)
+	err = test.col.KvsSet(key, nil, 0)
 	test.NoError(err)
-	record, err := test.col.KvsGet(KEY_RAW)
+	record, err := test.col.KvsGet(key)
 	test.NoError(err)
 	test.True(record.IsNil())
-	account, err = test.impl.Get(KEY)
+	accountGet, err = test.impl.Get(accountName)
 	test.NoError(err)
-	test.Nil(account)
+	test.Nil(accountGet)
 
 	// can get valid account record
-	KEY = "get-account-valid"
-	KEY_RAW = test.impl.getKey(KEY)
+	accountName = "get-account-valid"
+	key = test.impl.getKey(accountName)
 	podUuid := api.GeneratePodUuid()
-	account = &api.Account{
+	accountSet := &api.Account{
 		Meta: &api.ObjectMeta{
 			Type:              api.ResourceTypeAccount,
-			Name:              "test-account",
-			Owner:             "test-account",
+			Name:              accountName,
+			Owner:             accountName,
 			CreatorNode:       "012345678901234567890123456789ab",
-			Uuid:              api.GenerateAccountUuid("test-account"),
+			Uuid:              api.GenerateAccountUuid(accountName),
 			DeletionTimestamp: "2023-04-15T17:30:40+09:00",
 		},
 		State: &api.AccountState{
@@ -83,42 +83,49 @@ func (test *accountKvsTest) TestGet() {
 			},
 			Nodes: map[string]api.AccountNodeState{
 				"012345678901234567890123456789ab": {
+					Name:      "test-node",
+					NodeType:  api.NodeTypeMobile,
 					Timestamp: "2023-04-15T17:30:40+09:00",
 				},
 			},
 		},
 	}
-	raw, err := json.Marshal(account)
-	test.NoError(err)
-	err = test.col.KvsSet(KEY_RAW, raw, 0)
-	test.NoError(err)
-	account, err = test.impl.Get(KEY)
+
+	test.NoError(accountSet.Validate())
+	raw, err := json.Marshal(accountSet)
 	test.NoError(err)
 
-	test.Equal(api.ResourceTypeAccount, account.Meta.Type)
-	test.Equal("test-account", account.Meta.Name)
-	test.Equal("test-account", account.Meta.Owner)
-	test.Equal("012345678901234567890123456789ab", account.Meta.CreatorNode)
-	test.Equal(api.GenerateAccountUuid("test-account"), account.Meta.Uuid)
-	test.Equal("2023-04-15T17:30:40+09:00", account.Meta.DeletionTimestamp)
-	test.Len(account.State.Pods, 1)
-	test.Equal("012345678901234567890123456789ab", account.State.Pods[podUuid].RunningNode)
-	test.Equal("2023-04-15T17:30:40+09:00", account.State.Pods[podUuid].Timestamp)
-	test.Len(account.State.Nodes, 1)
-	test.Equal("2023-04-15T17:30:40+09:00", account.State.Nodes["012345678901234567890123456789ab"].Timestamp)
+	err = test.col.KvsSet(key, raw, 0)
+	test.NoError(err)
+	accountGet, err = test.impl.Get(accountName)
+	test.NoError(err)
+	test.NotNil(accountGet)
+	test.Equal(api.ResourceTypeAccount, accountGet.Meta.Type)
+	test.Equal(accountName, accountGet.Meta.Name)
+	test.Equal(accountName, accountGet.Meta.Owner)
+	test.Equal("012345678901234567890123456789ab", accountGet.Meta.CreatorNode)
+	test.Equal(api.GenerateAccountUuid(accountName), accountGet.Meta.Uuid)
+	test.Equal("2023-04-15T17:30:40+09:00", accountGet.Meta.DeletionTimestamp)
+	test.Len(accountGet.State.Pods, 1)
+	test.Equal("012345678901234567890123456789ab", accountGet.State.Pods[podUuid].RunningNode)
+	test.Equal("2023-04-15T17:30:40+09:00", accountGet.State.Pods[podUuid].Timestamp)
+	test.Len(accountGet.State.Nodes, 1)
+	test.Equal("test-node", accountGet.State.Nodes["012345678901234567890123456789ab"].Name)
+	test.Equal(api.NodeTypeMobile, accountGet.State.Nodes["012345678901234567890123456789ab"].NodeType)
+	test.Equal("2023-04-15T17:30:40+09:00", accountGet.State.Nodes["012345678901234567890123456789ab"].Timestamp)
 
 	// should be remove invalid record and return nil
-	KEY = "get-account-invalid"
-	KEY_RAW = test.impl.getKey(KEY)
-	account.State.Nodes = nil
-	raw, err = json.Marshal(account)
+	accountName = "get-account-invalid"
+	key = test.impl.getKey(accountName)
+	accountSet.State.Nodes = nil
+	raw, err = json.Marshal(accountSet)
 	test.NoError(err)
-	err = test.col.KvsSet(KEY_RAW, raw, 0)
+	err = test.col.KvsSet(key, raw, 0)
 	test.NoError(err)
-	account, err = test.impl.Get(KEY)
+	accountGet, err = test.impl.Get(accountName)
 	test.NoError(err)
-	test.Nil(account)
-	record, err = test.col.KvsGet(KEY_RAW)
+	test.Nil(accountGet)
+	record, err = test.col.KvsGet(key)
 	test.NoError(err)
 	test.True(record.IsNil())
 }
@@ -127,7 +134,7 @@ func (test *accountKvsTest) TestSet() {
 	// fail when set invalid record
 	KEY := "set-account-invalid"
 	KEY_RAW := test.impl.getKey(KEY)
-	account := &api.Account{
+	accountSet := &api.Account{
 		Meta: &api.ObjectMeta{
 			Type:              api.ResourceTypeAccount,
 			Name:              KEY,
@@ -141,19 +148,19 @@ func (test *accountKvsTest) TestSet() {
 			Nodes: make(map[string]api.AccountNodeState),
 		},
 	}
-	err := test.impl.Set(account)
+	err := test.impl.Set(accountSet)
 	test.Error(err)
 	_, err = test.col.KvsGet(KEY_RAW)
 	test.Error(err)
 
 	// can set with the valid record
-	account.State.Pods = make(map[string]api.AccountPodState)
-	err = test.impl.Set(account)
+	accountSet.State.Pods = make(map[string]api.AccountPodState)
+	err = test.impl.Set(accountSet)
 	defer test.impl.Delete(KEY)
 	test.NoError(err)
-	account, err = test.impl.Get(KEY)
+	accountGet, err := test.impl.Get(KEY)
 	test.NoError(err)
-	test.Equal(KEY, account.Meta.Name)
+	test.Equal(KEY, accountGet.Meta.Name)
 }
 
 func (test *accountKvsTest) TestDelete() {

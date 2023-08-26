@@ -74,66 +74,64 @@ func (impl *accountControllerImpl) DealLocalResource(raw []byte) (bool, error) {
 		return true, fmt.Errorf("failed to validate account record: %w", err)
 	}
 
-	impl.cleanLogs()
-	log, ok := impl.logs[account.Meta.Name]
+	impl.cleanLogs(account.Meta.Name)
+	logE, ok := impl.logs[account.Meta.Name]
 	if !ok {
-		log = &logEntry{
+		logE = &logEntry{
 			lastUpdated: time.Now(),
 			pods:        make(map[string]timestampLog),
 			nodes:       make(map[string]timestampLog),
 		}
-		impl.logs[account.Meta.Name] = log
+		impl.logs[account.Meta.Name] = logE
 	}
 
 	updateAccount := false
 	now := time.Now()
-	log.lastChecked = now
+	logE.lastChecked = now
 
 	for key, pod := range account.State.Pods {
-		podLog, ok := log.pods[key]
+		podLog, ok := logE.pods[key]
 		if !ok || podLog.timestampStr != pod.Timestamp {
-			log.pods[key] = timestampLog{
+			logE.pods[key] = timestampLog{
 				lastUpdated:  now,
 				timestampStr: pod.Timestamp,
 			}
-			log.lastUpdated = now
+			logE.lastUpdated = now
 			continue
 		}
 		if now.After(podLog.lastUpdated.Add(ACCOUNT_STATE_RESOURCE_LIFETIME)) {
 			delete(account.State.Pods, key)
 			updateAccount = true
-			delete(log.pods, key)
-			log.lastUpdated = now
+			logE.lastUpdated = now
 		}
 	}
-	for key, podLog := range log.pods {
+	for key, podLog := range logE.pods {
 		if now.After(podLog.lastUpdated.Add(ACCOUNT_STATE_RESOURCE_LIFETIME * 2)) {
-			delete(log.pods, key)
-			log.lastUpdated = now
+			delete(logE.pods, key)
+			logE.lastUpdated = now
 		}
 	}
 
 	for key, node := range account.State.Nodes {
-		nodeLog, ok := log.nodes[key]
+		nodeLog, ok := logE.nodes[key]
 		if !ok || nodeLog.timestampStr != node.Timestamp {
-			log.nodes[key] = timestampLog{
+			logE.nodes[key] = timestampLog{
 				lastUpdated:  now,
 				timestampStr: node.Timestamp,
 			}
-			log.lastUpdated = now
+			logE.lastUpdated = now
 			continue
 		}
 		if now.After(nodeLog.lastUpdated.Add(ACCOUNT_STATE_RESOURCE_LIFETIME)) {
 			delete(account.State.Nodes, key)
 			updateAccount = true
-			delete(log.nodes, key)
-			log.lastUpdated = now
+			logE.lastUpdated = now
 		}
 	}
-	for key, nodeLog := range log.nodes {
+	for key, nodeLog := range logE.nodes {
 		if now.After(nodeLog.lastUpdated.Add(ACCOUNT_STATE_RESOURCE_LIFETIME * 2)) {
-			delete(log.nodes, key)
-			log.lastUpdated = now
+			delete(logE.nodes, key)
+			logE.lastUpdated = now
 		}
 	}
 
@@ -141,7 +139,7 @@ func (impl *accountControllerImpl) DealLocalResource(raw []byte) (bool, error) {
 		return false, impl.accountKvs.Set(account)
 	}
 
-	if now.After(log.lastUpdated.Add(ACCOUNT_LIFETIME)) {
+	if now.After(logE.lastUpdated.Add(ACCOUNT_LIFETIME)) {
 		return true, nil
 	}
 
@@ -186,10 +184,8 @@ func (impl *accountControllerImpl) UpdatePodAndNodeState(account string, pods ma
 		return err
 	}
 
-	if pods == nil {
-		for podUUID, podState := range pods {
-			record.State.Pods[podUUID] = podState
-		}
+	for podUUID, podState := range pods {
+		record.State.Pods[podUUID] = podState
 	}
 
 	if nodeState != nil {
@@ -203,10 +199,13 @@ func (impl *accountControllerImpl) UpdatePodAndNodeState(account string, pods ma
 	return nil
 }
 
-func (impl *accountControllerImpl) cleanLogs() {
+func (impl *accountControllerImpl) cleanLogs(exclude string) {
 	now := time.Now()
 	for key, log := range impl.logs {
-		if now.After(log.lastChecked.Add(ACCOUNT_STATE_RESOURCE_LIFETIME * 2)) {
+		if key == exclude {
+			continue
+		}
+		if now.After(log.lastChecked.Add(ACCOUNT_LIFETIME * 2)) {
 			delete(impl.logs, key)
 		}
 	}

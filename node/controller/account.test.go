@@ -16,7 +16,8 @@
 package controller
 
 import (
-	"log"
+	"encoding/json"
+	"time"
 
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/kvs"
@@ -51,28 +52,195 @@ func NewAccountControllerTest() suite.TestingSuite {
 }
 
 func (test *accountControllerTest) TestDealLocalResource() {
-	account := "(=^_^=)"
+	accountName := "(=^_^=)"
 
 	// dummy entry to avoid error when update
-	test.col.KvsSet(api.GenerateAccountUuid(account), []byte("dummy"), 0)
+	test.col.KvsSet(api.GenerateAccountUuid(accountName), []byte("dummy"), 0)
 
 	/// abnormal: return true if the data is invalid
 	res, err := test.impl.DealLocalResource([]byte("invalid data"))
 	test.Error(err)
 	test.True(res)
 
-	log.Fatal("TODO: implement DealLocalResource() test")
+	/// normal: create log entry for new account
+	podUuid1 := api.GeneratePodUuid()
+	podUuid2 := api.GeneratePodUuid()
+	nodeID1 := "012345678901234567890123456789ab"
+	nodeID2 := "012345678901234567890123456789ac"
+	baseTime := time.Now()
+	baseTimestamp := misc.TimeToTimestamp(baseTime)
+	accountSet := &api.Account{
+		Meta: &api.ObjectMeta{
+			Type:        api.ResourceTypeAccount,
+			Name:        accountName,
+			Owner:       accountName,
+			CreatorNode: nodeID1,
+			Uuid:        api.GenerateAccountUuid(accountName),
+		},
+		State: &api.AccountState{
+			Pods: map[string]api.AccountPodState{
+				podUuid1: {
+					RunningNode: nodeID1,
+					Timestamp:   baseTimestamp,
+				},
+				podUuid2: {
+					RunningNode: nodeID2,
+					Timestamp:   baseTimestamp,
+				},
+			},
+			Nodes: map[string]api.AccountNodeState{
+				nodeID1: {
+					Name:      "node1",
+					Timestamp: baseTimestamp,
+					NodeType:  api.NodeTypeServer,
+				},
+			},
+		},
+	}
+	test.NoError(accountSet.Validate())
+	test.NoError(test.accountKvs.Set(accountSet))
+	raw, err := json.Marshal(accountSet)
+	test.NoError(err)
+	res, err = test.impl.DealLocalResource(raw)
+	endTime := time.Now()
+	test.NoError(err)
+	test.False(res)
+	test.Len(test.impl.logs, 1)
+	logEntry := test.impl.logs[accountName]
+	test.LessOrEqual(baseTime, logEntry.lastChecked)
+	test.LessOrEqual(logEntry.lastChecked, endTime)
+	test.LessOrEqual(baseTime, logEntry.lastUpdated)
+	test.LessOrEqual(logEntry.lastUpdated, endTime)
+	test.Len(logEntry.pods, 2)
+	test.LessOrEqual(baseTime, logEntry.pods[podUuid1].lastUpdated)
+	test.Equal(baseTimestamp, logEntry.pods[podUuid1].timestampStr)
+	test.LessOrEqual(baseTime, logEntry.pods[podUuid2].lastUpdated)
+	test.Equal(baseTimestamp, logEntry.pods[podUuid2].timestampStr)
+	test.Len(logEntry.nodes, 1)
+
+	accountGet, err := test.accountKvs.Get(accountName)
+	test.NoError(err)
+	test.NotNil(accountGet)
+	test.Len(accountGet.State.Pods, 2)
+	test.Len(accountGet.State.Nodes, 1)
 
 	/// normal: keep account.State.Pods before lifetime
+	timestampDummy := misc.TimeToTimestamp(baseTime.Add(-1 * ACCOUNT_STATE_RESOURCE_LIFETIME).Add(10 * time.Second))
+	accountSet.State.Pods[podUuid1] = api.AccountPodState{
+		RunningNode: nodeID1,
+		Timestamp:   timestampDummy,
+	}
+	test.impl.logs[accountName].pods[podUuid1] = timestampLog{
+		lastUpdated:  baseTime,
+		timestampStr: timestampDummy,
+	}
+	test.NoError(test.accountKvs.Set(accountSet))
+	raw, err = json.Marshal(accountSet)
+	test.NoError(err)
+	res, err = test.impl.DealLocalResource(raw)
+	test.NoError(err)
+	test.False(res)
+	test.Len(test.impl.logs, 1)
+	logEntry = test.impl.logs[accountName]
+	test.Len(logEntry.pods, 2)
 
-	/// normal: delete account.State.Pods & the log entry after lifetime passed
+	/// normal: delete account.State.Pods entry after lifetime passed
+	test.impl.logs[accountName].pods[podUuid2] = timestampLog{
+		lastUpdated:  baseTime.Add(-1 * ACCOUNT_STATE_RESOURCE_LIFETIME).Add(-10 * time.Second),
+		timestampStr: baseTimestamp,
+	}
+	res, err = test.impl.DealLocalResource(raw)
+	test.NoError(err)
+	test.False(res)
+	test.Len(test.impl.logs, 1)
+	logEntry = test.impl.logs[accountName]
+	test.Len(logEntry.pods, 2)
+
+	accountGet, err = test.accountKvs.Get(accountName)
+	test.NoError(err)
+	test.NotNil(accountGet)
+	test.Len(accountGet.State.Pods, 1)
+	test.Len(accountGet.State.Nodes, 1)
 
 	/// normal: delete pod log entry after 2 * lifetime passed
+	test.impl.logs[accountName].pods[podUuid2] = timestampLog{
+		lastUpdated:  baseTime.Add(-2 * ACCOUNT_STATE_RESOURCE_LIFETIME).Add(-10 * time.Second),
+		timestampStr: baseTimestamp,
+	}
+	res, err = test.impl.DealLocalResource(raw)
+	test.NoError(err)
+	test.False(res)
+	test.Len(test.impl.logs, 1)
+	logEntry = test.impl.logs[accountName]
+	test.Len(logEntry.pods, 1)
 
 	/// normal: keep account.State.Nodes before lifetime
-	/// normal: delete account.State.Nodes & the log entry after lifetime passed
+	accountSet.State.Nodes[nodeID1] = api.AccountNodeState{
+		Name:      "node1",
+		Timestamp: timestampDummy,
+		NodeType:  api.NodeTypeServer,
+	}
+	test.impl.logs[accountName].nodes[nodeID1] = timestampLog{
+		lastUpdated:  baseTime,
+		timestampStr: timestampDummy,
+	}
+	test.NoError(test.accountKvs.Set(accountSet))
+	raw, err = json.Marshal(accountSet)
+	test.NoError(err)
+	res, err = test.impl.DealLocalResource(raw)
+	test.NoError(err)
+	test.False(res)
+	test.Len(test.impl.logs, 1)
+	logEntry = test.impl.logs[accountName]
+	test.Len(logEntry.nodes, 1)
+
+	/// normal: delete account.State.Nodes entry after lifetime passed
+	test.impl.logs[accountName].nodes[nodeID1] = timestampLog{
+		lastUpdated:  baseTime.Add(-1 * ACCOUNT_STATE_RESOURCE_LIFETIME).Add(-10 * time.Second),
+		timestampStr: timestampDummy,
+	}
+	res, err = test.impl.DealLocalResource(raw)
+	test.NoError(err)
+	test.False(res)
+	test.Len(test.impl.logs, 1)
+	logEntry = test.impl.logs[accountName]
+	test.Len(logEntry.nodes, 1)
+
+	accountGet, err = test.accountKvs.Get(accountName)
+	test.NoError(err)
+	test.NotNil(accountGet)
+	test.Len(accountGet.State.Nodes, 0)
+
 	/// normal: delete node log entry after 2 * lifetime passed
+	test.impl.logs[accountName].nodes[nodeID1] = timestampLog{
+		lastUpdated:  baseTime.Add(-2 * ACCOUNT_STATE_RESOURCE_LIFETIME).Add(-10 * time.Second),
+		timestampStr: timestampDummy,
+	}
+	res, err = test.impl.DealLocalResource(raw)
+	test.NoError(err)
+	test.False(res)
+	test.Len(test.impl.logs, 1)
+	logEntry = test.impl.logs[accountName]
+	test.Len(logEntry.nodes, 0)
+
 	/// normal: return true if lifetime of account passed
+	delete(accountSet.State.Nodes, nodeID1)
+	test.NoError(accountSet.Validate())
+	test.NoError(test.accountKvs.Set(accountSet))
+	raw, err = json.Marshal(accountSet)
+	test.NoError(err)
+
+	test.impl.logs[accountName].lastUpdated = baseTime.Add(-1 * ACCOUNT_LIFETIME).Add(-10 * time.Second)
+
+	res, err = test.impl.DealLocalResource(raw)
+	test.NoError(err)
+	test.True(res)
+	test.Len(test.impl.logs, 1)
+
+	/// normal: delete log entry after 2 * lifetime
+	test.impl.logs[accountName].lastChecked = baseTime.Add(-2 * ACCOUNT_LIFETIME).Add(-10 * time.Second)
+	test.impl.cleanLogs("")
+	test.Len(test.impl.logs, 0)
 }
 
 func (test *accountControllerTest) TestGetAccountName() {
@@ -82,14 +250,15 @@ func (test *accountControllerTest) TestGetAccountName() {
 func (test *accountControllerTest) TestGetPodState() {
 	podUuid1 := api.GeneratePodUuid()
 	podUuid2 := api.GeneratePodUuid()
+	accountName := ACCOUNT
 
 	test.accountKvs.Set(&api.Account{
 		Meta: &api.ObjectMeta{
 			Type:              api.ResourceTypeAccount,
-			Name:              ACCOUNT,
-			Owner:             ACCOUNT,
+			Name:              accountName,
+			Owner:             accountName,
 			CreatorNode:       "012345678901234567890123456789ab",
-			Uuid:              api.GenerateAccountUuid(ACCOUNT),
+			Uuid:              api.GenerateAccountUuid(accountName),
 			DeletionTimestamp: "2023-04-15T17:30:40+09:00",
 		},
 		State: &api.AccountState{
@@ -124,14 +293,15 @@ func (test *accountControllerTest) TestGetPodState() {
 func (test *accountControllerTest) TestGetNodeState() {
 	nodeID1 := "012345678901234567890123456789ab"
 	nodeID2 := "012345678901234567890123456789aa"
+	accountName := ACCOUNT
 
 	test.accountKvs.Set(&api.Account{
 		Meta: &api.ObjectMeta{
 			Type:              api.ResourceTypeAccount,
-			Name:              ACCOUNT,
-			Owner:             ACCOUNT,
+			Name:              accountName,
+			Owner:             accountName,
 			CreatorNode:       "012345678901234567890123456789ab",
-			Uuid:              api.GenerateAccountUuid(ACCOUNT),
+			Uuid:              api.GenerateAccountUuid(accountName),
 			DeletionTimestamp: "2023-04-15T17:30:40+09:00",
 		},
 		State: &api.AccountState{
