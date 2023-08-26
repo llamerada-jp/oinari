@@ -186,8 +186,10 @@ func (impl *accountControllerImpl) UpdatePodAndNodeState(account string, pods ma
 		return err
 	}
 
-	for podUUID, podState := range pods {
-		record.State.Pods[podUUID] = podState
+	if pods == nil {
+		for podUUID, podState := range pods {
+			record.State.Pods[podUUID] = podState
+		}
 	}
 
 	if nodeState != nil {
