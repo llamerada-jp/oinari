@@ -150,9 +150,9 @@
                   <button type="button" class="btn btn-light dropdown-toggle" data-mdb-toggle="dropdown"
                     aria-expanded="false"></button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item appMenuTerminate" href="#">Terminate</a></li>
                     <li><a class="dropdown-item appMenuMigrate" href="#" data-mdb-toggle="modal"
                         data-mdb-target="#modalMigrate">Migrate</a></li>
+                    <li><a class="dropdown-item appMenuTerminate" href="#">Terminate</a></li>
                   </ul>
                 </div>
               </div>
@@ -187,11 +187,26 @@
           <div class="list-group" id="migrateList">
           </div>
           <template id="migrateListItem">
-            <h6 class="fw-bold nodeName"></h6>&nbsp;
-            <small class="opacity-75 nodeType"></small>:<small class="opacity-75 nodeID"></small>
-            <i class="bi-pin-map"></i>
-            <small class="opacity-75 nodeLatitude"></small>, <small class="opacity-75 nodeLongitude"></small>, <small
-              class="opacity-75 nodeAltitude"></small>
+            <div class="list-group-item list-group-item-action d-flex flex-row justify-content-between">
+              <div class="d-flex flex-column">
+                <div class="d-flex flex-row">
+                  <h6 class="fw-bold nodeName"></h6>
+                </div>
+                <div class="d-flex flex-row">
+                  <small class="opacity-75">
+                    <span class="nodeType"></span>&nbsp;(<span class="nodeID"></span>)
+                  </small>
+                </div>
+                <div class="d-flex flex-row">
+                  <small class="opacity-75">
+                    <i class="bi-pin-map"></i>&nbsp;
+                    <span class="nodeLatitude"></span>,&nbsp;
+                    <span class="nodeLongitude"></span>,&nbsp;
+                    <span class="nodeAltitude"></span>
+                  </small>
+                </div>
+              </div>
+            </div>
           </template>
         </div><!-- End of modal-body -->
       </div>

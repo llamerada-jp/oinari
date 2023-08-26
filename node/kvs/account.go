@@ -18,6 +18,8 @@ package kvs
 import (
 	"encoding/json"
 
+	"errors"
+
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/api"
 )
@@ -42,7 +44,7 @@ func (impl *accountKvsImpl) Get(name string) (*api.Account, error) {
 	key := impl.getKey(name)
 	val, err := impl.col.KvsGet(key)
 	if err != nil {
-		if err == colonio.ErrKvsNotFound {
+		if errors.Is(err, colonio.ErrKvsNotFound) {
 			return nil, nil
 		}
 		return nil, err

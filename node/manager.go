@@ -56,6 +56,11 @@ func (mgr *manager) Start(ctx context.Context) error {
 	tickerKeepAlive := time.NewTicker(30 * time.Second)
 	defer tickerKeepAlive.Stop()
 
+	// first keepalive
+	if err := mgr.keepAlive(); err != nil {
+		log.Println(err)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -122,8 +127,11 @@ func (mgr *manager) keepAlive() error {
 	}
 
 	for account, podStates := range accPodStates {
+		log.Println("🤔 keepalive account", account, localAccount)
 		if account == localAccount {
-			if err := mgr.accountCtrl.UpdatePodAndNodeState(account, podStates, localNodeID, mgr.nodeCtrl.GetNodeState()); err != nil {
+			nodeState := mgr.nodeCtrl.GetNodeState()
+			nodeState.Timestamp = misc.GetTimestamp()
+			if err := mgr.accountCtrl.UpdatePodAndNodeState(account, podStates, localNodeID, nodeState); err != nil {
 				return fmt.Errorf("failed to update account state (%s): %w", account, err)
 			}
 		} else {
