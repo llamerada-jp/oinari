@@ -274,7 +274,18 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 				continue
 			}
 
+			containers, err := impl.cri.ListContainers(&cri.ListContainersRequest{
+				Filter: &cri.ContainerFilter{
+					ID: res.ContainerId,
+				},
+			})
+			if err != nil || len(containers.Containers) == 0 {
+				log.Printf("failed to get container info: %s", err.Error())
+				continue
+			}
+
 			status.ContainerID = res.ContainerId
+			status.Image = containers.Containers[0].Image.Image
 			status.State = api.ContainerState{
 				Running: &api.ContainerStateRunning{
 					StartedAt: misc.GetTimestamp(),
@@ -398,7 +409,7 @@ func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *a
 	}
 
 	if err := impl.podKvs.Update(pod); err != nil {
-		return err
+		return fmt.Errorf("failed to update pod info: %w", err)
 	}
 
 	if len(containerStatuses) > 0 {

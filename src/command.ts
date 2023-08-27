@@ -21,9 +21,9 @@ export interface NodeState {
   id: string
   account: string
   nodeType: string
-  latitude: number
-  longitude: number
-  altitude: number
+  latitude: number | undefined
+  longitude: number | undefined
+  altitude: number | undefined
 }
 
 interface ListNodeResponse {

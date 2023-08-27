@@ -84,17 +84,18 @@ async function main(): Promise<void> {
   }
 
   // try to close when close window or tab
-  window.addEventListener('beforeunload', function() {
+  window.addEventListener('beforeunload', function () {
     command.disconnect();
   });
 
   // connect
-  let acTmp = Math.random().toString(32).substring(2);
-  let nnTmp = Math.random().toString(32).substring(2);
-  let info = await command.connect("https://localhost:8080/seed", 
-    "account-" + acTmp, 
+  // let acTmp = Math.random().toString(32).substring(2);
+  let account = "account-1";
+  let nodeName = "node-" + Math.random().toString(32).substring(2);
+  let info = await command.connect("https://localhost:8080/seed",
+    account,
     "",
-    "node-" + nnTmp,
+    nodeName,
     "PC");
   UI_SI.set(info.account, info.node);
   UI_PL.setNodeInfo(info.account, info.node);

@@ -127,7 +127,6 @@ func (mgr *manager) keepAlive() error {
 	}
 
 	for account, podStates := range accPodStates {
-		log.Println("🤔 keepalive account", account, localAccount)
 		if account == localAccount {
 			nodeState := mgr.nodeCtrl.GetNodeState()
 			nodeState.Timestamp = misc.GetTimestamp()

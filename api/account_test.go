@@ -16,6 +16,8 @@
 package api
 
 import (
+	"encoding/json"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,6 +33,37 @@ func TestGenerateAccountUuid(t *testing.T) {
 	id2 := GenerateAccountUuid("name2")
 	assert.NotEmpty(id2)
 	assert.NotEqual(id1, id2)
+}
+
+func TestMarshaller(t *testing.T) {
+	assert := assert.New(t)
+
+	// valid patterns
+	src := Account{
+		Meta: nil,
+		State: &AccountState{
+			Pods: make(map[string]AccountPodState),
+			Nodes: map[string]AccountNodeState{
+				"nid": {
+					Name:      "node name",
+					Timestamp: "2021-04-09T14:00:40+09:00",
+					NodeType:  NodeTypeGrass,
+					Latitude:  35.681236,
+					Longitude: math.NaN(),
+					Altitude:  1.0,
+				},
+			},
+		},
+	}
+	raw, err := json.Marshal(src)
+	assert.NoError(err)
+	assert.NotEmpty(raw)
+
+	dst := Account{}
+	assert.NoError(json.Unmarshal(raw, &dst))
+	assert.InDelta(35.681236, dst.State.Nodes["nid"].Latitude, 0.000001)
+	assert.True(math.IsNaN(dst.State.Nodes["nid"].Longitude))
+	assert.InDelta(1.0, dst.State.Nodes["nid"].Altitude, 0.000001)
 }
 
 func TestAccountValidate(t *testing.T) {

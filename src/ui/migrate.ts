@@ -61,9 +61,9 @@ async function reload(): Promise<void> {
     content.set(".nodeName", node.name);
     content.set(".nodeID", node.id);
     content.set(".nodeType", node.nodeType);
-    content.set(".nodeLatitude", node.latitude.toString());
-    content.set(".nodeLongitude", node.longitude.toString());
-    content.set(".nodeAltitude", node.altitude.toString());
+    content.set(".nodeLatitude",  (node.latitude == null ? "-" : node.latitude.toString()));
+    content.set(".nodeLongitude", (node.longitude == null ? "-" : node.longitude.toString()));
+    content.set(".nodeAltitude", (node.altitude == null ? "-" : node.altitude.toString()));
     Util.addListItem(listEl, temp, content);
   }
 

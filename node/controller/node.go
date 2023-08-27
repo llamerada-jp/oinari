@@ -17,6 +17,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -204,5 +205,68 @@ func (impl *nodeControllerImpl) publish() error {
 		return fmt.Errorf("failed to publish node info: %w", err)
 	}
 
+	return nil
+}
+
+func (ns NodeState) MarshalJSON() ([]byte, error) {
+	type Alias NodeState
+
+	var lat *float64
+	var lon *float64
+	var alt *float64
+
+	if !math.IsNaN(ns.Latitude) {
+		lat = &ns.Latitude
+	}
+	if !math.IsNaN(ns.Longitude) {
+		lon = &ns.Longitude
+	}
+	if !math.IsNaN(ns.Altitude) {
+		alt = &ns.Altitude
+	}
+
+	return json.Marshal(&struct {
+		Alias
+		AliasLatitude  *float64 `json:"latitude,omitempty"`
+		AliasLongitude *float64 `json:"longitude,omitempty"`
+		AliasAltitude  *float64 `json:"altitude,omitempty"`
+	}{
+		Alias:          (Alias)(ns),
+		AliasLatitude:  lat,
+		AliasLongitude: lon,
+		AliasAltitude:  alt,
+	})
+}
+
+func (ns *NodeState) UnmarshalJSON(b []byte) error {
+	type Alias NodeState
+
+	aux := &struct {
+		*Alias
+		AliasLatitude  *float64 `json:"latitude,omitempty"`
+		AliasLongitude *float64 `json:"longitude,omitempty"`
+		AliasAltitude  *float64 `json:"altitude,omitempty"`
+	}{
+		Alias: (*Alias)(ns),
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+
+	if aux.AliasLatitude != nil {
+		ns.Latitude = *aux.AliasLatitude
+	} else {
+		ns.Latitude = math.NaN()
+	}
+	if aux.AliasLongitude != nil {
+		ns.Longitude = *aux.AliasLongitude
+	} else {
+		ns.Longitude = math.NaN()
+	}
+	if aux.AliasAltitude != nil {
+		ns.Altitude = *aux.AliasAltitude
+	} else {
+		ns.Altitude = math.NaN()
+	}
 	return nil
 }

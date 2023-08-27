@@ -17,6 +17,7 @@ package kvs
 
 import (
 	"encoding/json"
+	"math"
 
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/misc"
@@ -144,8 +145,17 @@ func (test *accountKvsTest) TestSet() {
 			DeletionTimestamp: "2023-04-15T17:30:40+09:00",
 		},
 		State: &api.AccountState{
-			Pods:  nil, // should not be nil
-			Nodes: make(map[string]api.AccountNodeState),
+			Pods: nil, // should not be nil
+			Nodes: map[string]api.AccountNodeState{
+				"012345678901234567890123456789ab": {
+					Name:      "test-node",
+					NodeType:  api.NodeTypeMobile,
+					Timestamp: "2023-04-15T17:30:40+09:00",
+					Latitude:  math.NaN(),
+					Longitude: math.NaN(),
+					Altitude:  math.NaN(),
+				},
+			},
 		},
 	}
 	err := test.impl.Set(accountSet)
