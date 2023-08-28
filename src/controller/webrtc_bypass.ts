@@ -54,7 +54,7 @@ export class WebrtcBypass implements WebrtcImplement {
   linkSend(webrtcLink: number, data: Uint8Array) {
     this.cl.call(CL_PATH + "linkSend", {
       webrtcLink: webrtcLink,
-      data: new TextDecoder().decode(data),
+      data: data.slice(),
     });
   }
 

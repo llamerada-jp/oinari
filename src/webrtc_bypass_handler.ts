@@ -39,7 +39,7 @@ export function NewWebrtcHandler(cl: CL.Crosslink, wi: WebrtcImplement): CL.Mult
   });
 
   mpx.setHandlerFunc("linkSend", (param: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
-    wi.linkSend(param.webrtcLink, new TextEncoder().encode(param.data));
+    wi.linkSend(param.webrtcLink, param.data);
     writer.replySuccess({});
   });
 
