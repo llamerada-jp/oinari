@@ -72,19 +72,12 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) (bool, error) {
 
 	// check deletion
 	if len(pod.Meta.DeletionTimestamp) != 0 {
-		if len(pod.Status.RunningNode) == 0 || impl.checkContainerStateTerminated(pod) {
+		if len(pod.Status.RunningNode) == 0 || impl.isContainerTerminated(pod) {
 			return true, nil
 		}
 
 		return false, impl.messaging.ReconcileContainer(pod.Status.RunningNode, pod.Meta.Uuid)
 	}
-
-	/*
-		err = impl.accountMgr.BindPod(&pod)
-		if err != nil {
-			return err
-		}
-		//*/
 
 	// waiting to schedule
 	if len(pod.Status.RunningNode) == 0 {
@@ -92,22 +85,23 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) (bool, error) {
 	}
 
 	if pod.Status.RunningNode == pod.Spec.TargetNode {
-		if impl.checkContainerStateTerminated(pod) || impl.checkContainerStateUnknown(pod) {
+		if impl.isContainerTerminated(pod) || impl.isContainerUnknown(pod) {
 			// TODO restart pod by the restart policy
 			return false, nil
 		}
 
 	} else {
-		if impl.checkContainerStateTerminated(pod) {
+		if impl.isContainerTerminated(pod) {
 			pod.Status.RunningNode = pod.Spec.TargetNode
-			for _, containerStatus := range pod.Status.ContainerStatuses {
+			for idx := range pod.Status.ContainerStatuses {
+				containerStatus := &pod.Status.ContainerStatuses[idx]
 				containerStatus.ContainerID = ""
 				containerStatus.Image = ""
 				containerStatus.State = api.ContainerState{}
 			}
 			return false, impl.podKvs.Update(pod)
 
-		} else if impl.checkContainerStateUnknown(pod) {
+		} else if impl.isContainerUnknown(pod) {
 			// TODO restart pod by the restart policy
 		}
 	}
@@ -268,14 +262,14 @@ func (impl *podControllerImpl) Cleanup(uuid string) error {
 		return err
 	}
 
-	if impl.checkContainerStateUnknown(pod) {
+	if !impl.isContainerUnknown(pod) {
 		return fmt.Errorf("target pod of cleanup should be unknown state")
 	}
 
 	return impl.podKvs.Delete(uuid)
 }
 
-func (impl *podControllerImpl) checkContainerStateTerminated(pod *api.Pod) bool {
+func (impl *podControllerImpl) isContainerTerminated(pod *api.Pod) bool {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.State.Terminated == nil {
 			return false
@@ -285,7 +279,7 @@ func (impl *podControllerImpl) checkContainerStateTerminated(pod *api.Pod) bool 
 	return true
 }
 
-func (impl *podControllerImpl) checkContainerStateUnknown(pod *api.Pod) bool {
+func (impl *podControllerImpl) isContainerUnknown(pod *api.Pod) bool {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.State.Terminated == nil && containerStatus.State.Unknown != nil {
 			return true

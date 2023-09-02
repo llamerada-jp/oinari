@@ -243,6 +243,10 @@ func (status *PodStatus) validate(containerNum int) error {
 	for _, containerState := range status.ContainerStatuses {
 		if len(containerState.ContainerID) != 0 || len(containerState.Image) != 0 ||
 			containerState.State.Running != nil {
+			if len(status.RunningNode) == 0 {
+				return fmt.Errorf("running node should be set when container is running")
+			}
+
 			if len(containerState.ContainerID) == 0 {
 				return fmt.Errorf("container ID should be set when container is running")
 			}

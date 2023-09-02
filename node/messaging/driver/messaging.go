@@ -40,7 +40,7 @@ func NewMessagingDriver(col colonio.Colonio) MessagingDriver {
 }
 
 func (d *messagingDriverImpl) ReconcileContainer(nid, podUuid string) error {
-	raw, err := json.Marshal(messaging.VitalizePod{
+	raw, err := json.Marshal(messaging.ReconcileContainer{
 		PodUuid: podUuid,
 	})
 	if err != nil {

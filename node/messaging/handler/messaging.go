@@ -36,7 +36,7 @@ func InitMessagingHandler(col colonio.Colonio, containerCtrl controller.Containe
 		}
 
 		go func(raw []byte) {
-			var msg messaging.VitalizePod
+			var msg messaging.ReconcileContainer
 			err := json.Unmarshal(raw, &msg)
 			if err != nil {
 				log.Printf("failed to unmarshal reconcileContainer message: %s", err.Error())

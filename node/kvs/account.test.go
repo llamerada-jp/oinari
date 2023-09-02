@@ -20,18 +20,18 @@ import (
 	"math"
 
 	"github.com/llamerada-jp/oinari/api"
-	"github.com/llamerada-jp/oinari/node/misc"
+	"github.com/llamerada-jp/oinari/node/mock"
 	"github.com/stretchr/testify/suite"
 )
 
 type accountKvsTest struct {
 	suite.Suite
-	col  *misc.ColonioMock
+	col  *mock.Colonio
 	impl *accountKvsImpl
 }
 
 func NewAccountKvsTest() suite.TestingSuite {
-	colonioMock := misc.NewColonioMock()
+	colonioMock := mock.NewColonioMock()
 	return &accountKvsTest{
 		col: colonioMock,
 		impl: &accountKvsImpl{

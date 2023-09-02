@@ -13,88 +13,96 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package misc
+package mock
 
 import (
 	"log"
+	"sync"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
 )
 
-type colonioValueMock struct {
+type colonioValue struct {
 	data []byte
 }
 
-var _ colonio.Value = &colonioValueMock{}
+var _ colonio.Value = &colonioValue{}
 
-type ColonioMock struct {
-	kvs       map[string]*colonioValueMock
+type Colonio struct {
+	mutex     sync.Mutex
+	kvs       map[string]*colonioValue
 	positionX float64
 	positionY float64
 }
 
-var _ colonio.Colonio = &ColonioMock{}
+var _ colonio.Colonio = &Colonio{}
 
 // mimic Colonio for testings
-func NewColonioMock() *ColonioMock {
-	return &ColonioMock{
-		kvs: make(map[string]*colonioValueMock),
+func NewColonioMock() *Colonio {
+	return &Colonio{
+		kvs: make(map[string]*colonioValue),
 	}
 }
 
-func (impl *ColonioMock) DeleteKVSAll() {
-	impl.kvs = make(map[string]*colonioValueMock)
+func (impl *Colonio) DeleteKVSAll() {
+	impl.mutex.Lock()
+	defer impl.mutex.Unlock()
+
+	impl.kvs = make(map[string]*colonioValue)
 }
 
-func (impl *ColonioMock) Connect(url, token string) error {
+func (impl *Colonio) Connect(url, token string) error {
 	log.Fatal("ColonioMock::Connect is not implemented")
 	return nil
 }
 
-func (impl *ColonioMock) Disconnect() error {
+func (impl *Colonio) Disconnect() error {
 	log.Fatal("ColonioMock::Disconnect is not implemented")
 	return nil
 }
 
-func (impl *ColonioMock) IsConnected() bool {
+func (impl *Colonio) IsConnected() bool {
 	log.Fatal("ColonioMock::IsConnected is not implemented")
 	return false
 }
 
-func (impl *ColonioMock) GetLocalNid() string {
+func (impl *Colonio) GetLocalNid() string {
 	log.Fatal("ColonioMock::GetLocalNid is not implemented")
 	return ""
 }
 
-func (impl *ColonioMock) SetPosition(x, y float64) (float64, float64, error) {
+func (impl *Colonio) SetPosition(x, y float64) (float64, float64, error) {
 	impl.positionX = x
 	impl.positionY = y
 	return x, y, nil
 }
 
-func (impl *ColonioMock) GetLastPosition() (float64, float64) {
+func (impl *Colonio) GetLastPosition() (float64, float64) {
 	return impl.positionX, impl.positionY
 }
 
-func (impl *ColonioMock) MessagingPost(dst, name string, val interface{}, opt uint32) (colonio.Value, error) {
+func (impl *Colonio) MessagingPost(dst, name string, val interface{}, opt uint32) (colonio.Value, error) {
 	log.Fatal("ColonioMock::MessagingPost is not implemented")
 	return nil, nil
 }
 
-func (impl *ColonioMock) MessagingSetHandler(name string, handler func(*colonio.MessagingRequest, colonio.MessagingResponseWriter)) {
+func (impl *Colonio) MessagingSetHandler(name string, handler func(*colonio.MessagingRequest, colonio.MessagingResponseWriter)) {
 	log.Fatal("ColonioMock::MessagingSetHandler is not implemented")
 }
 
-func (impl *ColonioMock) MessagingUnsetHandler(name string) {
+func (impl *Colonio) MessagingUnsetHandler(name string) {
 	log.Fatal("ColonioMock::MessagingUnsetHandler is not implemented")
 }
 
-func (impl *ColonioMock) KvsGetLocalData() colonio.KvsLocalData {
+func (impl *Colonio) KvsGetLocalData() colonio.KvsLocalData {
 	log.Fatal("ColonioMock::KvsGetLocalData is not implemented")
 	return nil
 }
 
-func (impl *ColonioMock) KvsGet(key string) (colonio.Value, error) {
+func (impl *Colonio) KvsGet(key string) (colonio.Value, error) {
+	impl.mutex.Lock()
+	defer impl.mutex.Unlock()
+
 	v, ok := impl.kvs[key]
 	if !ok {
 		return nil, colonio.ErrKvsNotFound
@@ -102,7 +110,10 @@ func (impl *ColonioMock) KvsGet(key string) (colonio.Value, error) {
 	return v, nil
 }
 
-func (impl *ColonioMock) KvsSet(key string, val interface{}, opt uint32) error {
+func (impl *Colonio) KvsSet(key string, val interface{}, opt uint32) error {
+	impl.mutex.Lock()
+	defer impl.mutex.Unlock()
+
 	if opt&colonio.KvsProhibitOverwrite != 0 {
 		if _, ok := impl.kvs[key]; ok {
 			return colonio.ErrKvsProhibitOverwrite
@@ -110,13 +121,13 @@ func (impl *ColonioMock) KvsSet(key string, val interface{}, opt uint32) error {
 	}
 
 	if val == nil {
-		impl.kvs[key] = &colonioValueMock{}
+		impl.kvs[key] = &colonioValue{}
 		return nil
 	}
 
 	switch v := val.(type) {
 	case []byte:
-		impl.kvs[key] = &colonioValueMock{
+		impl.kvs[key] = &colonioValue{
 			data: v,
 		}
 		return nil
@@ -127,44 +138,44 @@ func (impl *ColonioMock) KvsSet(key string, val interface{}, opt uint32) error {
 	}
 }
 
-func (impl *ColonioMock) SpreadPost(x, y, r float64, name string, message interface{}, opt uint32) error {
+func (impl *Colonio) SpreadPost(x, y, r float64, name string, message interface{}, opt uint32) error {
 	log.Fatal("ColonioMock::SpreadPost is not implemented")
 	return nil
 }
 
-func (impl *ColonioMock) SpreadSetHandler(name string, handler func(*colonio.SpreadRequest)) {
+func (impl *Colonio) SpreadSetHandler(name string, handler func(*colonio.SpreadRequest)) {
 	log.Fatal("ColonioMock::SpreadSetHandler is not implemented")
 }
 
-func (impl *ColonioMock) SpreadUnsetHandler(name string) {
+func (impl *Colonio) SpreadUnsetHandler(name string) {
 	log.Fatal("ColonioMock::SpreadUnsetHandler is not implemented")
 }
 
-func (impl *colonioValueMock) IsNil() bool {
+func (impl *colonioValue) IsNil() bool {
 	return impl.data == nil
 }
 
-func (impl *colonioValueMock) IsBool() bool {
+func (impl *colonioValue) IsBool() bool {
 	return false
 }
 
-func (impl *colonioValueMock) IsInt() bool {
+func (impl *colonioValue) IsInt() bool {
 	return false
 }
 
-func (impl *colonioValueMock) IsDouble() bool {
+func (impl *colonioValue) IsDouble() bool {
 	return false
 }
 
-func (impl *colonioValueMock) IsString() bool {
+func (impl *colonioValue) IsString() bool {
 	return false
 }
 
-func (impl *colonioValueMock) IsBinary() bool {
+func (impl *colonioValue) IsBinary() bool {
 	return impl.data != nil
 }
 
-func (impl *colonioValueMock) Set(val interface{}) error {
+func (impl *colonioValue) Set(val interface{}) error {
 	if val == nil {
 		impl.data = nil
 	}
@@ -180,23 +191,23 @@ func (impl *colonioValueMock) Set(val interface{}) error {
 	}
 }
 
-func (impl *colonioValueMock) GetBool() (bool, error) {
+func (impl *colonioValue) GetBool() (bool, error) {
 	return false, colonio.ErrUndefined
 }
 
-func (impl *colonioValueMock) GetInt() (int64, error) {
+func (impl *colonioValue) GetInt() (int64, error) {
 	return 0, colonio.ErrUndefined
 }
 
-func (impl *colonioValueMock) GetDouble() (float64, error) {
+func (impl *colonioValue) GetDouble() (float64, error) {
 	return 0, colonio.ErrUndefined
 }
 
-func (impl *colonioValueMock) GetString() (string, error) {
+func (impl *colonioValue) GetString() (string, error) {
 	return "", colonio.ErrUndefined
 }
 
-func (impl *colonioValueMock) GetBinary() ([]byte, error) {
+func (impl *colonioValue) GetBinary() ([]byte, error) {
 	if impl.data == nil {
 		return nil, colonio.ErrUndefined
 	}

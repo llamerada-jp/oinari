@@ -22,6 +22,7 @@ import (
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/kvs"
 	"github.com/llamerada-jp/oinari/node/misc"
+	"github.com/llamerada-jp/oinari/node/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -30,13 +31,13 @@ const NODE_ID = "012345678901234567890123456789ab"
 
 type accountControllerTest struct {
 	suite.Suite
-	col        *misc.ColonioMock
+	col        *mock.Colonio
 	accountKvs kvs.AccountKvs
 	impl       *accountControllerImpl
 }
 
 func NewAccountControllerTest() suite.TestingSuite {
-	colonioMock := misc.NewColonioMock()
+	colonioMock := mock.NewColonioMock()
 	accountKvs := kvs.NewAccountKvs(colonioMock)
 
 	return &accountControllerTest{

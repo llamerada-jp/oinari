@@ -21,12 +21,13 @@ import (
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/misc"
+	"github.com/llamerada-jp/oinari/node/mock"
 	"github.com/stretchr/testify/suite"
 )
 
 type podKvsTest struct {
 	suite.Suite
-	col  *misc.ColonioMock
+	col  *mock.Colonio
 	impl PodKvs
 }
 
@@ -59,7 +60,7 @@ var (
 )
 
 func NewPodKvsTest() suite.TestingSuite {
-	colonioMock := misc.NewColonioMock()
+	colonioMock := mock.NewColonioMock()
 	return &podKvsTest{
 		col:  colonioMock,
 		impl: NewPodKvs(colonioMock),

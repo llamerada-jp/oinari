@@ -408,6 +408,20 @@ func TestValidatePodStatus(t *testing.T) {
 				},
 			},
 		},
+		"running container but running node is empty": {
+			// RunningNode: "01234567890123456789012345abcdef",
+			ContainerStatuses: []ContainerStatus{
+				{
+					ContainerID: "container1",
+					// Image: "https://localhost/dummy.wasm",
+					State: ContainerState{
+						Running: &ContainerStateRunning{
+							StartedAt: misc.GetTimestamp(),
+						},
+					},
+				},
+			},
+		},
 		"invalid running field": {
 			RunningNode: "01234567890123456789012345abcdef",
 			ContainerStatuses: []ContainerStatus{

@@ -22,7 +22,7 @@ const (
 	MessageNamePublishNode        = "publishNode"
 )
 
-type VitalizePod struct {
+type ReconcileContainer struct {
 	PodUuid string `json:"podUuid"`
 }
 
