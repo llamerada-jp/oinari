@@ -20,6 +20,7 @@ import * as Util from "./util";
 let command: CM.Commands;
 let processing: boolean = false;
 let uuid: string;
+let runningNode: string;
 
 const spinnerID = "migrateListSpinner";
 const listID = "migrateList";
@@ -32,8 +33,9 @@ export function init(cmd: CM.Commands): void {
   btnRefresh?.addEventListener("click", reload);
 }
 
-export function showMigrateModal(u: string): void {
+export function showMigrateModal(u: string, r: string): void {
   uuid = u;
+  runningNode = r;
   reload();
 }
 
@@ -61,9 +63,17 @@ async function reload(): Promise<void> {
     content.set(".nodeName", node.name);
     content.set(".nodeID", node.id);
     content.set(".nodeType", node.nodeType);
-    content.set(".nodeLatitude",  (node.latitude == null ? "-" : node.latitude.toString()));
+    content.set(".nodeLatitude", (node.latitude == null ? "-" : node.latitude.toString()));
     content.set(".nodeLongitude", (node.longitude == null ? "-" : node.longitude.toString()));
     content.set(".nodeAltitude", (node.altitude == null ? "-" : node.altitude.toString()));
+    if (node.id === runningNode) {
+      content.set(".memo", "The application is running on this node.");
+    } else {
+      content.set(".list-group-item", () => {
+        Util.closeModal("migrateClose");
+        command.migrateProcess(uuid, node.id);
+      });
+    }
     Util.addListItem(listEl, temp, content);
   }
 

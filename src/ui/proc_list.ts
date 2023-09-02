@@ -74,7 +74,7 @@ async function reload(): Promise<void> {
     });
     content.set(".appMenuMigrate", () => {
       Util.closeModal("procListClose");
-      MI.showMigrateModal(proc.uuid);
+      MI.showMigrateModal(proc.uuid, proc.runningNode);
     });
 
     if (proc.owner === account && listByAccount != null) {

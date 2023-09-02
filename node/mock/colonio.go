@@ -31,8 +31,8 @@ var _ colonio.Value = &colonioValue{}
 type Colonio struct {
 	mutex     sync.Mutex
 	kvs       map[string]*colonioValue
-	positionX float64
-	positionY float64
+	PositionX float64
+	PositionY float64
 }
 
 var _ colonio.Colonio = &Colonio{}
@@ -72,13 +72,13 @@ func (impl *Colonio) GetLocalNid() string {
 }
 
 func (impl *Colonio) SetPosition(x, y float64) (float64, float64, error) {
-	impl.positionX = x
-	impl.positionY = y
+	impl.PositionX = x
+	impl.PositionY = y
 	return x, y, nil
 }
 
 func (impl *Colonio) GetLastPosition() (float64, float64) {
-	return impl.positionX, impl.positionY
+	return impl.PositionX, impl.PositionY
 }
 
 func (impl *Colonio) MessagingPost(dst, name string, val interface{}, opt uint32) (colonio.Value, error) {
