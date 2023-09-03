@@ -173,8 +173,10 @@ func (state *AccountState) validate() error {
 		if err := ValidatePodUuid(podUuid); err != nil {
 			return fmt.Errorf("there is an invalid pod uuid for pods: %w", err)
 		}
-		if err := ValidateNodeId(podState.RunningNode); err != nil {
-			return fmt.Errorf("there is an invalid node if for pod %s: %w", podUuid, err)
+		if len(podState.RunningNode) != 0 {
+			if err := ValidateNodeId(podState.RunningNode); err != nil {
+				return fmt.Errorf("there is an invalid node if for pod %s: %w", podUuid, err)
+			}
 		}
 		if err := ValidateTimestamp(podState.Timestamp); err != nil {
 			return fmt.Errorf("there is an invalid timestamp for pod %s: %w", podUuid, err)

@@ -21,6 +21,7 @@ import (
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node/controller"
+	"github.com/llamerada-jp/oinari/node/misc"
 )
 
 type setPositionRequest struct {
@@ -124,11 +125,24 @@ func InitResourceHandler(rootMpx crosslink.MultiPlexer, accCtrl controller.Accou
 	// pod resource
 	mpx.SetHandler("createPod", crosslink.NewFuncHandler(
 		func(request *createPodRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-			digest, err := podCtrl.Create(request.Name, accCtrl.GetAccountName(), nodeCtrl.GetNid(), request.Spec)
+			owner := accCtrl.GetAccountName()
+			digest, err := podCtrl.Create(request.Name, owner, nodeCtrl.GetNid(), request.Spec)
 			if err != nil {
 				writer.ReplyError(err.Error())
 				return
 			}
+
+			err = accCtrl.UpdatePodAndNodeState(owner, map[string]api.AccountPodState{
+				digest.Uuid: {
+					RunningNode: "",
+					Timestamp:   misc.GetTimestamp(),
+				},
+			}, "", nil)
+			if err != nil {
+				writer.ReplyError(err.Error())
+				return
+			}
+
 			writer.ReplySuccess(createPodResponse{
 				Digest: digest,
 			})

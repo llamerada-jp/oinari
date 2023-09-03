@@ -16,7 +16,14 @@
 
 package misc
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var (
+	ErrTimeout = errors.New("timeout")
+)
 
 func GetTimestamp() string {
 	return TimeToTimestamp(time.Now())
@@ -24,4 +31,18 @@ func GetTimestamp() string {
 
 func TimeToTimestamp(t time.Time) string {
 	return t.Format(time.RFC3339)
+}
+
+func CallWithTimeout(f func() error, timeout time.Duration) error {
+	done := make(chan error)
+	go func() {
+		done <- f()
+	}()
+
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(timeout):
+		return ErrTimeout
+	}
 }

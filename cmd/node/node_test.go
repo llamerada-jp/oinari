@@ -43,6 +43,7 @@ func TestMain(t *testing.T) {
 	// test controller
 	suite.Run(t, controller.NewAccountControllerTest())
 	suite.Run(t, controller.NewNodeControllerTest())
+	suite.Run(t, controller.NewPodControllerTest())
 
 	// test manager
 }

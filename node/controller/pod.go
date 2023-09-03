@@ -107,8 +107,13 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) (bool, error) {
 	}
 
 	// TODO: consider the interval of RPC
-	if err := impl.messaging.ReconcileContainer(pod.Status.RunningNode, pod.Meta.Uuid); err != nil {
-		for _, containerStatus := range pod.Status.ContainerStatuses {
+	// TODO: wark around for colonio bug, message is not timeout when the target node is down
+	err := misc.CallWithTimeout(func() error {
+		return impl.messaging.ReconcileContainer(pod.Status.RunningNode, pod.Meta.Uuid)
+	}, 10*time.Second)
+	if err != nil {
+		for idx := range pod.Status.ContainerStatuses {
+			containerStatus := &pod.Status.ContainerStatuses[idx]
 			containerStatus.State.Unknown = &api.ContainerStateUnknown{
 				Timestamp: misc.GetTimestamp(),
 				Reason:    fmt.Sprintf("failed to call reconciliation to %s: %s", pod.Status.RunningNode, err.Error()),

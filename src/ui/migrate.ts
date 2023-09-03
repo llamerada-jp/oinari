@@ -67,7 +67,7 @@ async function reload(): Promise<void> {
     content.set(".nodeLongitude", (node.longitude == null ? "-" : node.longitude.toString()));
     content.set(".nodeAltitude", (node.altitude == null ? "-" : node.altitude.toString()));
     if (node.id === runningNode) {
-      content.set(".memo", "The application is running on this node.");
+      content.set(".nodeMemo", "The application is running on this node.");
     } else {
       content.set(".list-group-item", () => {
         Util.closeModal("migrateClose");

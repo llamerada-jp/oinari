@@ -166,6 +166,10 @@ func TestAccountStateValidate(t *testing.T) {
 					RunningNode: "01234567890123456789012345abcdef",
 					Timestamp:   "2021-04-09T14:00:40+09:00",
 				},
+				GeneratePodUuid(): {
+					// RunningNode: "01234567890123456789012345abcdef",
+					Timestamp: "2021-04-09T14:00:40+09:00",
+				},
 			},
 			Nodes: map[string]AccountNodeState{
 				"01234567890123456789012345abcdef": {

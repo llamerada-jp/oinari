@@ -16,6 +16,8 @@
 package controller
 
 import (
+	"math"
+
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/node/mock"
 	"github.com/stretchr/testify/suite"
@@ -57,7 +59,7 @@ func (test *nodeControllerTest) TestGetNid() {
 func (test *nodeControllerTest) TestGetNodeState() {
 	nodeState := test.impl.GetNodeState()
 	test.Equal(nodeName, nodeState.Name)
-	test.Nil(nodeState.Timestamp)
+	test.Empty(nodeState.Timestamp)
 	test.Equal(nodeType, nodeState.NodeType)
 	test.InDelta(12.345, nodeState.Latitude, 0.0001)
 	test.InDelta(67.890, nodeState.Longitude, 0.0001)
@@ -66,8 +68,8 @@ func (test *nodeControllerTest) TestGetNodeState() {
 
 func (test *nodeControllerTest) TestSetPosition() {
 	test.NoError(test.impl.SetPosition(34.345, 88.890, 11.0))
-	test.InDelta(34.345/180, test.col.PositionX, 0.0001)
-	test.InDelta(88.890/180, test.col.PositionY, 0.0001)
+	test.InDelta(88.890*math.Pi/180, test.col.PositionX, 0.0001)
+	test.InDelta(34.345*math.Pi/180, test.col.PositionY, 0.0001)
 
 	nodeState := test.impl.GetNodeState()
 	test.InDelta(34.345, nodeState.Latitude, 0.0001)
