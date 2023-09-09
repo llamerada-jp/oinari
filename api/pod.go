@@ -27,7 +27,9 @@ var ContainerRuntimeRequired = []string{
 	"go:1.19",
 	"go:1.20",
 }
-var ContainerRuntimeAccepted = []string{}
+var ContainerRuntimeAccepted = []string{
+	"core:dev1",
+}
 
 type Pod struct {
 	Meta   *ObjectMeta `json:"meta"`

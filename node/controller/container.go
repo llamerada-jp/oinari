@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/node/apis"
 	"github.com/llamerada-jp/oinari/node/cri"
 	"github.com/llamerada-jp/oinari/node/kvs"
 	"github.com/llamerada-jp/oinari/node/misc"
@@ -38,29 +39,35 @@ type ContainerInfo struct {
 	SandboxID string
 }
 
+type APIDriverFactory func(runtime []string) apis.Driver
+
 type reconcileState struct {
 	// true if reconcile running
 	running bool
 	// will delete when reconcile finished
 	willDelete    bool
 	containerInfo ContainerInfo
+	// key: containerID
+	apiDrivers map[string]apis.Driver
 }
 
 type containerControllerImpl struct {
-	localNid string
-	cri      cri.CRI
-	podKvs   kvs.PodKvs
+	localNid         string
+	cri              cri.CRI
+	podKvs           kvs.PodKvs
+	apiDriverFactory APIDriverFactory
 	// key: Pod UUID
 	reconcileStates map[string]*reconcileState
 	mtx             sync.Mutex
 }
 
-func NewContainerController(localNid string, cri cri.CRI, podKvs kvs.PodKvs) ContainerController {
+func NewContainerController(localNid string, cri cri.CRI, podKvs kvs.PodKvs, apiDriverFactory APIDriverFactory) ContainerController {
 	return &containerControllerImpl{
-		localNid:        localNid,
-		cri:             cri,
-		podKvs:          podKvs,
-		reconcileStates: make(map[string]*reconcileState),
+		localNid:         localNid,
+		cri:              cri,
+		podKvs:           podKvs,
+		apiDriverFactory: apiDriverFactory,
+		reconcileStates:  make(map[string]*reconcileState),
 	}
 }
 
@@ -86,6 +93,7 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUUID stri
 				containerInfo: ContainerInfo{
 					PodUUID: podUUID,
 				},
+				apiDrivers: make(map[string]apis.Driver),
 			}
 			impl.reconcileStates[podUUID] = state
 		}
@@ -274,6 +282,11 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 				continue
 			}
 
+			// create api driver if it isn't exist
+			if _, ok := state.apiDrivers[res.ContainerId]; !ok {
+				state.apiDrivers[res.ContainerId] = impl.apiDriverFactory(spec.Runtime)
+			}
+
 			containers, err := impl.cri.ListContainers(&cri.ListContainersRequest{
 				Filter: &cri.ContainerFilter{
 					ID: res.ContainerId,
@@ -327,6 +340,8 @@ func (impl *containerControllerImpl) letTerminate(state *reconcileState) error {
 		if err != nil {
 			log.Printf("failed to stop container :%s", err.Error())
 		}
+
+		delete(state.apiDrivers, container.ID)
 	}
 
 	// TODO: skip processing when all container exited

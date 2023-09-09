@@ -23,6 +23,9 @@ import (
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node"
+	"github.com/llamerada-jp/oinari/node/apis"
+	"github.com/llamerada-jp/oinari/node/apis/core"
+	"github.com/llamerada-jp/oinari/node/apis/null"
 	"github.com/llamerada-jp/oinari/node/controller"
 	"github.com/llamerada-jp/oinari/node/cri"
 	fd "github.com/llamerada-jp/oinari/node/frontend/driver"
@@ -105,6 +108,17 @@ func (na *nodeAgent) execute() error {
 	return nil
 }
 
+func apiDriverFactory(runtime []string) apis.Driver {
+	for _, r := range runtime {
+		switch r {
+		case "core:dev1":
+			return core.NewCoreAPIDriver()
+		}
+	}
+
+	return null.NewNullAPIDriver()
+}
+
 // implement system events
 func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	ctx := context.Background()
@@ -124,7 +138,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 
 	// controllers
 	accountCtrl := controller.NewAccountController(account, localNid, accountKvs)
-	containerCtrl := controller.NewContainerController(localNid, cri, podKvs)
+	containerCtrl := controller.NewContainerController(localNid, cri, podKvs, apiDriverFactory)
 	nodeCtrl := controller.NewNodeController(ctx, na.col, messaging, account, nodeName, nodeType)
 	podCtrl := controller.NewPodController(podKvs, messaging, localNid)
 
