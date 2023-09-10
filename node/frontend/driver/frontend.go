@@ -37,7 +37,7 @@ func NewFrontendDriver(cl crosslink.Crosslink) FrontendDriver {
 }
 
 func (impl *frontendDriverImpl) TellInitComplete() error {
-	impl.cl.Call("frontend/onInitComplete", nil, nil,
+	impl.cl.Call("frontend/nodeReady", nil, nil,
 		func(_ []byte, err error) {
 			if err != nil {
 				log.Fatalln(err)

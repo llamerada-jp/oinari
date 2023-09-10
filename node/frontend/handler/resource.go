@@ -60,9 +60,9 @@ type deletePodRequest struct {
 	Uuid string `json:"uuid"`
 }
 
-func InitResourceHandler(rootMpx crosslink.MultiPlexer, accCtrl controller.AccountController, containerCtrl controller.ContainerController, nodeCtrl controller.NodeController, podCtrl controller.PodController) {
+func InitResourceHandler(nodeMpx crosslink.MultiPlexer, accCtrl controller.AccountController, containerCtrl controller.ContainerController, nodeCtrl controller.NodeController, podCtrl controller.PodController) {
 	mpx := crosslink.NewMultiPlexer()
-	rootMpx.SetHandler("resource", mpx)
+	nodeMpx.SetHandler("resource", mpx)
 
 	// node resource
 	mpx.SetHandler("setNodePosition", crosslink.NewFuncHandler(func(request *setPositionRequest, tags map[string]string, writer crosslink.ResponseWriter) {

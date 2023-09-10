@@ -36,9 +36,9 @@ type connectResponse struct {
 type closeRequest struct {
 }
 
-func InitSystemHandler(rootMpx crosslink.MultiPlexer, sysCtrl controller.SystemController) error {
+func InitSystemHandler(nodeMpx crosslink.MultiPlexer, sysCtrl controller.SystemController) error {
 	mpx := crosslink.NewMultiPlexer()
-	rootMpx.SetHandler("system", mpx)
+	nodeMpx.SetHandler("system", mpx)
 
 	mpx.SetHandler("connect", crosslink.NewFuncHandler(func(request *connectRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		err := sysCtrl.Connect(request.Url, request.Account, request.Token, request.NodeName, request.NodeType)

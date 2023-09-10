@@ -1,6 +1,8 @@
 package oinari
 
 import (
+	"log"
+
 	app "github.com/llamerada-jp/oinari/api/app/core"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 )
@@ -32,7 +34,7 @@ func (o *oinari) run() error {
 		return err
 	}
 
-	if err := initWriter(o.cl, CrosslinkPath); err != nil {
+	if err := initWriter(o.cl, NodeCrosslinkPath); err != nil {
 		return err
 	}
 
@@ -55,9 +57,13 @@ func (o *oinari) initCrosslink() error {
 
 func (o *oinari) initCoreHandler(errCh chan error) error {
 	appMpx := crosslink.NewMultiPlexer()
-	o.rootMpx.SetHandler(CrosslinkPath, appMpx)
+	o.rootMpx.SetHandler("application", appMpx)
+	apiMpx := crosslink.NewMultiPlexer()
+	appMpx.SetHandler("api", apiMpx)
+	coreAPIMpx := crosslink.NewMultiPlexer()
+	apiMpx.SetHandler("core", coreAPIMpx)
 
-	appMpx.SetHandler("setup", crosslink.NewFuncHandler(func(req *app.SetupRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+	coreAPIMpx.SetHandler("setup", crosslink.NewFuncHandler(func(req *app.SetupRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		err := o.app.Setup(req.FirstInPod)
 		if err != nil {
 			writer.ReplyError("setup had an error")
@@ -67,7 +73,7 @@ func (o *oinari) initCoreHandler(errCh chan error) error {
 		}
 	}))
 
-	appMpx.SetHandler("dump", crosslink.NewFuncHandler(func(req *app.DumpRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+	coreAPIMpx.SetHandler("dump", crosslink.NewFuncHandler(func(req *app.DumpRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		data, err := o.app.Dump()
 		if err != nil {
 			writer.ReplyError("dump had an error")
@@ -79,7 +85,7 @@ func (o *oinari) initCoreHandler(errCh chan error) error {
 		}
 	}))
 
-	appMpx.SetHandler("restore", crosslink.NewFuncHandler(func(req *app.RestoreRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+	coreAPIMpx.SetHandler("restore", crosslink.NewFuncHandler(func(req *app.RestoreRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		err := o.app.Restore(req.DumpData)
 		if err != nil {
 			writer.ReplyError("restore had an error")
@@ -89,7 +95,7 @@ func (o *oinari) initCoreHandler(errCh chan error) error {
 		}
 	}))
 
-	appMpx.SetHandler("teardown", crosslink.NewFuncHandler(func(req *app.TeardownRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+	coreAPIMpx.SetHandler("teardown", crosslink.NewFuncHandler(func(req *app.TeardownRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		err := o.app.Teardown(req.LastInPod)
 		if err != nil {
 			writer.ReplyError("teardown had an error")
@@ -104,8 +110,11 @@ func (o *oinari) initCoreHandler(errCh chan error) error {
 }
 
 func (o *oinari) ready() error {
-	o.cl.Call(CrosslinkPath+"/ready", app.ReadyRequest{}, nil, func(b []byte, err error) {
+	o.cl.Call(NodeCrosslinkPath+"/ready", app.ReadyRequest{}, nil, func(b []byte, err error) {
 		// `ready` request only tell the status to the manager of this node, do nothing
+		if err != nil {
+			log.Fatal("failed to ready core api :%w", err)
+		}
 	})
 	return nil
 }

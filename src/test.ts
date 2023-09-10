@@ -87,34 +87,30 @@ const SIDE_NODE_PARAMS: Record<string, SideNodeParam> = {
 async function sidenode(param: SideNodeParam) {
   console.log("RUN SIDENODE");
 
-  let rootMpx: CL.MultiPlexer;
-  let crosslink: CL.Crosslink;
-  let command: CM.Commands;
 
   // start controller worker
   const controller = new Worker("controller.js");
 
   // setup crosslink
-  rootMpx = new CL.MultiPlexer();
-  crosslink = new CL.Crosslink(new CL.WorkerImpl(controller), rootMpx);
-
+  let rootMpx = new CL.MultiPlexer();
+  let frontendMpx = new CL.MultiPlexer();
+  rootMpx.setHandler("frontend", frontendMpx);
+  let crosslink = new CL.Crosslink(new CL.WorkerImpl(controller), rootMpx);
   // setup CRI
   CRI.initCRI(crosslink, rootMpx);
 
   // setup colonio module handler
-  let colonioMpx = new CL.MultiPlexer();
-  rootMpx.setHandler("colonio", colonioMpx);
   let colonio = await ColonioModule();
   let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
-  colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(crosslink, webrtcImpl));
+  frontendMpx.setHandler("colonio", WB.NewWebrtcHandler(crosslink, webrtcImpl));
 
   // setup system module handler
   let systemMpx = new CL.MultiPlexer();
   rootMpx.setHandler("system", systemMpx);
 
-  systemMpx.setHandlerFunc("onInitComplete", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
+  systemMpx.setHandlerFunc("nodeReady", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
     writer.replySuccess("");
-    command = new CM.Commands(crosslink);
+    let command = new CM.Commands(crosslink);
     command.connect("https://localhost:8080/seed", param.account, "", param.nodeName, param.nodeType).then(() => {
       return command.setPosition(param.latitude, param.longitude, param.altitude);
 

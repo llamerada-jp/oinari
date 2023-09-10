@@ -1,7 +1,10 @@
-title: 'Oinari'
 baseURL: 'https://www.oinari.app/'
-languageCode: 'en-us'
+title: 'Oinari'
 theme: 'hugo-book'
+
+enableGitInfo: true
+
+languageCode: 'en-us'
 
 menu:
   after:
@@ -10,5 +13,7 @@ menu:
     weight: 10
 
 params:
-  bookMenuBundle: '/menu'
+  BookTheme: 'auto'
+  BookMenuBundle: '/menu'
+  BookRepo: https://github.com/llamerada-jp/oinari/docs
   customCss: 'css/custom.css'

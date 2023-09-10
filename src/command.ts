@@ -1,7 +1,7 @@
 import * as CL from "./crosslink";
 
-const CL_SYSTEM_PATH: string = "system";
-const CL_RESOURCE_PATH: string = "resource";
+const CL_SYSTEM_PATH: string = "node/system";
+const CL_RESOURCE_PATH: string = "node/resource";
 
 export interface ConnectInfo {
   account: string

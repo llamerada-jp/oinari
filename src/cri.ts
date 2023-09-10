@@ -18,8 +18,7 @@ import * as CL from "./crosslink";
 import * as CT from "./container/types";
 
 const crosslinkCriPath: string = "cri";
-const crosslinkNodePath: string = "node";
-const containerTag: string = "container";
+const containerTag: string = "containerID";
 const sandboxTag: string = "sandbox";
 const podSandboxIdMax: number = Math.floor(Math.pow(2, 30));
 const containerIdMax: number = Math.floor(Math.pow(2, 30));
@@ -135,11 +134,18 @@ class ContainerImpl {
       return;
     }
     let rootMpx = new CL.MultiPlexer();
+    let criMpx = new CL.MultiPlexer();
+    rootMpx.setHandler("cri", criMpx);
     this.worker = new Worker("container.js");
     this.link = new CL.Crosslink(new CL.WorkerImpl(this.worker), rootMpx);
 
-    this._initHandler(rootMpx);
-    rootMpx.setHandler(crosslinkNodePath, new NodePipe(this.sandboxId, this.id));
+    this._initContainerHandler(criMpx);
+
+    if (this.runtime.indexOf("core:dev1") !== -1) {
+      let nodeMpx = new CL.MultiPlexer()
+      rootMpx.setHandler("node", nodeMpx)
+      nodeMpx.setHandler("api", new ForwardToNode(this.sandboxId, this.id));
+    }
   }
 
   stop() {
@@ -147,7 +153,7 @@ class ContainerImpl {
       return;
     }
 
-    this.link.call(CT.CrosslinkPath + "/term", {});
+    this.link.call(CT.CL_MANAGER_PATH + "/term", {});
     setTimeout(() => {
       if (this.finishedAt == null) {
         this.finishedAt = getTimestamp();
@@ -192,9 +198,9 @@ class ContainerImpl {
     return true;
   }
 
-  _initHandler(rootMpx: CL.MultiPlexer) {
+  _initContainerHandler(criMpx: CL.MultiPlexer) {
     let mpx = new CL.MultiPlexer();
-    rootMpx.setHandler(CT.CrosslinkPath, mpx);
+    criMpx.setHandler("container", mpx);
 
     mpx.setHandlerFunc("ready", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
       let res = this._onReady(data as CT.ReadyRequest);
@@ -292,7 +298,7 @@ class SandboxImpl {
   }
 }
 
-class ApplicationPipe implements CL.Handler {
+class ForwardToApplication implements CL.Handler {
   serve(data: any, tags: Map<string, string>, writer: CL.ResponseWriter): void {
     let path = tags.get(CL.TAG_PATH);
     let containerId = tags.get(containerTag);
@@ -312,7 +318,7 @@ class ApplicationPipe implements CL.Handler {
   }
 }
 
-class NodePipe implements CL.Handler {
+class ForwardToNode implements CL.Handler {
   sandboxId: string
   containerId: string
 
@@ -339,7 +345,7 @@ class NodePipe implements CL.Handler {
 export function initCRI(nCL: CL.Crosslink, rootMpx: CL.MultiPlexer): void {
   nodeCL = nCL;
   initHandler(rootMpx);
-  rootMpx.setHandler("application", new ApplicationPipe());
+  rootMpx.setHandler("application", new ForwardToApplication());
 }
 
 function initHandler(rootMpx: CL.MultiPlexer) {

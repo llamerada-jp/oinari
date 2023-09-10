@@ -1,7 +1,8 @@
 package oinari
 
 const (
-	CrosslinkPath = "application"
+	ApplicationCrosslinkPath = "application/api/core"
+	NodeCrosslinkPath        = "node/api/core"
 )
 
 type Application interface {

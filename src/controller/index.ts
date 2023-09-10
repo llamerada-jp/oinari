@@ -45,9 +45,7 @@ function run(data: any, _: Map<string, string>, writer: CL.ResponseWriter): void
 
   ColonioModule().then((colonio) => {
     // bypass webrtc
-    let colonioMpx = new CL.MultiPlexer();
-    rootMpx.setHandler("colonio", colonioMpx);
-    let bypass = new WB.WebrtcBypass(crosslink, colonioMpx);
+    let bypass = new WB.WebrtcBypass(crosslink, rootMpx, "frontend/webrtc");
     colonio.setWebrtcImpl(bypass);
 
     // setup colonio for go

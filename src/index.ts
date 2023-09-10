@@ -40,18 +40,17 @@ async function initController(): Promise<void> {
   // setup CRI
   CRI.initCRI(crosslink, rootMpx);
 
-  // setup colonio module handler
-  let colonioMpx = new CL.MultiPlexer();
-  rootMpx.setHandler("colonio", colonioMpx);
-  let colonio = await ColonioModule();
-  let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
-  colonioMpx.setHandler("webrtc", WB.NewWebrtcHandler(crosslink, webrtcImpl));
-
-  // setup frontend module handler
   let frontendMpx = new CL.MultiPlexer();
   rootMpx.setHandler("frontend", frontendMpx);
+
+  // setup colonio module handler
+  let colonio = await ColonioModule();
+  let webrtcImpl: WebrtcImplement = new colonio.DefaultWebrtcImplement();
+  frontendMpx.setHandler("webrtc", WB.NewWebrtcHandler(crosslink, webrtcImpl));
+
+  // setup frontend module handler
   let promise = new Promise<void>((resolve) => {
-    frontendMpx.setHandlerFunc("onInitComplete", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
+    frontendMpx.setHandlerFunc("nodeReady", (_1: any, _2: Map<string, string>, writer: CL.ResponseWriter) => {
       writer.replySuccess("");
       resolve();
     });

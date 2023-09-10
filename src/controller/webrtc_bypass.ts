@@ -1,13 +1,13 @@
 import * as CL from "../crosslink"
 
-const CL_PATH: string = "colonio/webrtc/";
-
 export class WebrtcBypass implements WebrtcImplement {
   cl: CL.Crosslink;
   cb: WebrtcLinkCb | undefined;
+  clPath: string;
 
-  constructor(cl: CL.Crosslink, mpxWorker: CL.MultiPlexer) {
+  constructor(cl: CL.Crosslink, mpxWorker: CL.MultiPlexer, clPath:string) {
     this.cl = cl;
+    this.clPath = clPath + "/";
     mpxWorker.setHandler("webrtc", this.makeWebrtcHandler());
   }
 
@@ -16,50 +16,50 @@ export class WebrtcBypass implements WebrtcImplement {
   }
 
   contextInitialize() {
-    this.cl.call(CL_PATH + "contextInitialize", {});
+    this.cl.call(this.clPath + "contextInitialize", {});
   }
 
   contextAddIceServer(iceServer: string) {
-    this.cl.call(CL_PATH + "contextAddIceServer", {
+    this.cl.call(this.clPath + "contextAddIceServer", {
       iceServer: iceServer,
     });
   }
 
   linkInitialize(webrtcLink: number, isCreateDc: boolean) {
-    this.cl.call(CL_PATH + "linkInitialize", {
+    this.cl.call(this.clPath + "linkInitialize", {
       webrtcLink: webrtcLink,
       isCreateDc: isCreateDc,
     });
   }
 
   linkFinalize(webrtcLink: number) {
-    this.cl.call(CL_PATH + "linkFinalize", {
+    this.cl.call(this.clPath + "linkFinalize", {
       webrtcLink: webrtcLink,
     });
   }
 
   linkDisconnect(webrtcLink: number) {
-    this.cl.call(CL_PATH + "linkDisconnect", {
+    this.cl.call(this.clPath + "linkDisconnect", {
       webrtcLink: webrtcLink,
     });
   }
 
   linkGetLocalSdp(webrtcLink: number, isRemoteSdpSet: boolean) {
-    this.cl.call(CL_PATH + "linkGetLocalSdp", {
+    this.cl.call(this.clPath + "linkGetLocalSdp", {
       webrtcLink: webrtcLink,
       isRemoteSdpSet: isRemoteSdpSet,
     });
   }
 
   linkSend(webrtcLink: number, data: Uint8Array) {
-    this.cl.call(CL_PATH + "linkSend", {
+    this.cl.call(this.clPath + "linkSend", {
       webrtcLink: webrtcLink,
       data: data.slice(),
     });
   }
 
   linkSetRemoteSdp(webrtcLink: number, sdpStr: string, isOffer: boolean) {
-    this.cl.call(CL_PATH + "linkSetRemoteSdp", {
+    this.cl.call(this.clPath + "linkSetRemoteSdp", {
       webrtcLink: webrtcLink,
       sdpStr: sdpStr,
       isOffer: isOffer,
@@ -67,7 +67,7 @@ export class WebrtcBypass implements WebrtcImplement {
   }
 
   linkUpdateIce(webrtcLink: number, iceStr: string) {
-    this.cl.call(CL_PATH + "linkUpdateIce", {
+    this.cl.call(this.clPath + "linkUpdateIce", {
       webrtcLink: webrtcLink,
       iceStr: iceStr,
     });

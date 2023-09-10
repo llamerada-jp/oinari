@@ -1,6 +1,6 @@
 import * as CL from "./crosslink"
 
-const CL_PATH: string = "colonio/webrtc/";
+const CL_PATH: string = "webrtc/";
 
 export function NewWebrtcHandler(cl: CL.Crosslink, wi: WebrtcImplement): CL.MultiPlexer {
   let mpx = new CL.MultiPlexer();

@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-export const CrosslinkPath: string = "container";
+export const CL_MANAGER_PATH: string = "container";
+export const CL_CRI_PATH: string = "cri/container";
 
 // ReadyRequest is a message to inform the parent that the worker has started
 export interface ReadyRequest {

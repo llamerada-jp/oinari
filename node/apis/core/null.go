@@ -13,13 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package null
-
-import "github.com/llamerada-jp/oinari/node/apis"
+package core
 
 type nullAPIDriverImpl struct {
 }
 
-func NewNullAPIDriver() apis.Driver {
+func NewNullAPIDriver() CoreDriver {
 	return &nullAPIDriverImpl{}
+}
+
+func (driver *nullAPIDriverImpl) DriverName() string {
+	return ""
+}
+
+func (driver *nullAPIDriverImpl) Setup(firstInPod bool) error {
+	return nil
+}
+
+func (driver *nullAPIDriverImpl) Dump() ([]byte, error) {
+	return nil, nil
+}
+
+func (driver *nullAPIDriverImpl) Restore(dumpData []byte) error {
+	return nil
+}
+
+func (driver *nullAPIDriverImpl) Teardown(lastInPod bool) error {
+	return nil
 }

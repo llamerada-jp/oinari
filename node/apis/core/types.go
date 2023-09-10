@@ -15,6 +15,10 @@
  */
 package core
 
-func InitHandler() {
-
+type CoreDriver interface {
+	DriverName() string
+	Setup(firstInPod bool) error
+	Dump() ([]byte, error)
+	Restore(dumpData []byte) error
+	Teardown(lastInPod bool) error
 }

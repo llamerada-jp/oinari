@@ -3,4 +3,4 @@ headless: true
 ---
 
 - Internals
-  - [Crosslink]({{< relref "/internal/crosslink" >}})
+  - [Crosslink]({{< relref "/posts/internal/crosslink" >}})

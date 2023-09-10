@@ -23,9 +23,7 @@ import (
 	"github.com/llamerada-jp/oinari/api"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node"
-	"github.com/llamerada-jp/oinari/node/apis"
 	"github.com/llamerada-jp/oinari/node/apis/core"
-	"github.com/llamerada-jp/oinari/node/apis/null"
 	"github.com/llamerada-jp/oinari/node/controller"
 	"github.com/llamerada-jp/oinari/node/cri"
 	fd "github.com/llamerada-jp/oinari/node/frontend/driver"
@@ -39,7 +37,7 @@ type nodeAgent struct {
 	ctx context.Context
 	// crosslink
 	cl      crosslink.Crosslink
-	rootMpx crosslink.MultiPlexer
+	nodeMpx crosslink.MultiPlexer
 	// frontend driver
 	frontendDriver fd.FrontendDriver
 
@@ -50,8 +48,10 @@ type nodeAgent struct {
 }
 
 func (na *nodeAgent) initCrosslink() error {
-	na.rootMpx = crosslink.NewMultiPlexer()
-	na.cl = crosslink.NewCrosslink("crosslink", na.rootMpx)
+	rootMpx := crosslink.NewMultiPlexer()
+	na.nodeMpx = crosslink.NewMultiPlexer()
+	rootMpx.SetHandler("node", na.nodeMpx)
+	na.cl = crosslink.NewCrosslink("crosslink", rootMpx)
 	return nil
 }
 
@@ -75,7 +75,7 @@ func (na *nodeAgent) initSystem() error {
 		}
 	}()
 
-	fh.InitSystemHandler(na.rootMpx, na.sysCtrl)
+	fh.InitSystemHandler(na.nodeMpx, na.sysCtrl)
 	return nil
 }
 
@@ -108,17 +108,6 @@ func (na *nodeAgent) execute() error {
 	return nil
 }
 
-func apiDriverFactory(runtime []string) apis.Driver {
-	for _, r := range runtime {
-		switch r {
-		case "core:dev1":
-			return core.NewCoreAPIDriver()
-		}
-	}
-
-	return null.NewNullAPIDriver()
-}
-
 // implement system events
 func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	ctx := context.Background()
@@ -136,9 +125,12 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	accountKvs := kvs.NewAccountKvs(na.col)
 	podKvs := kvs.NewPodKvs(na.col)
 
+	// drivers
+	coreDriverManager := core.NewCoreDriverManager(na.cl)
+
 	// controllers
 	accountCtrl := controller.NewAccountController(account, localNid, accountKvs)
-	containerCtrl := controller.NewContainerController(localNid, cri, podKvs, apiDriverFactory)
+	containerCtrl := controller.NewContainerController(localNid, cri, podKvs, coreDriverManager)
 	nodeCtrl := controller.NewNodeController(ctx, na.col, messaging, account, nodeName, nodeType)
 	podCtrl := controller.NewPodController(podKvs, messaging, localNid)
 
@@ -154,7 +146,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 
 	// handlers
 	mh.InitMessagingHandler(na.col, containerCtrl, nodeCtrl)
-	fh.InitResourceHandler(na.rootMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
+	fh.InitResourceHandler(na.nodeMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
 
 	return nil
 }

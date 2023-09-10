@@ -19,28 +19,26 @@ import * as Types from "./types";
 
 importScripts("wasm_exec.js");
 
-const CL_PATH: string = Types.CrosslinkPath + "/";
-
 let crosslink: CL.Crosslink;
 let rootMpx: CL.MultiPlexer;
 
 export function initManager(cl: CL.Crosslink, rm: CL.MultiPlexer): void {
   crosslink = cl;
   rootMpx = rm;
-  initHandler(rootMpx);
+  initContainerHandler(rootMpx);
 }
 
 export function ready(): void {
-  crosslink.call(CL_PATH + "ready", {}).then((obj) => {
+  crosslink.call(Types.CL_CRI_PATH + "/ready", {}).then((obj) => {
     let res = obj as Types.ReadyResponse;
     setup(res);
     start(res);
   });
 }
 
-function initHandler(rootMpx: CL.MultiPlexer): void {
+function initContainerHandler(rootMpx: CL.MultiPlexer): void {
   let mpx = new CL.MultiPlexer();
-  rootMpx.setHandler(Types.CrosslinkPath, mpx);
+  rootMpx.setHandler(Types.CL_MANAGER_PATH, mpx);
 
   mpx.setHandlerFunc("term", (data: any, _: Map<string, string>, writer: CL.ResponseWriter): void => {
     // let _ = data as Types.TermRequest;
@@ -91,7 +89,7 @@ function start(config: Types.ReadyResponse): void {
 }
 
 function finished(code: number): void {
-  crosslink.call(CL_PATH + "finished", {
+  crosslink.call(Types.CL_CRI_PATH + "/finished", {
     code: code,
   } as Types.FinishedRequest);
 }
