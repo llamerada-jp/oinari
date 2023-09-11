@@ -12,13 +12,13 @@ Oinari comprises several modules (browser's main worker as frontend, WebWorker, 
 
 ## handlers
 
-- `application {container}` @lib/oinari/run.go via src/cri.ts
+- `application/api/core {containerID}` @lib/oinari/run.go via src/cri.ts
 - `container` @src/container/manager.ts 
 - `cri/container` @src/cri.ts
 - `cri` @src/cri.ts
 - `frontend/nodeReady` @src/index.ts
 - `frontend/webrtc` @src/webrtc_bypass_handler.ts
-- `node/api`
+- `node/api/core {containerID}` @node/apis/core/handler/handler.go
 - `node/resource` @node/frontend/handler/resource.go
 - `node/system` @node/frontend/handler/system.go
 - `run` @src/controller/index.ts

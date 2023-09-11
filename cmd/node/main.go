@@ -24,6 +24,7 @@ import (
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node"
 	"github.com/llamerada-jp/oinari/node/apis/core"
+	ch "github.com/llamerada-jp/oinari/node/apis/core/handler"
 	"github.com/llamerada-jp/oinari/node/controller"
 	"github.com/llamerada-jp/oinari/node/cri"
 	fd "github.com/llamerada-jp/oinari/node/frontend/driver"
@@ -38,6 +39,7 @@ type nodeAgent struct {
 	// crosslink
 	cl      crosslink.Crosslink
 	nodeMpx crosslink.MultiPlexer
+	apiMpx  crosslink.MultiPlexer
 	// frontend driver
 	frontendDriver fd.FrontendDriver
 
@@ -51,6 +53,8 @@ func (na *nodeAgent) initCrosslink() error {
 	rootMpx := crosslink.NewMultiPlexer()
 	na.nodeMpx = crosslink.NewMultiPlexer()
 	rootMpx.SetHandler("node", na.nodeMpx)
+	na.apiMpx = crosslink.NewMultiPlexer()
+	na.nodeMpx.SetHandler("api", na.apiMpx)
 	na.cl = crosslink.NewCrosslink("crosslink", rootMpx)
 	return nil
 }
@@ -134,6 +138,9 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	nodeCtrl := controller.NewNodeController(ctx, na.col, messaging, account, nodeName, nodeType)
 	podCtrl := controller.NewPodController(podKvs, messaging, localNid)
 
+	// api
+	apiManager := core.NewCoreDriverManager(na.cl)
+
 	// manager
 	localDs := node.NewLocalDatastore(na.col)
 	manager := node.NewManager(localDs, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
@@ -147,6 +154,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	// handlers
 	mh.InitMessagingHandler(na.col, containerCtrl, nodeCtrl)
 	fh.InitResourceHandler(na.nodeMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
+	ch.InitHandler(na.apiMpx, apiManager)
 
 	return nil
 }
