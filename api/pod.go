@@ -104,9 +104,10 @@ type ContainerState struct {
 }
 
 type ContainerStatus struct {
-	ContainerID string         `json:"containerID,omitempty"`
-	Image       string         `json:"image,omitempty"`
-	State       ContainerState `json:"state"`
+	ContainerID string                    `json:"containerID,omitempty"`
+	Image       string                    `json:"image,omitempty"`
+	LastState   *ContainerStateTerminated `json:"lastState,omitempty"`
+	State       ContainerState            `json:"state"`
 }
 
 type PodStatus struct {

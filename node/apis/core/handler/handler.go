@@ -17,27 +17,75 @@ package handler
 
 import (
 	"fmt"
-	"log"
 
 	app "github.com/llamerada-jp/oinari/api/app/core"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node/apis/core"
+	"github.com/llamerada-jp/oinari/node/cri"
+	"github.com/llamerada-jp/oinari/node/kvs"
 )
 
-func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager) {
+func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI, podKVS kvs.PodKvs, recordKVS kvs.RecordKvs) {
 	mpx := crosslink.NewMultiPlexer()
 	apiMpx.SetHandler("core", mpx)
 
 	mpx.SetHandler("ready", crosslink.NewFuncHandler(func(request *app.ReadyRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		if !isDriverExists(tags, manager) {
-			writer.ReplyError("driver not assigned")
+		containerID, driver, err := getDriver(tags, manager)
+		if err != nil {
+			writer.ReplyError(err.Error())
 			return
 		}
+
+		containerList, err := c.ListContainers(&cri.ListContainersRequest{
+			Filter: &cri.ContainerFilter{
+				ID: containerID,
+			},
+		})
+		if err != nil {
+			writer.ReplyError(err.Error())
+			return
+		}
+		if len(containerList.Containers) == 0 {
+			writer.ReplyError("container not found")
+			return
+		}
+
+		sandboxList, err := c.ListPodSandbox(&cri.ListPodSandboxRequest{
+			Filter: &cri.PodSandboxFilter{
+				ID: containerList.Containers[0].PodSandboxId,
+			},
+		})
+		if err != nil {
+			writer.ReplyError(err.Error())
+		}
+		if len(sandboxList.Items) == 0 {
+			writer.ReplyError("sandbox not found")
+			return
+		}
+
+		podUUID := sandboxList.Items[0].Metadata.UID
+		pod, err := podKVS.Get(podUUID)
+		if err != nil {
+			writer.ReplyError(err.Error())
+			return
+		}
+		isInitialize := false
+		for _, status := range pod.Status.ContainerStatuses {
+			if status.ContainerID == containerID {
+				if status.LastState != nil {
+					isInitialize = true
+				}
+				break
+			}
+		}
+
+		record, err := recordKVS.Get(podUUID)
+
 		writer.ReplySuccess(&app.ReadyResponse{})
 	}))
 
 	mpx.SetHandler("output", crosslink.NewFuncHandler(func(request *app.OutputRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		if !isDriverExists(tags, manager) {
+		if !getDriver(tags, manager) {
 			writer.ReplyError("driver not assigned")
 			return
 		}
@@ -54,20 +102,16 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager) {
 	}))
 }
 
-func isDriverExists(tags map[string]string, manager *core.Manager) bool {
+func getDriver(tags map[string]string, manager *core.Manager) (string, core.CoreDriver, error) {
 	containerID, ok := tags["containerID"]
 	if !ok {
-		log.Fatal("containerID should be set when accessing core handler")
+		return "", nil, fmt.Errorf("containerID should be set when accessing core handler")
 	}
 
 	driver := manager.GetDriver(containerID)
 	if driver == nil {
-		return false
+		return "", nil, fmt.Errorf("driver not found")
 	}
 
-	if driver.DriverName() == "" {
-		return false
-	}
-
-	return true
+	return containerID, driver, nil
 }

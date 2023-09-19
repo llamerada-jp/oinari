@@ -26,18 +26,14 @@ func (driver *nullAPIDriverImpl) DriverName() string {
 	return ""
 }
 
-func (driver *nullAPIDriverImpl) Setup(firstInPod bool) error {
+func (driver *nullAPIDriverImpl) Setup(isInitialize bool, record []byte) error {
 	return nil
 }
 
-func (driver *nullAPIDriverImpl) Dump() ([]byte, error) {
+func (driver *nullAPIDriverImpl) Marshal() ([]byte, error) {
 	return nil, nil
 }
 
-func (driver *nullAPIDriverImpl) Restore(dumpData []byte) error {
-	return nil
-}
-
-func (driver *nullAPIDriverImpl) Teardown(lastInPod bool) error {
-	return nil
+func (driver *nullAPIDriverImpl) Teardown(isFinalize bool) ([]byte, error) {
+	return nil, nil
 }

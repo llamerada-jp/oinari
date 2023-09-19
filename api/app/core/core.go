@@ -35,33 +35,26 @@ type OutputResponse struct {
 
 // types to pass from node manager to application
 type SetupRequest struct {
-	FirstInPod bool `json:"firstInPod"`
+	IsInitialize bool   `json:"isInitialize"`
+	Record       []byte `json:"record"`
 }
 
 type SetupResponse struct {
 	// empty
 }
 
-type DumpRequest struct {
+type MarshalRequest struct {
 	// empty
 }
 
-type DumpResponse struct {
-	DumpData []byte `json:"dumpData"`
-}
-
-type RestoreRequest struct {
-	DumpData []byte `json:"dumpData"`
-}
-
-type RestoreResponse struct {
-	// empty
+type MarshalResponse struct {
+	Record []byte `json:"record"`
 }
 
 type TeardownRequest struct {
-	LastInPod bool `json:"lastInPod"`
+	IsFinalize bool `json:"isFinalizeT"`
 }
 
 type TeardownResponse struct {
-	// empty
+	Record []byte `json:"record"`
 }

@@ -6,8 +6,7 @@ const (
 )
 
 type Application interface {
-	Setup(firstInPod bool) error
-	Dump() ([]byte, error)
-	Restore(data []byte) error
-	Teardown(lastInPod bool) error
+	Setup(isInitialize bool, record []byte) error
+	Marshal() ([]byte, error)
+	Teardown(isFinalize bool) ([]byte, error)
 }

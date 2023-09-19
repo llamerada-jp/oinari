@@ -23,6 +23,7 @@ const (
 	ResourceTypeAccount = ResourceType("account")
 	ResourceTypeNode    = ResourceType("node")
 	ResourceTypePod     = ResourceType("pod")
+	ResourceTypeRecord  = ResourceType("record")
 )
 
 type ObjectMeta struct {

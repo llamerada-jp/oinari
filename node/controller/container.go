@@ -249,40 +249,45 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 		_, containerExists := containers[spec.Name]
 
 		// start containers if they are not exist
-		if status.State.Running == nil && !containerExists {
-			envs := []cri.KeyValue{}
-			for _, one := range spec.Env {
-				envs = append(envs, cri.KeyValue{
-					Key:   one.Name,
-					Value: one.Value,
+		if status.State.Running == nil {
+			var containerID string
+			if !containerExists {
+				envs := []cri.KeyValue{}
+				for _, one := range spec.Env {
+					envs = append(envs, cri.KeyValue{
+						Key:   one.Name,
+						Value: one.Value,
+					})
+				}
+
+				res, err := impl.cri.CreateContainer(&cri.CreateContainerRequest{
+					PodSandboxId: state.containerInfo.SandboxID,
+					Config: cri.ContainerConfig{
+						Metadata: cri.ContainerMetadata{
+							Name: spec.Name,
+						},
+						Image: cri.ImageSpec{
+							Image: spec.Image,
+						},
+						Runtime: spec.Runtime,
+						Args:    spec.Args,
+						Envs:    envs,
+					},
 				})
-			}
+				if err != nil {
+					log.Printf("failed to create container: %s", err.Error())
+					continue
+				}
 
-			res, err := impl.cri.CreateContainer(&cri.CreateContainerRequest{
-				PodSandboxId: state.containerInfo.SandboxID,
-				Config: cri.ContainerConfig{
-					Metadata: cri.ContainerMetadata{
-						Name: spec.Name,
-					},
-					Image: cri.ImageSpec{
-						Image: spec.Image,
-					},
-					Runtime: spec.Runtime,
-					Args:    spec.Args,
-					Envs:    envs,
-				},
-			})
-			if err != nil {
-				log.Printf("failed to create container: %s", err.Error())
-				continue
-			}
+				// create api driver
+				impl.apiCoreDriverManager.NewCoreDriver(res.ContainerId, spec.Runtime)
 
-			// create api driver
-			impl.apiCoreDriverManager.NewCoreDriver(res.ContainerId, spec.Runtime)
+				containerID = res.ContainerId
+			}
 
 			containers, err := impl.cri.ListContainers(&cri.ListContainersRequest{
 				Filter: &cri.ContainerFilter{
-					ID: res.ContainerId,
+					ID: containerID,
 				},
 			})
 			if err != nil || len(containers.Containers) == 0 {
@@ -290,20 +295,23 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 				continue
 			}
 
-			status.ContainerID = res.ContainerId
+			status.ContainerID = containerID
 			status.Image = containers.Containers[0].Image.Image
+
+			if containers.Containers[0].State != cri.ContainerRunning && containers.Containers[0].State != cri.ContainerExited {
+				_, err = impl.cri.StartContainer(&cri.StartContainerRequest{
+					ContainerId: containerID,
+				})
+				if err != nil {
+					log.Printf("failed to start container: %s", err.Error())
+					continue
+				}
+			}
+
 			status.State = api.ContainerState{
 				Running: &api.ContainerStateRunning{
 					StartedAt: misc.GetTimestamp(),
 				},
-			}
-
-			_, err = impl.cri.StartContainer(&cri.StartContainerRequest{
-				ContainerId: res.ContainerId,
-			})
-			if err != nil {
-				log.Printf("failed to start container: %s", err.Error())
-				continue
 			}
 		}
 	}
@@ -394,6 +402,9 @@ func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *a
 		}
 
 		if container.State == cri.ContainerExited && status.State.Terminated == nil {
+			if status.State.Terminated != nil {
+				status.LastState = status.State.Terminated
+			}
 			status.State.Terminated = &api.ContainerStateTerminated{
 				FinishedAt: container.FinishedAt,
 				ExitCode:   container.ExitCode,

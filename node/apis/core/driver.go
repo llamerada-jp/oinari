@@ -74,31 +74,25 @@ func callHelper[REQ any, RES any](driver *coreAPIDriverImpl, path string, reques
 	return res, nil
 }
 
-func (driver *coreAPIDriverImpl) Setup(firstInPod bool) error {
+func (driver *coreAPIDriverImpl) Setup(isInitialize bool, record []byte) error {
 	_, err := callHelper[app.SetupRequest, app.SetupResponse](driver, "setup", &app.SetupRequest{
-		FirstInPod: firstInPod,
+		IsInitialize: isInitialize,
+		Record:       record,
 	})
 	return err
 }
 
-func (driver *coreAPIDriverImpl) Dump() ([]byte, error) {
-	res, err := callHelper[app.DumpRequest, app.DumpResponse](driver, "dump", &app.DumpRequest{})
+func (driver *coreAPIDriverImpl) Marshal() ([]byte, error) {
+	res, err := callHelper[app.MarshalRequest, app.MarshalResponse](driver, "marshal", &app.MarshalRequest{})
 	if err != nil {
 		return nil, err
 	}
-	return res.DumpData, nil
+	return res.Record, nil
 }
 
-func (driver *coreAPIDriverImpl) Restore(dumpData []byte) error {
-	_, err := callHelper[app.RestoreRequest, app.RestoreResponse](driver, "restore", &app.RestoreRequest{
-		DumpData: dumpData,
+func (driver *coreAPIDriverImpl) Teardown(isFinalize bool) ([]byte, error) {
+	res, err := callHelper[app.TeardownRequest, app.TeardownResponse](driver, "teardown", &app.TeardownRequest{
+		IsFinalize: isFinalize,
 	})
-	return err
-}
-
-func (driver *coreAPIDriverImpl) Teardown(lastInPod bool) error {
-	_, err := callHelper[app.TeardownRequest, app.TeardownResponse](driver, "teardown", &app.TeardownRequest{
-		LastInPod: lastInPod,
-	})
-	return err
+	return res.Record, err
 }

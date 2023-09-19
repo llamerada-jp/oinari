@@ -17,8 +17,7 @@ package core
 
 type CoreDriver interface {
 	DriverName() string
-	Setup(firstInPod bool) error
-	Dump() ([]byte, error)
-	Restore(dumpData []byte) error
-	Teardown(lastInPod bool) error
+	Setup(isInitialize bool, record []byte) error
+	Marshal() ([]byte, error)
+	Teardown(isFinalize bool) ([]byte, error)
 }

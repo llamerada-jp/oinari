@@ -26,8 +26,7 @@ import (
 
 type coreTest struct {
 	CountSetup    int `json:"setup"`
-	CountDump     int `json:"dump"`
-	CountRestore  int `json:"restore"`
+	CountMarshal  int `json:"marshal"`
 	CountTeardown int `json:"teardown"`
 }
 
@@ -37,14 +36,19 @@ type logEntry struct {
 	Param any    `json:"param"`
 }
 
-func (ct *coreTest) Setup(firstInPod bool) error {
+func (ct *coreTest) Setup(isInitialize bool, record []byte) error {
+	err := json.Unmarshal(record, ct)
+	if err != nil {
+		return err
+	}
+
 	ct.CountSetup++
-	return ct.outputLog("Setup", ct.CountSetup, firstInPod)
+	return ct.outputLog("Setup", ct.CountSetup, isInitialize)
 }
 
-func (ct *coreTest) Dump() ([]byte, error) {
-	ct.CountDump++
-	err := ct.outputLog("Dump", ct.CountDump, nil)
+func (ct *coreTest) Marshal() ([]byte, error) {
+	ct.CountMarshal++
+	err := ct.outputLog("Marshal", ct.CountMarshal, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -52,19 +56,9 @@ func (ct *coreTest) Dump() ([]byte, error) {
 	return json.Marshal(*ct)
 }
 
-func (ct *coreTest) Restore(data []byte) error {
-	ct.CountRestore++
-	err := ct.outputLog("Restore", ct.CountRestore, nil)
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal(data, ct)
-}
-
-func (ct *coreTest) Teardown(lastInPod bool) error {
+func (ct *coreTest) Teardown(isFinalize bool) ([]byte, error) {
 	ct.CountTeardown++
-	return ct.outputLog("Teardown", ct.CountTeardown, lastInPod)
+	return nil, ct.outputLog("Teardown", ct.CountTeardown, isFinalize)
 }
 
 func (ct *coreTest) outputLog(name string, count int, param any) error {

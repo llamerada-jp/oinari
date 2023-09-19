@@ -64,7 +64,7 @@ func (o *oinari) initCoreHandler(errCh chan error) error {
 	apiMpx.SetHandler("core", coreAPIMpx)
 
 	coreAPIMpx.SetHandler("setup", crosslink.NewFuncHandler(func(req *app.SetupRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		err := o.app.Setup(req.FirstInPod)
+		err := o.app.Setup(req.IsInitialize, req.Record)
 		if err != nil {
 			writer.ReplyError("setup had an error")
 			errCh <- err
@@ -73,35 +73,31 @@ func (o *oinari) initCoreHandler(errCh chan error) error {
 		}
 	}))
 
-	coreAPIMpx.SetHandler("dump", crosslink.NewFuncHandler(func(req *app.DumpRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		data, err := o.app.Dump()
+	coreAPIMpx.SetHandler("marshal", crosslink.NewFuncHandler(func(req *app.MarshalRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+		record, err := o.app.Marshal()
 		if err != nil {
-			writer.ReplyError("dump had an error")
+			writer.ReplyError("marshal had an error")
 			errCh <- err
 		} else {
-			writer.ReplySuccess(app.DumpResponse{
-				DumpData: data,
+			writer.ReplySuccess(app.MarshalResponse{
+				Record: record,
 			})
 		}
 	}))
 
-	coreAPIMpx.SetHandler("restore", crosslink.NewFuncHandler(func(req *app.RestoreRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		err := o.app.Restore(req.DumpData)
-		if err != nil {
-			writer.ReplyError("restore had an error")
-			errCh <- err
-		} else {
-			writer.ReplySuccess(app.RestoreResponse{})
-		}
-	}))
-
 	coreAPIMpx.SetHandler("teardown", crosslink.NewFuncHandler(func(req *app.TeardownRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		err := o.app.Teardown(req.LastInPod)
+		record, err := o.app.Teardown(req.IsFinalize)
+		// ignore record if finalize
+		if req.IsFinalize {
+			record = nil
+		}
 		if err != nil {
 			writer.ReplyError("teardown had an error")
 			errCh <- err
 		} else {
-			writer.ReplySuccess(app.TeardownResponse{})
+			writer.ReplySuccess(app.TeardownResponse{
+				Record: record,
+			})
 			close(errCh)
 		}
 	}))
