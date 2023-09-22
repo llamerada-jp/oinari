@@ -85,13 +85,14 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI,
 	}))
 
 	mpx.SetHandler("output", crosslink.NewFuncHandler(func(request *app.OutputRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		if !getDriver(tags, manager) {
-			writer.ReplyError("driver not assigned")
+		_, _, err := getDriver(tags, manager)
+		if err != nil {
+			writer.ReplyError(err.Error())
 			return
 		}
 
 		// TODO: broadcast message to neighbors
-		_, err := fmt.Println(string(request.Payload))
+		_, err = fmt.Println(string(request.Payload))
 		if err != nil {
 			writer.ReplyError(err.Error())
 			return
