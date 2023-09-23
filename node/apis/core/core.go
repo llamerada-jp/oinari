@@ -17,12 +17,14 @@ package core
 
 import (
 	"log"
+	"sync"
 
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 )
 
 type Manager struct {
-	cl crosslink.Crosslink
+	mtx sync.Mutex
+	cl  crosslink.Crosslink
 	// key: containerID
 	drivers map[string]CoreDriver
 }
@@ -35,6 +37,9 @@ func NewCoreDriverManager(cl crosslink.Crosslink) *Manager {
 }
 
 func (m *Manager) NewCoreDriver(containerID string, runtime []string) CoreDriver {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
 	if _, ok := m.drivers[containerID]; ok {
 		log.Fatal("driver already exists")
 	}
@@ -58,9 +63,15 @@ L:
 }
 
 func (m *Manager) DestroyDriver(containerID string) {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
 	delete(m.drivers, containerID)
 }
 
 func (m *Manager) GetDriver(containerID string) CoreDriver {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
 	return m.drivers[containerID]
 }

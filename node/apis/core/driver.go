@@ -48,7 +48,10 @@ func callHelper[REQ any, RES any](driver *coreAPIDriverImpl, path string, reques
 	ch := make(chan *RES)
 	var funcError error
 
-	driver.cl.Call(strings.Join([]string{oinari.ApplicationCrosslinkPath, path}, "/"), request, nil,
+	driver.cl.Call(strings.Join([]string{oinari.ApplicationCrosslinkPath, path}, "/"), request,
+		map[string]string{
+			"containerID": driver.containerID,
+		},
 		func(response []byte, err error) {
 			defer close(ch)
 
@@ -94,5 +97,8 @@ func (driver *coreAPIDriverImpl) Teardown(isFinalize bool) ([]byte, error) {
 	res, err := callHelper[app.TeardownRequest, app.TeardownResponse](driver, "teardown", &app.TeardownRequest{
 		IsFinalize: isFinalize,
 	})
+	if isFinalize {
+		return nil, err
+	}
 	return res.Record, err
 }

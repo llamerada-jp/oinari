@@ -28,7 +28,7 @@ func NewFuncHandler[T any](f func(param *T, tags map[string]string, writer Respo
 func (f *funcHandlerImpl) Serve(dataRaw []byte, tags map[string]string, writer ResponseWriter) {
 	if kind, ok := tags[TAG_PATH_MATCH_KIND]; ok {
 		if kind != PATH_MATCH_KIND_EXACT {
-			log.Fatalln("func handler should be called with exact match path")
+			log.Fatalln("crosslink func handler should be called with exact match path")
 		}
 	}
 	f.f(dataRaw, tags, writer)

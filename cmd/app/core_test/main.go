@@ -81,6 +81,6 @@ func Main() {
 	ct := &coreTest{}
 	err := oinari.Run(ct)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("test program failed: %s", err.Error())
 	}
 }

@@ -32,7 +32,7 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI,
 	mpx.SetHandler("ready", crosslink.NewFuncHandler(func(request *app.ReadyRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		containerID, driver, err := getDriver(tags, manager)
 		if err != nil {
-			writer.ReplyError(err.Error())
+			writer.ReplyError(fmt.Sprintf("`getDriver` failed on `ready` handler: %s", err.Error()))
 			return
 		}
 
@@ -42,11 +42,11 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI,
 			},
 		})
 		if err != nil {
-			writer.ReplyError(err.Error())
+			writer.ReplyError(fmt.Sprintf("`ListContainers` failed on `ready` handler: %s", err.Error()))
 			return
 		}
 		if len(containerList.Containers) == 0 {
-			writer.ReplyError("container not found")
+			writer.ReplyError(fmt.Sprintf("container not found on `ready` handler"))
 			return
 		}
 
@@ -56,22 +56,24 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI,
 			},
 		})
 		if err != nil {
-			writer.ReplyError(err.Error())
+			writer.ReplyError(fmt.Sprintf("`ListPodSandbox` failed on `ready` handler: %s", err.Error()))
 		}
 		if len(sandboxList.Items) == 0 {
-			writer.ReplyError("sandbox not found")
+			writer.ReplyError("sandbox not found on `ready` handler")
 			return
 		}
 
 		podUUID := sandboxList.Items[0].Metadata.UID
 		pod, err := podKVS.Get(podUUID)
 		if err != nil {
-			writer.ReplyError(err.Error())
+			writer.ReplyError(fmt.Sprintf("`podKVS.Get` failed on `ready` handler: %s", err.Error()))
 			return
 		}
 		isInitialize := false
-		for _, status := range pod.Status.ContainerStatuses {
+		var containerName string
+		for idx, status := range pod.Status.ContainerStatuses {
 			if status.ContainerID == containerID {
+				containerName = pod.Spec.Containers[idx].Name
 				if status.LastState != nil {
 					isInitialize = true
 				}
@@ -80,6 +82,21 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI,
 		}
 
 		record, err := recordKVS.Get(podUUID)
+		if err != nil {
+			writer.ReplyError(fmt.Sprintf("`recordKVS.Get` failed on `ready` handler: %s", err.Error()))
+			return
+		}
+
+		go func() {
+			if record == nil {
+				err = driver.Setup(isInitialize, nil)
+			} else {
+				err = driver.Setup(isInitialize, record.Data.Entries[containerName].Record)
+			}
+			if err != nil {
+				// TODO: try to restart container
+			}
+		}()
 
 		writer.ReplySuccess(&app.ReadyResponse{})
 	}))
@@ -87,14 +104,14 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI,
 	mpx.SetHandler("output", crosslink.NewFuncHandler(func(request *app.OutputRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		_, _, err := getDriver(tags, manager)
 		if err != nil {
-			writer.ReplyError(err.Error())
+			writer.ReplyError(fmt.Sprintf("`getDriver` failed on `output` handler: %s", err.Error()))
 			return
 		}
 
 		// TODO: broadcast message to neighbors
 		_, err = fmt.Println(string(request.Payload))
 		if err != nil {
-			writer.ReplyError(err.Error())
+			writer.ReplyError(fmt.Sprintf("`fmt.Println failed on `output` handler: %s", err.Error()))
 			return
 		}
 		writer.ReplySuccess(&app.OutputResponse{
@@ -111,7 +128,7 @@ func getDriver(tags map[string]string, manager *core.Manager) (string, core.Core
 
 	driver := manager.GetDriver(containerID)
 	if driver == nil {
-		return "", nil, fmt.Errorf("driver not found")
+		return "", nil, fmt.Errorf("driver not found for %s", containerID)
 	}
 
 	return containerID, driver, nil

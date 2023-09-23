@@ -28,7 +28,7 @@ func (m *mpxImpl) Serve(dataRaw []byte, tags map[string]string, writer ResponseW
 	var ok bool
 
 	if path, ok = tags[TAG_PATH]; !ok {
-		log.Fatalln("`path` tag should be set")
+		log.Fatalln("`path` tag should be set in crosslink multi plexer")
 	}
 
 	if leaf, ok = tags[TAG_LEAF]; !ok {

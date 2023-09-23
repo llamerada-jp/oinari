@@ -98,7 +98,7 @@ func NewNodeController(ctx context.Context, col colonio.Colonio, messaging drive
 			case <-ticker.C:
 				impl.cleanup()
 				if err := impl.publish(); err != nil {
-					log.Println(err)
+					log.Printf("publish method on the node controller failed: %s", err.Error())
 				}
 			}
 		}

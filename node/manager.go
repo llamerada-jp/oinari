@@ -58,7 +58,7 @@ func (mgr *manager) Start(ctx context.Context) error {
 
 	// first keepalive
 	if err := mgr.keepAlive(); err != nil {
-		log.Println(err)
+		log.Printf("keepAlive of node manager failed: %s", err.Error())
 	}
 
 	for {
@@ -68,12 +68,12 @@ func (mgr *manager) Start(ctx context.Context) error {
 
 		case <-tickerDealLR.C:
 			if err := mgr.dealLocalResource(); err != nil {
-				log.Println(err)
+				log.Printf("dealLocalResource of node manager failed: %s", err.Error())
 			}
 
 		case <-tickerKeepAlive.C:
 			if err := mgr.keepAlive(); err != nil {
-				log.Println(err)
+				log.Printf("keepAlive of node manager failed: %s", err.Error())
 			}
 
 		}

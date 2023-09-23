@@ -75,7 +75,7 @@ func (na *nodeAgent) initSystem() error {
 	go func() {
 		err := na.sysCtrl.Start(na.ctx)
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatalf("system controller failed: %s", err.Error())
 		}
 	}()
 
@@ -128,18 +128,16 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	// KVS
 	accountKvs := kvs.NewAccountKvs(na.col)
 	podKvs := kvs.NewPodKvs(na.col)
+	recordKVS := kvs.NewRecordKvs(na.col)
 
-	// drivers
+	// api driver manager
 	coreDriverManager := core.NewCoreDriverManager(na.cl)
 
 	// controllers
 	accountCtrl := controller.NewAccountController(account, localNid, accountKvs)
-	containerCtrl := controller.NewContainerController(localNid, cri, podKvs, coreDriverManager)
+	containerCtrl := controller.NewContainerController(localNid, cri, podKvs, recordKVS, coreDriverManager)
 	nodeCtrl := controller.NewNodeController(ctx, na.col, messaging, account, nodeName, nodeType)
 	podCtrl := controller.NewPodController(podKvs, messaging, localNid)
-
-	// api
-	apiManager := core.NewCoreDriverManager(na.cl)
 
 	// manager
 	localDs := node.NewLocalDatastore(na.col)
@@ -147,14 +145,14 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	go func() {
 		err := manager.Start(na.ctx)
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatalf("node manager failed: %s", err.Error())
 		}
 	}()
 
 	// handlers
 	mh.InitMessagingHandler(na.col, containerCtrl, nodeCtrl)
 	fh.InitResourceHandler(na.nodeMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
-	ch.InitHandler(na.apiMpx, apiManager)
+	ch.InitHandler(na.apiMpx, coreDriverManager, cri, podKvs, recordKVS)
 
 	return nil
 }
@@ -163,6 +161,6 @@ func main() {
 	na := &nodeAgent{}
 	err := na.execute()
 	if err != nil {
-		log.Println(err)
+		log.Fatalf("error on node: %s", err.Error())
 	}
 }

@@ -54,7 +54,7 @@ func (s *sleep) Setup(isInitialize bool, record []byte) error {
 		s.PassedSec = 0
 
 	} else {
-		fmt.Printf("continue to sleep for %d sec", s.PassedSec)
+		fmt.Printf("continue to sleep for %d sec\n", s.PassedSec)
 		err := json.Unmarshal(record, s)
 		if err != nil {
 			return err
@@ -108,7 +108,7 @@ func (s *sleep) start() error {
 
 func showHelp(err error) {
 	if err != nil {
-		log.Println(err)
+		log.Printf("`sleep` program failed: %s", err.Error())
 	}
 	log.Fatalf("usage: %s [duration]\n  duration: duration to sleep[sec], immediate wake up when 0, never wake up when negative value", os.Args[0])
 }
@@ -136,7 +136,7 @@ func main() {
 
 	err = oinari.Run(sleep)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("`oinari.Run` failed on sleep program: %s", err.Error())
 	}
 
 	os.Exit(0)

@@ -45,7 +45,7 @@ func (w *writer) Write(p []byte) (n int, err error) {
 		var res app.OutputResponse
 		err = json.Unmarshal(b, &res)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("unmarshal response of output failed on oinari api: %s", err.Error())
 		}
 
 		resCh <- writeResponse{

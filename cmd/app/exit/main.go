@@ -24,7 +24,7 @@ import (
 
 func showHelp(err error) {
 	if err != nil {
-		log.Println(err)
+		log.Printf("`exit` program failed: %s", err.Error())
 	}
 	log.Fatalf("usage: %s [code]\n  code: exit code, default 0", os.Args[0])
 }

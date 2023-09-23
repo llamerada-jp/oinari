@@ -76,7 +76,7 @@ func (cl *crosslinkImpl) Call(path string, obj any, tags map[string]string, cb f
 	if obj != nil {
 		objBin, err := json.Marshal(obj)
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatalf("marshaling a parameter failed on crosslink call method: %s", err.Error())
 		}
 		objStr = string(objBin)
 	}
@@ -85,7 +85,7 @@ func (cl *crosslinkImpl) Call(path string, obj any, tags map[string]string, cb f
 	if tags != nil {
 		tagsBin, err := json.Marshal(tags)
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatalf("marshaling the tag failed on crosslink call method: %s", err.Error())
 		}
 		tagsStr = string(tagsBin)
 	}
@@ -107,7 +107,7 @@ func (cl *crosslinkImpl) serve(id uint32, dtaRaw, tagRaw []byte) {
 	var tags map[string]string
 	err := json.Unmarshal(tagRaw, &tags)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("unmarshal the tag failed on crosslink serve method: %s", err.Error())
 	}
 
 	rw := &rwImpl{
@@ -121,7 +121,7 @@ func (cl *crosslinkImpl) serve(id uint32, dtaRaw, tagRaw []byte) {
 func (cl *crosslinkImpl) replyFromJs(id uint32, responseRaw []byte, message string) {
 	cb, ok := cl.cbMap[id]
 	if !ok {
-		log.Fatalln("call back function is not exist")
+		log.Fatalln("call back function is not exist on crosslink")
 	}
 	defer delete(cl.cbMap, id)
 
@@ -135,7 +135,7 @@ func (cl *crosslinkImpl) replyFromJs(id uint32, responseRaw []byte, message stri
 func (rw *rwImpl) ReplySuccess(response any) {
 	responseJson, err := json.Marshal(response)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("marshaling the response failed on crosslink ReplySuccess: %s", err.Error())
 	}
 	rw.jsInstance.Call("replyFromGo", js.ValueOf(rw.id), js.ValueOf(string(responseJson)), js.ValueOf(""))
 }

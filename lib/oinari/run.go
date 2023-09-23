@@ -109,7 +109,7 @@ func (o *oinari) ready() error {
 	o.cl.Call(NodeCrosslinkPath+"/ready", app.ReadyRequest{}, nil, func(b []byte, err error) {
 		// `ready` request only tell the status to the manager of this node, do nothing
 		if err != nil {
-			log.Fatal("failed to ready core api :%w", err)
+			log.Fatalf("failed to ready core api of oinari: %s", err.Error())
 		}
 	})
 	return nil

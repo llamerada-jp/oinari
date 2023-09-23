@@ -40,7 +40,7 @@ func (impl *frontendDriverImpl) TellInitComplete() error {
 	impl.cl.Call("frontend/nodeReady", nil, nil,
 		func(_ []byte, err error) {
 			if err != nil {
-				log.Fatalln(err)
+				log.Fatalf("frontend/nodeReady has an error: %s", err.Error())
 			}
 		})
 	return nil

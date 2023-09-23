@@ -51,17 +51,19 @@ type containerControllerImpl struct {
 	localNid             string
 	cri                  cri.CRI
 	podKvs               kvs.PodKvs
+	recordKvs            kvs.RecordKvs
 	apiCoreDriverManager *core.Manager
 	// key: Pod UUID
 	reconcileStates map[string]*reconcileState
 	mtx             sync.Mutex
 }
 
-func NewContainerController(localNid string, cri cri.CRI, podKvs kvs.PodKvs, apiCoreDriverManager *core.Manager) ContainerController {
+func NewContainerController(localNid string, cri cri.CRI, podKvs kvs.PodKvs, recordKVS kvs.RecordKvs, apiCoreDriverManager *core.Manager) ContainerController {
 	return &containerControllerImpl{
 		localNid:             localNid,
 		cri:                  cri,
 		podKvs:               podKvs,
+		recordKvs:            recordKVS,
 		apiCoreDriverManager: apiCoreDriverManager,
 		reconcileStates:      make(map[string]*reconcileState),
 	}
@@ -139,7 +141,7 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUUID stri
 			return impl.updatePodInfo(state, pod)
 		}
 
-		if err := impl.letTerminate(state); err != nil {
+		if err := impl.letTerminate(state, pod); err != nil {
 			return err
 		}
 
@@ -319,7 +321,7 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 	return nil
 }
 
-func (impl *containerControllerImpl) letTerminate(state *reconcileState) error {
+func (impl *containerControllerImpl) letTerminate(state *reconcileState, pod *api.Pod) error {
 	// TODO: send exit signal when any container running
 	containers, err := impl.cri.ListContainers(&cri.ListContainersRequest{
 		Filter: &cri.ContainerFilter{
@@ -330,9 +332,44 @@ func (impl *containerControllerImpl) letTerminate(state *reconcileState) error {
 		return err
 	}
 
+	isFinalize := len(pod.Meta.DeletionTimestamp) != 0
+	var record *api.Record
+	if !isFinalize {
+		var err error
+		record, err = impl.recordKvs.Get(pod.Meta.Uuid)
+		if err != nil {
+			return err
+		}
+		if record == nil {
+			record = &api.Record{
+				Meta: &api.ObjectMeta{
+					Type:        api.ResourceTypeRecord,
+					Name:        pod.Meta.Name,
+					Owner:       pod.Meta.Owner,
+					CreatorNode: pod.Meta.CreatorNode,
+					Uuid:        pod.Meta.Uuid,
+				},
+				Data: &api.RecordData{
+					Entries: make(map[string]api.RecordEntry),
+				},
+			}
+		}
+	}
+
 	for _, container := range containers.Containers {
 		if container.State == cri.ContainerExited {
 			continue
+		}
+
+		raw, err := impl.apiCoreDriverManager.GetDriver(container.ID).Teardown(isFinalize)
+		if err != nil {
+			return fmt.Errorf("failed to teardown container: %w", err)
+		}
+		if raw != nil {
+			record.Data.Entries[container.Metadata.Name] = api.RecordEntry{
+				Record:    raw,
+				Timestamp: misc.GetTimestamp(),
+			}
 		}
 
 		_, err = impl.cri.StopContainer(&cri.StopContainerRequest{
@@ -343,6 +380,18 @@ func (impl *containerControllerImpl) letTerminate(state *reconcileState) error {
 		}
 
 		impl.apiCoreDriverManager.DestroyDriver(container.ID)
+	}
+
+	if !isFinalize {
+		err = impl.recordKvs.Set(record)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = impl.recordKvs.Delete(pod.Meta.Uuid)
+		if err != nil {
+			log.Printf("failed to delete record: %s", err.Error())
+		}
 	}
 
 	// TODO: skip processing when all container exited
