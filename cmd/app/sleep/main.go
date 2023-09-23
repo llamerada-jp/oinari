@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"sync"
@@ -35,7 +34,7 @@ type sleep struct {
 	cancel      context.CancelFunc
 	durationSec uint64
 	// for marshal
-	PassedSec uint64
+	PassedSec uint64 `json:"passedSec"`
 }
 
 func newSleep(ctx context.Context, durationSec uint64) *sleep {
@@ -49,16 +48,16 @@ func newSleep(ctx context.Context, durationSec uint64) *sleep {
 }
 
 func (s *sleep) Setup(isInitialize bool, record []byte) error {
-	if isInitialize {
-		fmt.Println("start sleeping")
+	if isInitialize || record == nil {
+		fmt.Println("😪 start sleeping")
 		s.PassedSec = 0
 
 	} else {
-		fmt.Printf("continue to sleep for %d sec\n", s.PassedSec)
 		err := json.Unmarshal(record, s)
 		if err != nil {
 			return err
 		}
+		fmt.Printf("😪 continue to sleep for %d sec\n", s.PassedSec)
 	}
 
 	return s.start()
@@ -73,11 +72,14 @@ func (s *sleep) Marshal() ([]byte, error) {
 
 func (s *sleep) Teardown(isFinalize bool) ([]byte, error) {
 	s.cancel()
+	// TODO: If use mutex, the container cannot stop. Is the limitation of WebAssembly thread?
+	// s.mtx.Lock()
+	// defer s.mtx.Unlock()
 
 	if isFinalize {
-		fmt.Println("finish sleeping by interrupt")
+		fmt.Println("😪 finish sleeping by interrupt")
 	} else {
-		fmt.Println("pause sleeping")
+		fmt.Printf("😪 pause sleeping, %d sec passed\n", s.PassedSec)
 	}
 
 	return s.Marshal()
@@ -95,7 +97,7 @@ func (s *sleep) start() error {
 				s.mtx.Lock()
 				s.PassedSec++
 				if s.durationSec > 0 && s.PassedSec >= s.durationSec {
-					fmt.Println("finish sleeping by timeout")
+					fmt.Println("😪 finish sleeping by timeout")
 					os.Exit(0)
 				}
 				s.mtx.Unlock()
@@ -108,9 +110,9 @@ func (s *sleep) start() error {
 
 func showHelp(err error) {
 	if err != nil {
-		log.Printf("`sleep` program failed: %s", err.Error())
+		fmt.Printf("😪 %s\n", err.Error())
 	}
-	log.Fatalf("usage: %s [duration]\n  duration: duration to sleep[sec], immediate wake up when 0, never wake up when negative value", os.Args[0])
+	fmt.Printf("😪 usage: %s [duration]\n  duration: duration to sleep[sec], immediate wake up when 0, never wake up when negative value\n", os.Args[0])
 }
 
 func main() {
@@ -136,7 +138,8 @@ func main() {
 
 	err = oinari.Run(sleep)
 	if err != nil {
-		log.Fatalf("`oinari.Run` failed on sleep program: %s", err.Error())
+		fmt.Println("😪", err)
+		os.Exit(1)
 	}
 
 	os.Exit(0)

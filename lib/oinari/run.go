@@ -1,6 +1,7 @@
 package oinari
 
 import (
+	"fmt"
 	"log"
 
 	app "github.com/llamerada-jp/oinari/api/app/core"
@@ -21,38 +22,40 @@ func Run(app Application) error {
 		app: app,
 	}
 
-	return o.run()
+	err := o.run()
+	if err != nil {
+		return fmt.Errorf("error on Run of oinari: %w", err)
+	}
+	return nil
 }
 
 func (o *oinari) run() error {
-	if err := o.initCrosslink(); err != nil {
-		return err
-	}
+	o.initCrosslink()
 
 	errCh := make(chan error)
 	if err := o.initCoreHandler(errCh); err != nil {
-		return err
+		return fmt.Errorf("failed on initCoreHandler: %w", err)
 	}
 
 	if err := initWriter(o.cl, NodeCrosslinkPath); err != nil {
-		return err
+		return fmt.Errorf("failed on initWriter: %w", err)
 	}
 
 	if err := o.ready(); err != nil {
-		return err
+		return fmt.Errorf("failed on ready: %w", err)
 	}
 
 	err, ok := <-errCh
 	if ok {
+		close(errCh)
 		return err
 	}
 	return nil
 }
 
-func (o *oinari) initCrosslink() error {
+func (o *oinari) initCrosslink() {
 	o.rootMpx = crosslink.NewMultiPlexer()
 	o.cl = crosslink.NewCrosslink("crosslink", o.rootMpx)
-	return nil
 }
 
 func (o *oinari) initCoreHandler(errCh chan error) error {
@@ -67,7 +70,7 @@ func (o *oinari) initCoreHandler(errCh chan error) error {
 		err := o.app.Setup(req.IsInitialize, req.Record)
 		if err != nil {
 			writer.ReplyError("setup had an error")
-			errCh <- err
+			errCh <- fmt.Errorf("catch an error on `Setup` method: %s", err)
 		} else {
 			writer.ReplySuccess(app.SetupResponse{})
 		}
@@ -77,7 +80,7 @@ func (o *oinari) initCoreHandler(errCh chan error) error {
 		record, err := o.app.Marshal()
 		if err != nil {
 			writer.ReplyError("marshal had an error")
-			errCh <- err
+			errCh <- fmt.Errorf("catch an error on `Marshal` method: %s", err)
 		} else {
 			writer.ReplySuccess(app.MarshalResponse{
 				Record: record,
@@ -93,7 +96,7 @@ func (o *oinari) initCoreHandler(errCh chan error) error {
 		}
 		if err != nil {
 			writer.ReplyError("teardown had an error")
-			errCh <- err
+			errCh <- fmt.Errorf("catch an error on `Teardown` method: %s", err)
 		} else {
 			writer.ReplySuccess(app.TeardownResponse{
 				Record: record,
@@ -107,9 +110,8 @@ func (o *oinari) initCoreHandler(errCh chan error) error {
 
 func (o *oinari) ready() error {
 	o.cl.Call(NodeCrosslinkPath+"/ready", app.ReadyRequest{}, nil, func(b []byte, err error) {
-		// `ready` request only tell the status to the manager of this node, do nothing
 		if err != nil {
-			log.Fatalf("failed to ready core api of oinari: %s", err.Error())
+			log.Fatalf("failed to ready core api of oinari, do you have a runtime set?: %s", err.Error())
 		}
 	})
 	return nil

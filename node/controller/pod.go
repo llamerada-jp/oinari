@@ -97,6 +97,9 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) (bool, error) {
 				containerStatus := &pod.Status.ContainerStatuses[idx]
 				containerStatus.ContainerID = ""
 				containerStatus.Image = ""
+				if containerStatus.State.Terminated != nil {
+					containerStatus.LastState = containerStatus.State.Terminated
+				}
 				containerStatus.State = api.ContainerState{}
 			}
 			return false, impl.podKvs.Update(pod)

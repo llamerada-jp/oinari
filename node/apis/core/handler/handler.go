@@ -18,6 +18,7 @@ package handler
 import (
 	"fmt"
 
+	"github.com/llamerada-jp/oinari/api"
 	app "github.com/llamerada-jp/oinari/api/app/core"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node/apis/core"
@@ -69,29 +70,38 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI,
 			writer.ReplyError(fmt.Sprintf("`podKVS.Get` failed on `ready` handler: %s", err.Error()))
 			return
 		}
-		isInitialize := false
+		isInitialize := true
 		var containerName string
 		for idx, status := range pod.Status.ContainerStatuses {
-			if status.ContainerID == containerID {
-				containerName = pod.Spec.Containers[idx].Name
-				if status.LastState != nil {
-					isInitialize = true
-				}
-				break
+			if status.ContainerID != containerID {
+				continue
 			}
+			containerName = pod.Spec.Containers[idx].Name
+			if status.LastState != nil {
+				isInitialize = false
+			}
+			break
 		}
 
-		record, err := recordKVS.Get(podUUID)
-		if err != nil {
-			writer.ReplyError(fmt.Sprintf("`recordKVS.Get` failed on `ready` handler: %s", err.Error()))
-			return
+		var record *api.Record
+		if !isInitialize {
+			record, err = recordKVS.Get(podUUID)
+			if err != nil {
+				writer.ReplyError(fmt.Sprintf("`recordKVS.Get` failed on `ready` handler: %s", err.Error()))
+				return
+			}
 		}
 
 		go func() {
 			if record == nil {
 				err = driver.Setup(isInitialize, nil)
 			} else {
-				err = driver.Setup(isInitialize, record.Data.Entries[containerName].Record)
+				entry, ok := record.Data.Entries[containerName]
+				if !ok {
+					err = driver.Setup(isInitialize, nil)
+				} else {
+					err = driver.Setup(isInitialize, entry.Record)
+				}
 			}
 			if err != nil {
 				// TODO: try to restart container
