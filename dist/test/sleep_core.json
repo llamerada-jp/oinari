@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "name": "sleep with core API"
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "sleep_core",
+        "image": "/test/sleep_core.wasm",
+        "args": ["-1"],
+        "runtime": ["go:1.19", "core:dev1"]
+      }
+    ]
+  }
+}
