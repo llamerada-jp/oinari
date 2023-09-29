@@ -20,13 +20,13 @@ import (
 	"fmt"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/frontend/driver"
 	"golang.org/x/exp/slices"
 )
 
 type EventHandler interface {
-	OnConnect(nodeName string, nodeType api.NodeType) error
+	OnConnect(nodeName string, nodeType core.NodeType) error
 }
 
 type SystemController interface {
@@ -67,7 +67,7 @@ func (impl *systemControllerImpl) GetNode() string {
 }
 
 func (impl *systemControllerImpl) Connect(url, account, token, nodeName, nodeType string) error {
-	if !slices.Contains(api.NodeTypeAccepted, api.NodeType(nodeType)) {
+	if !slices.Contains(core.NodeTypeAccepted, core.NodeType(nodeType)) {
 		return fmt.Errorf("unsupported node type specified")
 	}
 
@@ -78,7 +78,7 @@ func (impl *systemControllerImpl) Connect(url, account, token, nodeName, nodeTyp
 
 	impl.account = account
 
-	err = impl.evh.OnConnect(nodeName, api.NodeType(nodeType))
+	err = impl.evh.OnConnect(nodeName, core.NodeType(nodeType))
 	if err != nil {
 		return err
 	}

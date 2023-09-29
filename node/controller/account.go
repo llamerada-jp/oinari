@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/kvs"
 )
 
@@ -31,9 +31,9 @@ type AccountController interface {
 	DealLocalResource(raw []byte) (bool, error)
 
 	GetAccountName() string
-	GetPodState() (map[string]api.AccountPodState, error)
-	GetNodeState() (map[string]api.AccountNodeState, error)
-	UpdatePodAndNodeState(account string, pods map[string]api.AccountPodState, nodeID string, nodeState *api.AccountNodeState) error
+	GetPodState() (map[string]core.AccountPodState, error)
+	GetNodeState() (map[string]core.AccountNodeState, error)
+	UpdatePodAndNodeState(account string, pods map[string]core.AccountPodState, nodeID string, nodeState *core.AccountNodeState) error
 }
 
 type accountControllerImpl struct {
@@ -65,7 +65,7 @@ func NewAccountController(account, localNid string, accountKvs kvs.AccountKvs) A
 }
 
 func (impl *accountControllerImpl) DealLocalResource(raw []byte) (bool, error) {
-	account := &api.Account{}
+	account := &core.Account{}
 	if err := json.Unmarshal(raw, account); err != nil {
 		return true, fmt.Errorf("failed to unmarshal account record: %w", err)
 	}
@@ -150,7 +150,7 @@ func (impl *accountControllerImpl) GetAccountName() string {
 	return impl.accountName
 }
 
-func (impl *accountControllerImpl) GetPodState() (map[string]api.AccountPodState, error) {
+func (impl *accountControllerImpl) GetPodState() (map[string]core.AccountPodState, error) {
 	acc, err := impl.accountKvs.Get(impl.accountName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account record: %s", err)
@@ -158,13 +158,13 @@ func (impl *accountControllerImpl) GetPodState() (map[string]api.AccountPodState
 
 	// TODO check not found
 	if acc == nil {
-		return make(map[string]api.AccountPodState), nil
+		return make(map[string]core.AccountPodState), nil
 	}
 
 	return acc.State.Pods, nil
 }
 
-func (impl *accountControllerImpl) GetNodeState() (map[string]api.AccountNodeState, error) {
+func (impl *accountControllerImpl) GetNodeState() (map[string]core.AccountNodeState, error) {
 	acc, err := impl.accountKvs.Get(impl.accountName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account record: %s", err)
@@ -172,13 +172,13 @@ func (impl *accountControllerImpl) GetNodeState() (map[string]api.AccountNodeSta
 
 	// TODO check not found
 	if acc == nil {
-		return make(map[string]api.AccountNodeState), nil
+		return make(map[string]core.AccountNodeState), nil
 	}
 
 	return acc.State.Nodes, nil
 }
 
-func (impl *accountControllerImpl) UpdatePodAndNodeState(account string, pods map[string]api.AccountPodState, nodeID string, nodeState *api.AccountNodeState) error {
+func (impl *accountControllerImpl) UpdatePodAndNodeState(account string, pods map[string]core.AccountPodState, nodeID string, nodeState *core.AccountNodeState) error {
 	record, err := impl.getOrCreateAccount(account)
 	if err != nil {
 		return err
@@ -211,24 +211,24 @@ func (impl *accountControllerImpl) cleanLogs(exclude string) {
 	}
 }
 
-func (impl *accountControllerImpl) getOrCreateAccount(accountName string) (*api.Account, error) {
+func (impl *accountControllerImpl) getOrCreateAccount(accountName string) (*core.Account, error) {
 	account, err := impl.accountKvs.Get(accountName)
 	if err != nil {
 		return nil, err
 	}
 
 	if account == nil {
-		account = &api.Account{
-			Meta: &api.ObjectMeta{
-				Type:        api.ResourceTypeAccount,
+		account = &core.Account{
+			Meta: &core.ObjectMeta{
+				Type:        core.ResourceTypeAccount,
 				Name:        accountName,
 				Owner:       accountName,
 				CreatorNode: impl.localNid,
-				Uuid:        api.GenerateAccountUuid(accountName),
+				Uuid:        core.GenerateAccountUuid(accountName),
 			},
-			State: &api.AccountState{
-				Pods:  make(map[string]api.AccountPodState),
-				Nodes: make(map[string]api.AccountNodeState),
+			State: &core.AccountState{
+				Pods:  make(map[string]core.AccountPodState),
+				Nodes: make(map[string]core.AccountNodeState),
 			},
 		}
 	}

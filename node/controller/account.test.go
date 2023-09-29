@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/kvs"
 	"github.com/llamerada-jp/oinari/node/misc"
 	"github.com/llamerada-jp/oinari/node/mock"
@@ -56,7 +56,7 @@ func (test *accountControllerTest) TestDealLocalResource() {
 	accountName := "(=^_^=)"
 
 	// dummy entry to avoid error when update
-	test.col.KvsSet(api.GenerateAccountUuid(accountName), []byte("dummy"), 0)
+	test.col.KvsSet(core.GenerateAccountUuid(accountName), []byte("dummy"), 0)
 
 	/// abnormal: return true if the data is invalid
 	res, err := test.impl.DealLocalResource([]byte("invalid data"))
@@ -64,22 +64,22 @@ func (test *accountControllerTest) TestDealLocalResource() {
 	test.True(res)
 
 	/// normal: create log entry for new account
-	podUuid1 := api.GeneratePodUuid()
-	podUuid2 := api.GeneratePodUuid()
+	podUuid1 := core.GeneratePodUuid()
+	podUuid2 := core.GeneratePodUuid()
 	nodeID1 := "012345678901234567890123456789ab"
 	nodeID2 := "012345678901234567890123456789ac"
 	baseTime := time.Now()
 	baseTimestamp := misc.TimeToTimestamp(baseTime)
-	accountSet := &api.Account{
-		Meta: &api.ObjectMeta{
-			Type:        api.ResourceTypeAccount,
+	accountSet := &core.Account{
+		Meta: &core.ObjectMeta{
+			Type:        core.ResourceTypeAccount,
 			Name:        accountName,
 			Owner:       accountName,
 			CreatorNode: nodeID1,
-			Uuid:        api.GenerateAccountUuid(accountName),
+			Uuid:        core.GenerateAccountUuid(accountName),
 		},
-		State: &api.AccountState{
-			Pods: map[string]api.AccountPodState{
+		State: &core.AccountState{
+			Pods: map[string]core.AccountPodState{
 				podUuid1: {
 					RunningNode: nodeID1,
 					Timestamp:   baseTimestamp,
@@ -89,11 +89,11 @@ func (test *accountControllerTest) TestDealLocalResource() {
 					Timestamp:   baseTimestamp,
 				},
 			},
-			Nodes: map[string]api.AccountNodeState{
+			Nodes: map[string]core.AccountNodeState{
 				nodeID1: {
 					Name:      "node1",
 					Timestamp: baseTimestamp,
-					NodeType:  api.NodeTypeServer,
+					NodeType:  core.NodeTypeServer,
 				},
 			},
 		},
@@ -127,7 +127,7 @@ func (test *accountControllerTest) TestDealLocalResource() {
 
 	/// normal: keep account.State.Pods before lifetime
 	timestampDummy := misc.TimeToTimestamp(baseTime.Add(-1 * ACCOUNT_STATE_RESOURCE_LIFETIME).Add(10 * time.Second))
-	accountSet.State.Pods[podUuid1] = api.AccountPodState{
+	accountSet.State.Pods[podUuid1] = core.AccountPodState{
 		RunningNode: nodeID1,
 		Timestamp:   timestampDummy,
 	}
@@ -176,10 +176,10 @@ func (test *accountControllerTest) TestDealLocalResource() {
 	test.Len(logEntry.pods, 1)
 
 	/// normal: keep account.State.Nodes before lifetime
-	accountSet.State.Nodes[nodeID1] = api.AccountNodeState{
+	accountSet.State.Nodes[nodeID1] = core.AccountNodeState{
 		Name:      "node1",
 		Timestamp: timestampDummy,
-		NodeType:  api.NodeTypeServer,
+		NodeType:  core.NodeTypeServer,
 	}
 	test.impl.logs[accountName].nodes[nodeID1] = timestampLog{
 		lastUpdated:  baseTime,
@@ -249,21 +249,21 @@ func (test *accountControllerTest) TestGetAccountName() {
 }
 
 func (test *accountControllerTest) TestGetPodState() {
-	podUuid1 := api.GeneratePodUuid()
-	podUuid2 := api.GeneratePodUuid()
+	podUuid1 := core.GeneratePodUuid()
+	podUuid2 := core.GeneratePodUuid()
 	accountName := ACCOUNT
 
-	test.accountKvs.Set(&api.Account{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypeAccount,
+	test.accountKvs.Set(&core.Account{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypeAccount,
 			Name:              accountName,
 			Owner:             accountName,
 			CreatorNode:       "012345678901234567890123456789ab",
-			Uuid:              api.GenerateAccountUuid(accountName),
+			Uuid:              core.GenerateAccountUuid(accountName),
 			DeletionTimestamp: "2023-04-15T17:30:40+09:00",
 		},
-		State: &api.AccountState{
-			Pods: map[string]api.AccountPodState{
+		State: &core.AccountState{
+			Pods: map[string]core.AccountPodState{
 				podUuid1: {
 					RunningNode: "012345678901234567890123456789ab",
 					Timestamp:   "2023-04-15T17:30:40+09:00",
@@ -273,7 +273,7 @@ func (test *accountControllerTest) TestGetPodState() {
 					Timestamp:   "2023-04-15T17:30:40+09:00",
 				},
 			},
-			Nodes: make(map[string]api.AccountNodeState),
+			Nodes: make(map[string]core.AccountNodeState),
 		},
 	})
 
@@ -296,27 +296,27 @@ func (test *accountControllerTest) TestGetNodeState() {
 	nodeID2 := "012345678901234567890123456789aa"
 	accountName := ACCOUNT
 
-	test.accountKvs.Set(&api.Account{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypeAccount,
+	test.accountKvs.Set(&core.Account{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypeAccount,
 			Name:              accountName,
 			Owner:             accountName,
 			CreatorNode:       "012345678901234567890123456789ab",
-			Uuid:              api.GenerateAccountUuid(accountName),
+			Uuid:              core.GenerateAccountUuid(accountName),
 			DeletionTimestamp: "2023-04-15T17:30:40+09:00",
 		},
-		State: &api.AccountState{
-			Pods: make(map[string]api.AccountPodState),
-			Nodes: map[string]api.AccountNodeState{
+		State: &core.AccountState{
+			Pods: make(map[string]core.AccountPodState),
+			Nodes: map[string]core.AccountNodeState{
 				nodeID1: {
 					Name:      "node1",
 					Timestamp: "2023-04-15T17:30:40+09:00",
-					NodeType:  api.NodeTypeServer,
+					NodeType:  core.NodeTypeServer,
 				},
 				nodeID2: {
 					Name:      "node2",
 					Timestamp: "2023-04-15T17:30:40+09:00",
-					NodeType:  api.NodeTypePC,
+					NodeType:  core.NodeTypePC,
 				},
 			},
 		},
@@ -327,9 +327,9 @@ func (test *accountControllerTest) TestGetNodeState() {
 	test.NoError(err)
 	test.Len(nodeState, 2)
 	test.Equal("node1", nodeState[nodeID1].Name)
-	test.Equal(api.NodeTypeServer, nodeState[nodeID1].NodeType)
+	test.Equal(core.NodeTypeServer, nodeState[nodeID1].NodeType)
 	test.Equal("node2", nodeState[nodeID2].Name)
-	test.Equal(api.NodeTypePC, nodeState[nodeID2].NodeType)
+	test.Equal(core.NodeTypePC, nodeState[nodeID2].NodeType)
 
 	/// normal: account data is not found
 	test.col.DeleteKVSAll()
@@ -341,15 +341,15 @@ func (test *accountControllerTest) TestGetNodeState() {
 func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 	test.col.DeleteKVSAll()
 	account := "lucky"
-	uuid1 := api.GeneratePodUuid()
-	uuid2 := api.GeneratePodUuid()
-	uuid3 := api.GeneratePodUuid()
+	uuid1 := core.GeneratePodUuid()
+	uuid2 := core.GeneratePodUuid()
+	uuid3 := core.GeneratePodUuid()
 	nodeID1 := "012345678901234567890123456789ab"
 	nodeID2 := "012345678901234567890123456789ac"
 
 	/// normal pattern: create new
 	test.impl.UpdatePodAndNodeState(account,
-		map[string]api.AccountPodState{
+		map[string]core.AccountPodState{
 			uuid1: {
 				RunningNode: nodeID1,
 				Timestamp:   "2023-04-15T17:30:40+09:00",
@@ -360,10 +360,10 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 			},
 		},
 		"012345678901234567890123456789ab",
-		&api.AccountNodeState{
+		&core.AccountNodeState{
 			Name:      "node name",
 			Timestamp: "2023-04-15T17:30:40+09:00",
-			NodeType:  api.NodeTypeServer,
+			NodeType:  core.NodeTypeServer,
 			Latitude:  35.681167,
 			Longitude: 139.767052,
 			Altitude:  10.0,
@@ -374,7 +374,7 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 	test.Equal(account, data.Meta.Name)
 	test.Equal(account, data.Meta.Owner)
 	test.Equal(nodeID1, data.Meta.CreatorNode)
-	test.Equal(api.GenerateAccountUuid(account), data.Meta.Uuid)
+	test.Equal(core.GenerateAccountUuid(account), data.Meta.Uuid)
 	test.Len(data.State.Pods, 2)
 	test.Equal(nodeID1, data.State.Pods[uuid1].RunningNode)
 	test.Equal("2023-04-15T17:30:40+09:00", data.State.Pods[uuid1].Timestamp)
@@ -383,14 +383,14 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 	test.Len(data.State.Nodes, 1)
 	test.Equal("node name", data.State.Nodes[nodeID1].Name)
 	test.Equal("2023-04-15T17:30:40+09:00", data.State.Nodes[nodeID1].Timestamp)
-	test.Equal(api.NodeTypeServer, data.State.Nodes[nodeID1].NodeType)
+	test.Equal(core.NodeTypeServer, data.State.Nodes[nodeID1].NodeType)
 	test.Equal(35.681167, data.State.Nodes[nodeID1].Latitude)
 	test.Equal(139.767052, data.State.Nodes[nodeID1].Longitude)
 	test.Equal(10.0, data.State.Nodes[nodeID1].Altitude)
 
 	/// normal pattern: update exists
 	test.impl.UpdatePodAndNodeState(account,
-		map[string]api.AccountPodState{
+		map[string]core.AccountPodState{
 			uuid2: {
 				RunningNode: nodeID1,
 				Timestamp:   "2023-04-15T17:30:41+09:00",
@@ -401,10 +401,10 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 			},
 		},
 		nodeID1,
-		&api.AccountNodeState{
+		&core.AccountNodeState{
 			Name:      "node name",
 			Timestamp: "2023-04-15T17:30:41+09:00",
-			NodeType:  api.NodeTypeServer,
+			NodeType:  core.NodeTypeServer,
 			Latitude:  36.681167,
 			Longitude: 140.767052,
 			Altitude:  11.0,
@@ -423,7 +423,7 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 
 	// normal pattern: update pod state only
 	test.impl.UpdatePodAndNodeState(account,
-		map[string]api.AccountPodState{
+		map[string]core.AccountPodState{
 			uuid2: {
 				RunningNode: nodeID1,
 				Timestamp:   "2023-04-15T17:30:42+09:00",
@@ -444,10 +444,10 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 	// normal pattern: update node state only
 	test.impl.UpdatePodAndNodeState(account,
 		nil, nodeID2,
-		&api.AccountNodeState{
+		&core.AccountNodeState{
 			Name:      "node name 2",
 			Timestamp: "2023-04-15T17:30:41+09:00",
-			NodeType:  api.NodeTypeGrass,
+			NodeType:  core.NodeTypeGrass,
 			Latitude:  37.681167,
 			Longitude: 141.767052,
 			Altitude:  12.0,
@@ -457,12 +457,12 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 	test.Len(data.State.Pods, 3)
 	test.Len(data.State.Nodes, 2)
 	test.Equal("node name", data.State.Nodes[nodeID1].Name)
-	test.Equal(api.NodeTypeServer, data.State.Nodes[nodeID1].NodeType)
+	test.Equal(core.NodeTypeServer, data.State.Nodes[nodeID1].NodeType)
 	test.Equal(36.681167, data.State.Nodes[nodeID1].Latitude)
 	test.Equal(140.767052, data.State.Nodes[nodeID1].Longitude)
 	test.Equal(11.0, data.State.Nodes[nodeID1].Altitude)
 	test.Equal("node name 2", data.State.Nodes[nodeID2].Name)
-	test.Equal(api.NodeTypeGrass, data.State.Nodes[nodeID2].NodeType)
+	test.Equal(core.NodeTypeGrass, data.State.Nodes[nodeID2].NodeType)
 	test.Equal(37.681167, data.State.Nodes[nodeID2].Latitude)
 	test.Equal(141.767052, data.State.Nodes[nodeID2].Longitude)
 	test.Equal(12.0, data.State.Nodes[nodeID2].Altitude)

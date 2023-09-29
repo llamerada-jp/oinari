@@ -18,7 +18,7 @@ package command
 import (
 	"log"
 
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node/controller"
 	"github.com/llamerada-jp/oinari/node/misc"
@@ -39,8 +39,8 @@ type ListNodeResponse struct {
 }
 
 type createPodRequest struct {
-	Name string       `json:"name"`
-	Spec *api.PodSpec `json:"spec"`
+	Name string        `json:"name"`
+	Spec *core.PodSpec `json:"spec"`
 }
 
 type createPodResponse struct {
@@ -132,7 +132,7 @@ func InitResourceHandler(nodeMpx crosslink.MultiPlexer, accCtrl controller.Accou
 				return
 			}
 
-			err = accCtrl.UpdatePodAndNodeState(owner, map[string]api.AccountPodState{
+			err = accCtrl.UpdatePodAndNodeState(owner, map[string]core.AccountPodState{
 				digest.Uuid: {
 					RunningNode: "",
 					Timestamp:   misc.GetTimestamp(),

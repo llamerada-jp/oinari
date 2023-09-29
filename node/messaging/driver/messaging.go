@@ -20,12 +20,12 @@ import (
 	"fmt"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/messaging"
 )
 
 type MessagingDriver interface {
-	PublishNode(r float64, nid, name, account string, nodeType api.NodeType, latitude, longitude, altitude float64) error
+	PublishNode(r float64, nid, name, account string, nodeType core.NodeType, latitude, longitude, altitude float64) error
 	ReconcileContainer(nid, uuid string) error
 }
 
@@ -55,7 +55,7 @@ func (d *messagingDriverImpl) ReconcileContainer(nid, podUuid string) error {
 	return nil
 }
 
-func (d *messagingDriverImpl) PublishNode(r float64, nid, name, account string, nodeType api.NodeType, latitude, longitude, altitude float64) error {
+func (d *messagingDriverImpl) PublishNode(r float64, nid, name, account string, nodeType core.NodeType, latitude, longitude, altitude float64) error {
 	raw, err := json.Marshal(messaging.PublishNode{
 		Name:      name,
 		ID:        nid,

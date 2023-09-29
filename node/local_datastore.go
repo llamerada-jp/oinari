@@ -20,12 +20,12 @@ import (
 	"strings"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 )
 
 type LocalResource struct {
 	key          string
-	resourceType api.ResourceType
+	resourceType core.ResourceType
 	recordRaw    []byte
 }
 
@@ -74,7 +74,7 @@ func (ld *localDatastore) GetResources() ([]LocalResource, error) {
 		}
 		resources = append(resources, LocalResource{
 			key:          key,
-			resourceType: api.ResourceType(resourceEntry[0]),
+			resourceType: core.ResourceType(resourceEntry[0]),
 			recordRaw:    raw,
 		})
 	}

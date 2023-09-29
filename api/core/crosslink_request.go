@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package app
+package core
 
 // types to pass from application to node manager
 type ReadyRequest struct {

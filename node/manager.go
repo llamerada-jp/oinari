@@ -21,7 +21,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/controller"
 	"github.com/llamerada-jp/oinari/node/misc"
 )
@@ -89,9 +89,9 @@ func (mgr *manager) dealLocalResource() error {
 	for _, resource := range resources {
 		willDelete := false
 		switch resource.resourceType {
-		case api.ResourceTypePod:
+		case core.ResourceTypePod:
 			willDelete, err = mgr.podCtrl.DealLocalResource(resource.recordRaw)
-		case api.ResourceTypeAccount:
+		case core.ResourceTypeAccount:
 			willDelete, err = mgr.accountCtrl.DealLocalResource(resource.recordRaw)
 		}
 		if willDelete {
@@ -112,15 +112,15 @@ func (mgr *manager) keepAlive() error {
 	localAccount := mgr.accountCtrl.GetAccountName()
 	localNodeID := mgr.nodeCtrl.GetNid()
 
-	accPodStates := make(map[string]map[string]api.AccountPodState)
-	accPodStates[localAccount] = make(map[string]api.AccountPodState)
+	accPodStates := make(map[string]map[string]core.AccountPodState)
+	accPodStates[localAccount] = make(map[string]core.AccountPodState)
 	for _, info := range mgr.containerCtrl.GetContainerInfos() {
 		podStates, ok := accPodStates[info.Owner]
 		if !ok {
-			podStates = make(map[string]api.AccountPodState)
+			podStates = make(map[string]core.AccountPodState)
 			accPodStates[info.Owner] = podStates
 		}
-		podStates[info.PodUUID] = api.AccountPodState{
+		podStates[info.PodUUID] = core.AccountPodState{
 			RunningNode: localNodeID,
 			Timestamp:   misc.GetTimestamp(),
 		}

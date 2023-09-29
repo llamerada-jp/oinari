@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 
-	app "github.com/llamerada-jp/oinari/api/app/core"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 )
 
@@ -32,7 +32,7 @@ func (w *writer) Write(p []byte) (n int, err error) {
 	}
 	resCh := make(chan writeResponse)
 
-	w.cl.Call(w.path+"/output", app.OutputRequest{
+	w.cl.Call(w.path+"/output", core.OutputRequest{
 		Payload: p,
 	}, nil, func(b []byte, err error) {
 		if err != nil {
@@ -42,7 +42,7 @@ func (w *writer) Write(p []byte) (n int, err error) {
 			}
 		}
 
-		var res app.OutputResponse
+		var res core.OutputResponse
 		err = json.Unmarshal(b, &res)
 		if err != nil {
 			log.Fatalf("unmarshal response of output failed on oinari api: %s", err.Error())

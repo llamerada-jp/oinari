@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/misc"
 	"github.com/llamerada-jp/oinari/node/mock"
 	"github.com/stretchr/testify/suite"
@@ -32,25 +32,25 @@ type podKvsTest struct {
 }
 
 var (
-	validSpec = &api.PodSpec{
-		Containers: []api.ContainerSpec{
+	validSpec = &core.PodSpec{
+		Containers: []core.ContainerSpec{
 			{
 				Name:          "test",
 				Image:         "http://localhost/dummy.wasm",
 				Runtime:       []string{"go:1.20"},
-				RestartPolicy: api.RestartPolicyAlways,
+				RestartPolicy: core.RestartPolicyAlways,
 			},
 		},
 	}
 
-	validStatus = &api.PodStatus{
+	validStatus = &core.PodStatus{
 		RunningNode: "01234567890123456789012345abcdef",
-		ContainerStatuses: []api.ContainerStatus{
+		ContainerStatuses: []core.ContainerStatus{
 			{
 				ContainerID: "dummy",
 				Image:       "http://localhost/dummy.wasm",
-				State: api.ContainerState{
-					Running: &api.ContainerStateRunning{
+				State: core.ContainerState{
+					Running: &core.ContainerStateRunning{
 						StartedAt: misc.GetTimestamp(),
 					},
 				},
@@ -68,15 +68,15 @@ func NewPodKvsTest() suite.TestingSuite {
 }
 
 func (test *podKvsTest) TestCreate() {
-	uuid := api.GeneratePodUuid()
+	uuid := core.GeneratePodUuid()
 	name1 := "cat"
 	name2 := "dog"
 	name3 := "naked mole rat"
 
 	/// normal pattern
-	err := test.impl.Create(&api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypePod,
+	err := test.impl.Create(&core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypePod,
 			Name:              name1,
 			Owner:             "owner",
 			CreatorNode:       "01234567890123456789012345678901",
@@ -90,9 +90,9 @@ func (test *podKvsTest) TestCreate() {
 	test.getByUUID(uuid)
 
 	/// abnormal: duplicate uuid
-	err = test.impl.Create(&api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypePod,
+	err = test.impl.Create(&core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypePod,
 			Name:              name2,
 			Owner:             "owner",
 			CreatorNode:       "01234567890123456789012345678901",
@@ -109,9 +109,9 @@ func (test *podKvsTest) TestCreate() {
 	/// normal pattern: the entry deleted
 	err = test.impl.Delete(uuid)
 	test.NoError(err)
-	err = test.impl.Create(&api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypePod,
+	err = test.impl.Create(&core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypePod,
 			Name:              name2,
 			Owner:             "owner",
 			CreatorNode:       "01234567890123456789012345678901",
@@ -126,9 +126,9 @@ func (test *podKvsTest) TestCreate() {
 	test.Equal(name2, pod.Meta.Name)
 
 	/// abnormal: failed to validate
-	err = test.impl.Create(&api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:  api.ResourceTypePod,
+	err = test.impl.Create(&core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:  core.ResourceTypePod,
 			Name:  name3,
 			Owner: "owner",
 			// CreatorNode:       "01234567890123456789012345678901",
@@ -144,15 +144,15 @@ func (test *podKvsTest) TestCreate() {
 }
 
 func (test *podKvsTest) TestUpdate() {
-	uuid := api.GeneratePodUuid()
+	uuid := core.GeneratePodUuid()
 	name1 := "cat"
 	name2 := "dog"
 	name3 := "naked mole rat"
 
 	/// normal pattern
-	err := test.impl.Create(&api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypePod,
+	err := test.impl.Create(&core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypePod,
 			Name:              name1,
 			Owner:             "owner",
 			CreatorNode:       "01234567890123456789012345678901",
@@ -164,9 +164,9 @@ func (test *podKvsTest) TestUpdate() {
 	})
 	test.NoError(err)
 
-	err = test.impl.Update(&api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypePod,
+	err = test.impl.Update(&core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypePod,
 			Name:              name2,
 			Owner:             "owner",
 			CreatorNode:       "01234567890123456789012345678901",
@@ -181,10 +181,10 @@ func (test *podKvsTest) TestUpdate() {
 	test.Equal(name2, pod.Meta.Name)
 
 	/// abnormal: the entry is not exist
-	newUuid := api.GeneratePodUuid()
-	err = test.impl.Update(&api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypePod,
+	newUuid := core.GeneratePodUuid()
+	err = test.impl.Update(&core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypePod,
 			Name:              name2,
 			Owner:             "owner",
 			CreatorNode:       "01234567890123456789012345678901",
@@ -198,9 +198,9 @@ func (test *podKvsTest) TestUpdate() {
 	test.False(test.existsByUUID(newUuid))
 
 	/// abnormal: failed to validate
-	err = test.impl.Update(&api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:  api.ResourceTypePod,
+	err = test.impl.Update(&core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:  core.ResourceTypePod,
 			Name:  name3,
 			Owner: "owner",
 			// CreatorNode:       "01234567890123456789012345678901",
@@ -216,11 +216,11 @@ func (test *podKvsTest) TestUpdate() {
 }
 
 func (test *podKvsTest) TestGet() {
-	uuid := api.GeneratePodUuid()
+	uuid := core.GeneratePodUuid()
 	name := "naked mole rat"
-	err := test.impl.Create(&api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypePod,
+	err := test.impl.Create(&core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypePod,
 			Name:              name,
 			Owner:             "owner",
 			CreatorNode:       "01234567890123456789012345678901",
@@ -238,7 +238,7 @@ func (test *podKvsTest) TestGet() {
 	test.Equal(name, pod.Meta.Name)
 
 	/// abnormal: entry not exist
-	_, err = test.impl.Get(api.GeneratePodUuid())
+	_, err = test.impl.Get(core.GeneratePodUuid())
 	test.Error(err)
 
 	/// abnormal: the entry deleted
@@ -249,10 +249,10 @@ func (test *podKvsTest) TestGet() {
 }
 
 func (test *podKvsTest) TestDelete() {
-	uuid := api.GeneratePodUuid()
-	err := test.impl.Create(&api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypePod,
+	uuid := core.GeneratePodUuid()
+	err := test.impl.Create(&core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypePod,
 			Name:              "naked mole rat",
 			Owner:             "owner",
 			CreatorNode:       "01234567890123456789012345678901",
@@ -267,7 +267,7 @@ func (test *podKvsTest) TestDelete() {
 	/// normal pattern
 	err = test.impl.Delete(uuid)
 	test.NoError(err)
-	val, err := test.col.KvsGet(string(api.ResourceTypePod) + "/" + uuid)
+	val, err := test.col.KvsGet(string(core.ResourceTypePod) + "/" + uuid)
 	test.NoError(err)
 	test.True(val.IsNil())
 
@@ -276,24 +276,24 @@ func (test *podKvsTest) TestDelete() {
 	test.NoError(err)
 
 	/// normal pattern: entry not exit
-	err = test.impl.Delete(api.GeneratePodUuid())
+	err = test.impl.Delete(core.GeneratePodUuid())
 	test.NoError(err)
 }
 
-func (test *podKvsTest) getByUUID(uuid string) *api.Pod {
-	key := string(api.ResourceTypePod) + "/" + uuid
+func (test *podKvsTest) getByUUID(uuid string) *core.Pod {
+	key := string(core.ResourceTypePod) + "/" + uuid
 	val, err := test.col.KvsGet(key)
 	test.NoError(err)
 	raw, err := val.GetBinary()
 	test.NoError(err)
-	pod := &api.Pod{}
+	pod := &core.Pod{}
 	err = json.Unmarshal(raw, pod)
 	test.NoError(err)
 	return pod
 }
 
 func (test *podKvsTest) existsByUUID(uuid string) bool {
-	key := string(api.ResourceTypePod) + "/" + uuid
+	key := string(core.ResourceTypePod) + "/" + uuid
 	_, err := test.col.KvsGet(key)
 
 	if err != nil {

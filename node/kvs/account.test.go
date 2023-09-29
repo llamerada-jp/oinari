@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"math"
 
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -65,27 +65,27 @@ func (test *accountKvsTest) TestGet() {
 	// can get valid account record
 	accountName = "get-account-valid"
 	key = test.impl.getKey(accountName)
-	podUuid := api.GeneratePodUuid()
-	accountSet := &api.Account{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypeAccount,
+	podUuid := core.GeneratePodUuid()
+	accountSet := &core.Account{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypeAccount,
 			Name:              accountName,
 			Owner:             accountName,
 			CreatorNode:       "012345678901234567890123456789ab",
-			Uuid:              api.GenerateAccountUuid(accountName),
+			Uuid:              core.GenerateAccountUuid(accountName),
 			DeletionTimestamp: "2023-04-15T17:30:40+09:00",
 		},
-		State: &api.AccountState{
-			Pods: map[string]api.AccountPodState{
+		State: &core.AccountState{
+			Pods: map[string]core.AccountPodState{
 				podUuid: {
 					RunningNode: "012345678901234567890123456789ab",
 					Timestamp:   "2023-04-15T17:30:40+09:00",
 				},
 			},
-			Nodes: map[string]api.AccountNodeState{
+			Nodes: map[string]core.AccountNodeState{
 				"012345678901234567890123456789ab": {
 					Name:      "test-node",
-					NodeType:  api.NodeTypeMobile,
+					NodeType:  core.NodeTypeMobile,
 					Timestamp: "2023-04-15T17:30:40+09:00",
 				},
 			},
@@ -101,18 +101,18 @@ func (test *accountKvsTest) TestGet() {
 	accountGet, err = test.impl.Get(accountName)
 	test.NoError(err)
 	test.NotNil(accountGet)
-	test.Equal(api.ResourceTypeAccount, accountGet.Meta.Type)
+	test.Equal(core.ResourceTypeAccount, accountGet.Meta.Type)
 	test.Equal(accountName, accountGet.Meta.Name)
 	test.Equal(accountName, accountGet.Meta.Owner)
 	test.Equal("012345678901234567890123456789ab", accountGet.Meta.CreatorNode)
-	test.Equal(api.GenerateAccountUuid(accountName), accountGet.Meta.Uuid)
+	test.Equal(core.GenerateAccountUuid(accountName), accountGet.Meta.Uuid)
 	test.Equal("2023-04-15T17:30:40+09:00", accountGet.Meta.DeletionTimestamp)
 	test.Len(accountGet.State.Pods, 1)
 	test.Equal("012345678901234567890123456789ab", accountGet.State.Pods[podUuid].RunningNode)
 	test.Equal("2023-04-15T17:30:40+09:00", accountGet.State.Pods[podUuid].Timestamp)
 	test.Len(accountGet.State.Nodes, 1)
 	test.Equal("test-node", accountGet.State.Nodes["012345678901234567890123456789ab"].Name)
-	test.Equal(api.NodeTypeMobile, accountGet.State.Nodes["012345678901234567890123456789ab"].NodeType)
+	test.Equal(core.NodeTypeMobile, accountGet.State.Nodes["012345678901234567890123456789ab"].NodeType)
 	test.Equal("2023-04-15T17:30:40+09:00", accountGet.State.Nodes["012345678901234567890123456789ab"].Timestamp)
 
 	// should be remove invalid record and return nil
@@ -135,21 +135,21 @@ func (test *accountKvsTest) TestSet() {
 	// fail when set invalid record
 	KEY := "set-account-invalid"
 	KEY_RAW := test.impl.getKey(KEY)
-	accountSet := &api.Account{
-		Meta: &api.ObjectMeta{
-			Type:              api.ResourceTypeAccount,
+	accountSet := &core.Account{
+		Meta: &core.ObjectMeta{
+			Type:              core.ResourceTypeAccount,
 			Name:              KEY,
 			Owner:             KEY,
 			CreatorNode:       "012345678901234567890123456789ab",
-			Uuid:              api.GenerateAccountUuid(KEY),
+			Uuid:              core.GenerateAccountUuid(KEY),
 			DeletionTimestamp: "2023-04-15T17:30:40+09:00",
 		},
-		State: &api.AccountState{
+		State: &core.AccountState{
 			Pods: nil, // should not be nil
-			Nodes: map[string]api.AccountNodeState{
+			Nodes: map[string]core.AccountNodeState{
 				"012345678901234567890123456789ab": {
 					Name:      "test-node",
-					NodeType:  api.NodeTypeMobile,
+					NodeType:  core.NodeTypeMobile,
 					Timestamp: "2023-04-15T17:30:40+09:00",
 					Latitude:  math.NaN(),
 					Longitude: math.NaN(),
@@ -164,7 +164,7 @@ func (test *accountKvsTest) TestSet() {
 	test.Error(err)
 
 	// can set with the valid record
-	accountSet.State.Pods = make(map[string]api.AccountPodState)
+	accountSet.State.Pods = make(map[string]core.AccountPodState)
 	err = test.impl.Set(accountSet)
 	defer test.impl.Delete(KEY)
 	test.NoError(err)

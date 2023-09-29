@@ -21,12 +21,12 @@ import (
 	"errors"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 )
 
 type AccountKvs interface {
-	Get(name string) (*api.Account, error)
-	Set(account *api.Account) error
+	Get(name string) (*core.Account, error)
+	Set(account *core.Account) error
 	Delete(name string) error
 }
 
@@ -40,7 +40,7 @@ func NewAccountKvs(col colonio.Colonio) AccountKvs {
 	}
 }
 
-func (impl *accountKvsImpl) Get(name string) (*api.Account, error) {
+func (impl *accountKvsImpl) Get(name string) (*core.Account, error) {
 	key := impl.getKey(name)
 	val, err := impl.col.KvsGet(key)
 	if err != nil {
@@ -59,7 +59,7 @@ func (impl *accountKvsImpl) Get(name string) (*api.Account, error) {
 		return nil, err
 	}
 
-	account := api.Account{}
+	account := core.Account{}
 	err = json.Unmarshal(raw, &account)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (impl *accountKvsImpl) Get(name string) (*api.Account, error) {
 	return &account, nil
 }
 
-func (impl *accountKvsImpl) Set(account *api.Account) error {
+func (impl *accountKvsImpl) Set(account *core.Account) error {
 	if err := account.Validate(); err != nil {
 		return err
 	}
@@ -99,5 +99,5 @@ func (impl *accountKvsImpl) Delete(name string) error {
 
 // use sha256 hash as account's uuid
 func (impl *accountKvsImpl) getKey(name string) string {
-	return string(api.ResourceTypeAccount) + "/" + api.GenerateAccountUuid(name)
+	return string(core.ResourceTypeAccount) + "/" + core.GenerateAccountUuid(name)
 }

@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	app "github.com/llamerada-jp/oinari/api/app/core"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/lib/oinari"
 )
@@ -78,7 +78,7 @@ func callHelper[REQ any, RES any](driver *coreAPIDriverImpl, path string, reques
 }
 
 func (driver *coreAPIDriverImpl) Setup(isInitialize bool, record []byte) error {
-	_, err := callHelper[app.SetupRequest, app.SetupResponse](driver, "setup", &app.SetupRequest{
+	_, err := callHelper[core.SetupRequest, core.SetupResponse](driver, "setup", &core.SetupRequest{
 		IsInitialize: isInitialize,
 		Record:       record,
 	})
@@ -86,7 +86,7 @@ func (driver *coreAPIDriverImpl) Setup(isInitialize bool, record []byte) error {
 }
 
 func (driver *coreAPIDriverImpl) Marshal() ([]byte, error) {
-	res, err := callHelper[app.MarshalRequest, app.MarshalResponse](driver, "marshal", &app.MarshalRequest{})
+	res, err := callHelper[core.MarshalRequest, core.MarshalResponse](driver, "marshal", &core.MarshalRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (driver *coreAPIDriverImpl) Marshal() ([]byte, error) {
 }
 
 func (driver *coreAPIDriverImpl) Teardown(isFinalize bool) ([]byte, error) {
-	res, err := callHelper[app.TeardownRequest, app.TeardownResponse](driver, "teardown", &app.TeardownRequest{
+	res, err := callHelper[core.TeardownRequest, core.TeardownResponse](driver, "teardown", &core.TeardownRequest{
 		IsFinalize: isFinalize,
 	})
 	if isFinalize {

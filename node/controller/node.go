@@ -25,18 +25,18 @@ import (
 	"time"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/messaging/driver"
 )
 
 type NodeState struct {
-	Name      string       `json:"name"`
-	ID        string       `json:"id"`
-	Account   string       `json:"account"`
-	NodeType  api.NodeType `json:"nodeType"`
-	Latitude  float64      `json:"latitude"`
-	Longitude float64      `json:"longitude"`
-	Altitude  float64      `json:"altitude"`
+	Name      string        `json:"name"`
+	ID        string        `json:"id"`
+	Account   string        `json:"account"`
+	NodeType  core.NodeType `json:"nodeType"`
+	Latitude  float64       `json:"latitude"`
+	Longitude float64       `json:"longitude"`
+	Altitude  float64       `json:"altitude"`
 }
 
 type NodeRecord struct {
@@ -46,7 +46,7 @@ type NodeRecord struct {
 
 type NodeController interface {
 	GetNid() string
-	GetNodeState() *api.AccountNodeState
+	GetNodeState() *core.AccountNodeState
 	ReceivePublishingNode(state NodeState) error
 	SetPosition(latitude, longitude, altitude float64) error
 	SetPublicity(r float64) error
@@ -60,7 +60,7 @@ type nodeControllerImpl struct {
 	account   string
 	nodeID    string
 	nodeName  string
-	nodeType  api.NodeType
+	nodeType  core.NodeType
 	nodes     map[string]NodeRecord
 	publicity float64
 	latitude  float64
@@ -73,7 +73,7 @@ const (
 	NODE_RECORD_LIFETIME  = 90 * time.Second
 )
 
-func NewNodeController(ctx context.Context, col colonio.Colonio, messaging driver.MessagingDriver, account, nodeName string, nodeType api.NodeType) NodeController {
+func NewNodeController(ctx context.Context, col colonio.Colonio, messaging driver.MessagingDriver, account, nodeName string, nodeType core.NodeType) NodeController {
 	impl := &nodeControllerImpl{
 		col:       col,
 		messaging: messaging,
@@ -111,8 +111,8 @@ func (impl *nodeControllerImpl) GetNid() string {
 	return impl.nodeID
 }
 
-func (impl *nodeControllerImpl) GetNodeState() *api.AccountNodeState {
-	return &api.AccountNodeState{
+func (impl *nodeControllerImpl) GetNodeState() *core.AccountNodeState {
+	return &core.AccountNodeState{
 		Name:      impl.nodeName,
 		NodeType:  impl.nodeType,
 		Latitude:  impl.latitude,

@@ -18,19 +18,18 @@ package handler
 import (
 	"fmt"
 
-	"github.com/llamerada-jp/oinari/api"
-	app "github.com/llamerada-jp/oinari/api/app/core"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
-	"github.com/llamerada-jp/oinari/node/apis/core"
+	nodeAPI "github.com/llamerada-jp/oinari/node/apis/core"
 	"github.com/llamerada-jp/oinari/node/cri"
 	"github.com/llamerada-jp/oinari/node/kvs"
 )
 
-func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI, podKVS kvs.PodKvs, recordKVS kvs.RecordKvs) {
+func InitHandler(apiMpx crosslink.MultiPlexer, manager *nodeAPI.Manager, c cri.CRI, podKVS kvs.PodKvs, recordKVS kvs.RecordKvs) {
 	mpx := crosslink.NewMultiPlexer()
 	apiMpx.SetHandler("core", mpx)
 
-	mpx.SetHandler("ready", crosslink.NewFuncHandler(func(request *app.ReadyRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+	mpx.SetHandler("ready", crosslink.NewFuncHandler(func(request *core.ReadyRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		containerID, driver, err := getDriver(tags, manager)
 		if err != nil {
 			writer.ReplyError(fmt.Sprintf("`getDriver` failed on `ready` handler: %s", err.Error()))
@@ -83,7 +82,7 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI,
 			break
 		}
 
-		var record *api.Record
+		var record *core.Record
 		if !isInitialize {
 			record, err = recordKVS.Get(podUUID)
 			if err != nil {
@@ -108,10 +107,10 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI,
 			}
 		}()
 
-		writer.ReplySuccess(&app.ReadyResponse{})
+		writer.ReplySuccess(&core.ReadyResponse{})
 	}))
 
-	mpx.SetHandler("output", crosslink.NewFuncHandler(func(request *app.OutputRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+	mpx.SetHandler("output", crosslink.NewFuncHandler(func(request *core.OutputRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		_, _, err := getDriver(tags, manager)
 		if err != nil {
 			writer.ReplyError(fmt.Sprintf("`getDriver` failed on `output` handler: %s", err.Error()))
@@ -124,13 +123,13 @@ func InitHandler(apiMpx crosslink.MultiPlexer, manager *core.Manager, c cri.CRI,
 			writer.ReplyError(fmt.Sprintf("`fmt.Println failed on `output` handler: %s", err.Error()))
 			return
 		}
-		writer.ReplySuccess(&app.OutputResponse{
+		writer.ReplySuccess(&core.OutputResponse{
 			Length: len(request.Payload),
 		})
 	}))
 }
 
-func getDriver(tags map[string]string, manager *core.Manager) (string, core.CoreDriver, error) {
+func getDriver(tags map[string]string, manager *nodeAPI.Manager) (string, nodeAPI.CoreDriver, error) {
 	containerID, ok := tags["containerID"]
 	if !ok {
 		return "", nil, fmt.Errorf("containerID should be set when accessing core handler")

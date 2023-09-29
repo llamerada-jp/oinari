@@ -18,7 +18,7 @@ package controller
 import (
 	"math"
 
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -32,7 +32,7 @@ type nodeControllerTest struct {
 const (
 	nodeID   = "test-nid"
 	nodeName = "test-node"
-	nodeType = api.NodeTypeMobile
+	nodeType = core.NodeTypeMobile
 )
 
 func NewNodeControllerTest() suite.TestingSuite {

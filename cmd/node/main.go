@@ -20,7 +20,7 @@ import (
 	"log"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/api"
+	api "github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node"
 	"github.com/llamerada-jp/oinari/node/apis/core"

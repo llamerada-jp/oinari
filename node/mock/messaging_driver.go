@@ -18,7 +18,7 @@ package mock
 import (
 	"sync"
 
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/messaging"
 	"github.com/llamerada-jp/oinari/node/messaging/driver"
 )
@@ -52,7 +52,7 @@ func (md *MessagingDriver) ResetRecord() {
 	md.Records = make([]*MessagingRecord, 0)
 }
 
-func (md *MessagingDriver) PublishNode(r float64, nid, name, account string, nodeType api.NodeType, latitude, longitude, altitude float64) error {
+func (md *MessagingDriver) PublishNode(r float64, nid, name, account string, nodeType core.NodeType, latitude, longitude, altitude float64) error {
 	md.mutex.Lock()
 	defer md.mutex.Unlock()
 

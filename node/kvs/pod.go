@@ -21,13 +21,13 @@ import (
 	"fmt"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 )
 
 type PodKvs interface {
-	Create(pod *api.Pod) error
-	Update(pod *api.Pod) error
-	Get(uuid string) (*api.Pod, error)
+	Create(pod *core.Pod) error
+	Update(pod *core.Pod) error
+	Get(uuid string) (*core.Pod, error)
 	Delete(uuid string) error
 }
 
@@ -41,12 +41,12 @@ func NewPodKvs(col colonio.Colonio) PodKvs {
 	}
 }
 
-func (impl *podKvsImpl) Create(pod *api.Pod) error {
+func (impl *podKvsImpl) Create(pod *core.Pod) error {
 	if err := pod.Validate(true); err != nil {
 		return fmt.Errorf("failed to create pod data: %w", err)
 	}
 
-	key := string(api.ResourceTypePod) + "/" + pod.Meta.Uuid
+	key := string(core.ResourceTypePod) + "/" + pod.Meta.Uuid
 	raw, err := json.Marshal(pod)
 	if err != nil {
 		return fmt.Errorf("failed to create pod data: %w", err)
@@ -73,12 +73,12 @@ func (impl *podKvsImpl) Create(pod *api.Pod) error {
 	return fmt.Errorf("there is an duplicate uuid pod data")
 }
 
-func (impl *podKvsImpl) Update(pod *api.Pod) error {
+func (impl *podKvsImpl) Update(pod *core.Pod) error {
 	if err := pod.Validate(true); err != nil {
 		return fmt.Errorf("failed to update pod data: %w", err)
 	}
 
-	key := string(api.ResourceTypePod) + "/" + pod.Meta.Uuid
+	key := string(core.ResourceTypePod) + "/" + pod.Meta.Uuid
 	raw, err := json.Marshal(pod)
 	if err != nil {
 		return fmt.Errorf("failed to update pod data: %w", err)
@@ -96,8 +96,8 @@ func (impl *podKvsImpl) Update(pod *api.Pod) error {
 }
 
 // return pod
-func (impl *podKvsImpl) Get(uuid string) (*api.Pod, error) {
-	key := string(api.ResourceTypePod) + "/" + uuid
+func (impl *podKvsImpl) Get(uuid string) (*core.Pod, error) {
+	key := string(core.ResourceTypePod) + "/" + uuid
 	val, err := impl.col.KvsGet(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pod data: %w", err)
@@ -112,7 +112,7 @@ func (impl *podKvsImpl) Get(uuid string) (*api.Pod, error) {
 		return nil, fmt.Errorf("failed to get pod data: %w", err)
 	}
 
-	pod := &api.Pod{}
+	pod := &core.Pod{}
 	err = json.Unmarshal(raw, pod)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (impl *podKvsImpl) Get(uuid string) (*api.Pod, error) {
 
 // set nil instead of remove record
 func (impl *podKvsImpl) Delete(uuid string) error {
-	key := string(api.ResourceTypePod) + "/" + uuid
+	key := string(core.ResourceTypePod) + "/" + uuid
 	// TODO check record before set nil for the record
 	if err := impl.col.KvsSet(key, nil, 0); err != nil {
 		return fmt.Errorf("failed to delete pod data: %w", err)

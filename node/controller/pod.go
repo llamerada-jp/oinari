@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/kvs"
 	"github.com/llamerada-jp/oinari/node/messaging/driver"
 	"github.com/llamerada-jp/oinari/node/misc"
@@ -38,9 +38,9 @@ type ApplicationDigest struct {
 type PodController interface {
 	DealLocalResource(raw []byte) (bool, error)
 
-	Create(name, owner, creatorNode string, spec *api.PodSpec) (*ApplicationDigest, error)
-	GetPodData(uuid string) (*api.Pod, error)
-	GetContainerStateMessage(pod *api.Pod) string
+	Create(name, owner, creatorNode string, spec *core.PodSpec) (*ApplicationDigest, error)
+	GetPodData(uuid string) (*core.Pod, error)
+	GetContainerStateMessage(pod *core.Pod) string
 	Migrate(uuid string, targetNodeID string) error
 	Delete(uuid string) error
 	Cleanup(uuid string) error
@@ -61,7 +61,7 @@ func NewPodController(podKvs kvs.PodKvs, messaging driver.MessagingDriver, local
 }
 
 func (impl *podControllerImpl) DealLocalResource(raw []byte) (bool, error) {
-	pod := &api.Pod{}
+	pod := &core.Pod{}
 	if err := json.Unmarshal(raw, pod); err != nil {
 		return true, fmt.Errorf("failed to unmarshal pod record: %w", err)
 	}
@@ -100,7 +100,7 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) (bool, error) {
 				if containerStatus.State.Terminated != nil {
 					containerStatus.LastState = containerStatus.State.Terminated
 				}
-				containerStatus.State = api.ContainerState{}
+				containerStatus.State = core.ContainerState{}
 			}
 			return false, impl.podKvs.Update(pod)
 
@@ -117,7 +117,7 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) (bool, error) {
 	if err != nil {
 		for idx := range pod.Status.ContainerStatuses {
 			containerStatus := &pod.Status.ContainerStatuses[idx]
-			containerStatus.State.Unknown = &api.ContainerStateUnknown{
+			containerStatus.State.Unknown = &core.ContainerStateUnknown{
 				Timestamp: misc.GetTimestamp(),
 				Reason:    fmt.Sprintf("failed to call reconciliation to %s: %s", pod.Status.RunningNode, err.Error()),
 			}
@@ -128,23 +128,23 @@ func (impl *podControllerImpl) DealLocalResource(raw []byte) (bool, error) {
 	return false, nil
 }
 
-func (impl *podControllerImpl) Create(name, owner, creatorNode string, spec *api.PodSpec) (*ApplicationDigest, error) {
-	pod := &api.Pod{
-		Meta: &api.ObjectMeta{
-			Type:        api.ResourceTypePod,
+func (impl *podControllerImpl) Create(name, owner, creatorNode string, spec *core.PodSpec) (*ApplicationDigest, error) {
+	pod := &core.Pod{
+		Meta: &core.ObjectMeta{
+			Type:        core.ResourceTypePod,
 			Name:        name,
 			Owner:       owner,
 			CreatorNode: creatorNode,
-			Uuid:        api.GeneratePodUuid(),
+			Uuid:        core.GeneratePodUuid(),
 		},
 		Spec: impl.setDefaultPodSpec(spec),
-		Status: &api.PodStatus{
-			ContainerStatuses: make([]api.ContainerStatus, 0),
+		Status: &core.PodStatus{
+			ContainerStatuses: make([]core.ContainerStatus, 0),
 		},
 	}
 
 	for range pod.Spec.Containers {
-		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, api.ContainerStatus{})
+		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, core.ContainerStatus{})
 	}
 
 	err := impl.podKvs.Create(pod)
@@ -161,23 +161,23 @@ func (impl *podControllerImpl) Create(name, owner, creatorNode string, spec *api
 	}, nil
 }
 
-func (impl *podControllerImpl) setDefaultPodSpec(spec *api.PodSpec) *api.PodSpec {
+func (impl *podControllerImpl) setDefaultPodSpec(spec *core.PodSpec) *core.PodSpec {
 	for idx := range spec.Containers {
 		container := &spec.Containers[idx]
 		if len(container.RestartPolicy) == 0 {
-			container.RestartPolicy = api.RestartPolicyDisable
+			container.RestartPolicy = core.RestartPolicyDisable
 		}
 	}
 
 	if spec.Scheduler == nil {
-		spec.Scheduler = &api.SchedulerSpec{
+		spec.Scheduler = &core.SchedulerSpec{
 			Type: "creator",
 		}
 	}
 	return spec
 }
 
-func (impl *podControllerImpl) schedulePod(pod *api.Pod) error {
+func (impl *podControllerImpl) schedulePod(pod *core.Pod) error {
 	if len(pod.Status.RunningNode) != 0 {
 		return nil
 	}
@@ -193,7 +193,7 @@ func (impl *podControllerImpl) schedulePod(pod *api.Pod) error {
 	}
 }
 
-func (impl *podControllerImpl) GetContainerStateMessage(pod *api.Pod) string {
+func (impl *podControllerImpl) GetContainerStateMessage(pod *core.Pod) string {
 	waiting := 0
 	running := 0
 	terminated := 0
@@ -221,7 +221,7 @@ func (impl *podControllerImpl) GetContainerStateMessage(pod *api.Pod) string {
 	return message
 }
 
-func (impl *podControllerImpl) GetPodData(uuid string) (*api.Pod, error) {
+func (impl *podControllerImpl) GetPodData(uuid string) (*core.Pod, error) {
 	return impl.podKvs.Get(uuid)
 }
 
@@ -277,7 +277,7 @@ func (impl *podControllerImpl) Cleanup(uuid string) error {
 	return impl.podKvs.Delete(uuid)
 }
 
-func (impl *podControllerImpl) isContainerTerminated(pod *api.Pod) bool {
+func (impl *podControllerImpl) isContainerTerminated(pod *core.Pod) bool {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.State.Terminated == nil {
 			return false
@@ -287,7 +287,7 @@ func (impl *podControllerImpl) isContainerTerminated(pod *api.Pod) bool {
 	return true
 }
 
-func (impl *podControllerImpl) isContainerUnknown(pod *api.Pod) bool {
+func (impl *podControllerImpl) isContainerUnknown(pod *core.Pod) bool {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.State.Terminated == nil && containerStatus.State.Unknown != nil {
 			return true

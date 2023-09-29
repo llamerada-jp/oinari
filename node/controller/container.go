@@ -21,8 +21,8 @@ import (
 	"log"
 	"sync"
 
-	"github.com/llamerada-jp/oinari/api"
-	"github.com/llamerada-jp/oinari/node/apis/core"
+	"github.com/llamerada-jp/oinari/api/core"
+	coreAPI "github.com/llamerada-jp/oinari/node/apis/core"
 	"github.com/llamerada-jp/oinari/node/cri"
 	"github.com/llamerada-jp/oinari/node/kvs"
 	"github.com/llamerada-jp/oinari/node/misc"
@@ -52,13 +52,13 @@ type containerControllerImpl struct {
 	cri                  cri.CRI
 	podKvs               kvs.PodKvs
 	recordKvs            kvs.RecordKvs
-	apiCoreDriverManager *core.Manager
+	apiCoreDriverManager *coreAPI.Manager
 	// key: Pod UUID
 	reconcileStates map[string]*reconcileState
 	mtx             sync.Mutex
 }
 
-func NewContainerController(localNid string, cri cri.CRI, podKvs kvs.PodKvs, recordKVS kvs.RecordKvs, apiCoreDriverManager *core.Manager) ContainerController {
+func NewContainerController(localNid string, cri cri.CRI, podKvs kvs.PodKvs, recordKVS kvs.RecordKvs, apiCoreDriverManager *coreAPI.Manager) ContainerController {
 	return &containerControllerImpl{
 		localNid:             localNid,
 		cri:                  cri,
@@ -179,7 +179,7 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUUID stri
 }
 
 // return sandboxId
-func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.Pod) error {
+func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *core.Pod) error {
 	// create sandbox if it isn't exist
 	if len(state.containerInfo.SandboxID) == 0 {
 		res, err := impl.cri.RunPodSandbox(&cri.RunPodSandboxRequest{
@@ -310,8 +310,8 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 				}
 			}
 
-			status.State = api.ContainerState{
-				Running: &api.ContainerStateRunning{
+			status.State = core.ContainerState{
+				Running: &core.ContainerStateRunning{
 					StartedAt: misc.GetTimestamp(),
 				},
 			}
@@ -321,7 +321,7 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *api.
 	return nil
 }
 
-func (impl *containerControllerImpl) letTerminate(state *reconcileState, pod *api.Pod) error {
+func (impl *containerControllerImpl) letTerminate(state *reconcileState, pod *core.Pod) error {
 	// TODO: send exit signal when any container running
 	containers, err := impl.cri.ListContainers(&cri.ListContainersRequest{
 		Filter: &cri.ContainerFilter{
@@ -333,7 +333,7 @@ func (impl *containerControllerImpl) letTerminate(state *reconcileState, pod *ap
 	}
 
 	isFinalize := len(pod.Meta.DeletionTimestamp) != 0
-	var record *api.Record
+	var record *core.Record
 	if !isFinalize {
 		var err error
 		record, err = impl.recordKvs.Get(pod.Meta.Uuid)
@@ -341,16 +341,16 @@ func (impl *containerControllerImpl) letTerminate(state *reconcileState, pod *ap
 			return err
 		}
 		if record == nil {
-			record = &api.Record{
-				Meta: &api.ObjectMeta{
-					Type:        api.ResourceTypeRecord,
+			record = &core.Record{
+				Meta: &core.ObjectMeta{
+					Type:        core.ResourceTypeRecord,
 					Name:        pod.Meta.Name,
 					Owner:       pod.Meta.Owner,
 					CreatorNode: pod.Meta.CreatorNode,
 					Uuid:        pod.Meta.Uuid,
 				},
-				Data: &api.RecordData{
-					Entries: make(map[string]api.RecordEntry),
+				Data: &core.RecordData{
+					Entries: make(map[string]core.RecordEntry),
 				},
 			}
 		}
@@ -366,7 +366,7 @@ func (impl *containerControllerImpl) letTerminate(state *reconcileState, pod *ap
 			return fmt.Errorf("failed to teardown container: %w", err)
 		}
 		if raw != nil {
-			record.Data.Entries[container.Metadata.Name] = api.RecordEntry{
+			record.Data.Entries[container.Metadata.Name] = core.RecordEntry{
 				Record:    raw,
 				Timestamp: misc.GetTimestamp(),
 			}
@@ -400,7 +400,7 @@ func (impl *containerControllerImpl) letTerminate(state *reconcileState, pod *ap
 	return nil
 }
 
-func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *api.Pod) error {
+func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *core.Pod) error {
 	// make containers as map[container name]ContainerStatus
 	containerStatuses := make(map[string]*cri.ContainerStatus)
 	if len(state.containerInfo.SandboxID) != 0 {
@@ -422,7 +422,7 @@ func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *a
 
 		if !containerExists {
 			if status.State.Terminated == nil && status.State.Unknown == nil {
-				status.State.Unknown = &api.ContainerStateUnknown{
+				status.State.Unknown = &core.ContainerStateUnknown{
 					Timestamp: misc.GetTimestamp(),
 					Reason:    "the container not found",
 				}
@@ -433,7 +433,7 @@ func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *a
 		if (container.State == cri.ContainerRunning || container.State == cri.ContainerExited) && status.State.Running == nil {
 			status.ContainerID = container.ID
 			status.Image = container.Image.Image
-			status.State.Running = &api.ContainerStateRunning{
+			status.State.Running = &core.ContainerStateRunning{
 				StartedAt: misc.GetTimestamp(),
 			}
 			status.State.Unknown = nil
@@ -442,7 +442,7 @@ func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *a
 		if status.ContainerID != container.ID {
 			impl.removeSandbox(state.containerInfo.SandboxID)
 			if status.State.Unknown == nil {
-				status.State.Unknown = &api.ContainerStateUnknown{
+				status.State.Unknown = &core.ContainerStateUnknown{
 					Timestamp: misc.GetTimestamp(),
 					Reason:    fmt.Sprintf("container id is different from actual (%s)", container.ID),
 				}
@@ -454,7 +454,7 @@ func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *a
 			if status.State.Terminated != nil {
 				status.LastState = status.State.Terminated
 			}
-			status.State.Terminated = &api.ContainerStateTerminated{
+			status.State.Terminated = &core.ContainerStateTerminated{
 				FinishedAt: container.FinishedAt,
 				ExitCode:   container.ExitCode,
 			}
@@ -462,7 +462,7 @@ func (impl *containerControllerImpl) updatePodInfo(state *reconcileState, pod *a
 		}
 
 		if status.State.Terminated == nil && status.State.Unknown == nil && container.State == cri.ContainerUnknown {
-			status.State.Unknown = &api.ContainerStateUnknown{
+			status.State.Unknown = &core.ContainerStateUnknown{
 				Timestamp: misc.GetTimestamp(),
 				Reason:    "container status could not get",
 			}

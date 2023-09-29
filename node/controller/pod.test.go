@@ -18,7 +18,7 @@ package controller
 import (
 	"time"
 
-	"github.com/llamerada-jp/oinari/api"
+	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/kvs"
 	"github.com/llamerada-jp/oinari/node/misc"
 	"github.com/llamerada-jp/oinari/node/mock"
@@ -63,13 +63,13 @@ func (test *podControllerTest) TestDealLocalResource() {
 	// create an pod
 	nodeID1 := "012345678901234567890123456789ab"
 	nodeID2 := "012345678901234567890123456789ac"
-	digest, err := test.impl.Create("test-pod", "owner", nodeID1, &api.PodSpec{
-		Containers: []api.ContainerSpec{
+	digest, err := test.impl.Create("test-pod", "owner", nodeID1, &core.PodSpec{
+		Containers: []core.ContainerSpec{
 			{
 				Name:          "test",
 				Image:         "http://localhost/dummy.wasm",
 				Runtime:       []string{"go:1.20"},
-				RestartPolicy: api.RestartPolicyAlways,
+				RestartPolicy: core.RestartPolicyAlways,
 			},
 		},
 	})
@@ -114,14 +114,14 @@ func (test *podControllerTest) TestDealLocalResource() {
 	test.NoError(err)
 	test.Equal(nodeID2, pod.Spec.TargetNode)
 	test.Equal(nodeID1, pod.Status.RunningNode)
-	pod.Status.ContainerStatuses[0] = api.ContainerStatus{
+	pod.Status.ContainerStatuses[0] = core.ContainerStatus{
 		ContainerID: "test",
 		Image:       "http://localhost/dummy.wasm",
-		State: api.ContainerState{
-			Running: &api.ContainerStateRunning{
+		State: core.ContainerState{
+			Running: &core.ContainerStateRunning{
 				StartedAt: misc.GetTimestamp(),
 			},
-			Terminated: &api.ContainerStateTerminated{
+			Terminated: &core.ContainerStateTerminated{
 				FinishedAt: misc.GetTimestamp(),
 				ExitCode:   0,
 			},
@@ -145,13 +145,13 @@ func (test *podControllerTest) TestDealLocalResource() {
 	test.Nil(pod.Status.ContainerStatuses[0].State.Unknown)
 
 	// tests for pod with deletion timestamp
-	digest, err = test.impl.Create("test-pod", "owner", nodeID1, &api.PodSpec{
-		Containers: []api.ContainerSpec{
+	digest, err = test.impl.Create("test-pod", "owner", nodeID1, &core.PodSpec{
+		Containers: []core.ContainerSpec{
 			{
 				Name:          "test",
 				Image:         "http://localhost/dummy.wasm",
 				Runtime:       []string{"go:1.20"},
-				RestartPolicy: api.RestartPolicyAlways,
+				RestartPolicy: core.RestartPolicyAlways,
 			},
 		},
 	})
@@ -171,11 +171,11 @@ func (test *podControllerTest) TestDealLocalResource() {
 	pod, err = test.podKvs.Get(digest.Uuid)
 	test.NoError(err)
 	pod.Status.RunningNode = nodeID1
-	pod.Status.ContainerStatuses[0] = api.ContainerStatus{
+	pod.Status.ContainerStatuses[0] = core.ContainerStatus{
 		ContainerID: "test",
 		Image:       "http://localhost/dummy.wasm",
-		State: api.ContainerState{
-			Running: &api.ContainerStateRunning{
+		State: core.ContainerState{
+			Running: &core.ContainerStateRunning{
 				StartedAt: misc.GetTimestamp(),
 			},
 		},
@@ -189,7 +189,7 @@ func (test *podControllerTest) TestDealLocalResource() {
 	test.False(deleteFlg)
 
 	// require deletion if deletion timestamp is set and container terminated
-	pod.Status.ContainerStatuses[0].State.Terminated = &api.ContainerStateTerminated{
+	pod.Status.ContainerStatuses[0].State.Terminated = &core.ContainerStateTerminated{
 		FinishedAt: misc.GetTimestamp(),
 		ExitCode:   0,
 	}
@@ -202,7 +202,7 @@ func (test *podControllerTest) TestDealLocalResource() {
 }
 
 func (test *podControllerTest) getRaw(podUuid string) []byte {
-	key := string(api.ResourceTypePod) + "/" + podUuid
+	key := string(core.ResourceTypePod) + "/" + podUuid
 
 	val, err := test.col.KvsGet(key)
 
@@ -215,13 +215,13 @@ func (test *podControllerTest) getRaw(podUuid string) []byte {
 
 func (test *podControllerTest) TestPodLifecycle() {
 	// create a pod
-	validPodSpec := &api.PodSpec{
-		Containers: []api.ContainerSpec{
+	validPodSpec := &core.PodSpec{
+		Containers: []core.ContainerSpec{
 			{
 				Name:          "test",
 				Image:         "http://localhost/dummy.wasm",
 				Runtime:       []string{"go:1.20"},
-				RestartPolicy: api.RestartPolicyAlways,
+				RestartPolicy: core.RestartPolicyAlways,
 			},
 		},
 	}
@@ -321,7 +321,7 @@ func (test *podControllerTest) TestPodLifecycle() {
 	// cleanup a pod with unhealthy pod
 	pod2, err := test.impl.GetPodData(digest2.Uuid)
 	test.NoError(err)
-	pod2.Status.ContainerStatuses[0].State.Unknown = &api.ContainerStateUnknown{
+	pod2.Status.ContainerStatuses[0].State.Unknown = &core.ContainerStateUnknown{
 		Reason:    "test",
 		Timestamp: misc.GetTimestamp(),
 	}

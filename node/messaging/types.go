@@ -15,7 +15,7 @@
  */
 package messaging
 
-import "github.com/llamerada-jp/oinari/api"
+import "github.com/llamerada-jp/oinari/api/core"
 
 const (
 	MessageNameReconcileContainer = "reconcileContainer"
@@ -27,11 +27,11 @@ type ReconcileContainer struct {
 }
 
 type PublishNode struct {
-	Name      string       `json:"name"`
-	ID        string       `json:"id"`
-	Account   string       `json:"account"`
-	NodeType  api.NodeType `json:"nodeType"`
-	Latitude  float64      `json:"latitude"`
-	Longitude float64      `json:"longitude"`
-	Altitude  float64      `json:"altitude"`
+	Name      string        `json:"name"`
+	ID        string        `json:"id"`
+	Account   string        `json:"account"`
+	NodeType  core.NodeType `json:"nodeType"`
+	Latitude  float64       `json:"latitude"`
+	Longitude float64       `json:"longitude"`
+	Altitude  float64       `json:"altitude"`
 }
