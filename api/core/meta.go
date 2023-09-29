@@ -33,6 +33,8 @@ type ObjectMeta struct {
 	CreatorNode       string       `json:"creatorNode"`
 	Uuid              string       `json:"uuid"`
 	DeletionTimestamp string       `json:"deletionTimestamp"`
+	// TODO: implement parent parameter to cleanup current resource
+	// Parent string `json:"parent"`
 }
 
 func (meta *ObjectMeta) Validate(t ResourceType) error {

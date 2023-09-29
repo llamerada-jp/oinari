@@ -112,7 +112,19 @@ type ContainerStatus struct {
 
 type PodStatus struct {
 	RunningNode       string            `json:"runningNode"`
+	Position          *Vector3          `json:"position,omitempty"`
 	ContainerStatuses []ContainerStatus `json:"containerStatuses"`
+}
+
+type Vector2 struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
+type Vector3 struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+	Z float64 `json:"z"`
 }
 
 func GeneratePodUuid() string {
