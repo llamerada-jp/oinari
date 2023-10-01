@@ -18,7 +18,7 @@ build-go: $(GO_FILES) go.mod go.sum
 	GOOS=js GOARCH=wasm go build -o ./dist/test/sleep_core.wasm ./cmd/app/sleep_core/*.go
 	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./lib/crosslink/
 	## should edit TESTS@src/test.ts to run test build by wasm
-	GOOS=js GOARCH=wasm go test -o ./dist/test/test_api.wasm -c ./api/...
+	GOOS=js GOARCH=wasm go test -o ./dist/test/test_api_core.wasm -c ./api/core/
 	GOOS=js GOARCH=wasm go test -o ./dist/test/test_node.wasm -c ./cmd/node/
 
 .PHONY: build-ts

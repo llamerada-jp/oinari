@@ -8,7 +8,7 @@ import * as crosslinkGoTest from "./crosslink.test.go";
 declare function ColonioModule(): Promise<any>;
 
 const TESTS = [
-  "test/test_api.wasm",
+  "test/test_api_core.wasm",
   "test/test_node.wasm",
 ];
 

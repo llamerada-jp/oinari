@@ -79,7 +79,8 @@ func (ct *coreTest) outputLog(name string, count int, param any) error {
 
 func Main() {
 	ct := &coreTest{}
-	err := oinari.Run(ct)
+	mgr := oinari.NewManager()
+	err := mgr.Run(ct)
 	if err != nil {
 		log.Fatalf("test program failed: %s", err.Error())
 	}

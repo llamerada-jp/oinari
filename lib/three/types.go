@@ -13,32 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package crosslink
+package three
 
-const (
-	TAG_PATH            = "path"
-	TAG_LEAF            = "leaf"
-	TAG_PATH_MATCH_KIND = "matchKind"
-
-	PATH_MATCH_KIND_EXACT = "E"
-	PATH_MATCH_KIND_HEAD  = "H"
+import (
+	api "github.com/llamerada-jp/oinari/api/three"
+	"github.com/llamerada-jp/oinari/lib/oinari"
 )
 
-type ResponseWriter interface {
-	ReplySuccess(response any)
-	ReplyError(message string)
-}
+const (
+	// ApplicationCrosslinkPath = "application/api/three"
+	NodeCrosslinkPath = "node/api/three"
+)
 
-type Handler interface {
-	Serve(dataRaw []byte, tags map[string]string, writer ResponseWriter)
-}
+type ThreeAPI interface {
+	oinari.API
 
-type Crosslink interface {
-	Call(path string, obj any, tags map[string]string, cb func([]byte, error))
-}
-
-type MultiPlexer interface {
-	Handler
-	SetHandler(pattern string, handler Handler)
-	SetDefaultHandler(handler Handler)
+	CreateObject(name string, spec *api.ObjectSpec) (string, error)
+	UpdateObject(uuid string, spec *api.ObjectSpec) error
+	DeleteObject(uuid string) error
 }

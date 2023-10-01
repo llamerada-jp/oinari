@@ -15,8 +15,6 @@
  */
 package three
 
-import "github.com/llamerada-jp/oinari/api/core"
-
 type CreateObjectRequest struct {
 	Name string      `json:"name"`
 	Spec *ObjectSpec `json:"spec"`
@@ -26,12 +24,20 @@ type CreateObjectResponse struct {
 	UUID string `json:"uuid"`
 }
 
-type MoveRequest struct {
-	UUID     string        `json:"uuid"`
-	Position *core.Vector3 `json:"position"`
-	// TODO: kind of the Z axis. (e.g. altitude, elevation)
+// This method is foolish and inefficient and needs to be improved.
+type UpdateObjectRequest struct {
+	UUID string      `json:"uuid"`
+	Spec *ObjectSpec `json:"spec"`
 }
 
-type MoveResponse struct {
+type UpdateObjectResponse struct {
+	// empty
+}
+
+type DeleteObjectRequest struct {
+	UUID string `json:"uuid"`
+}
+
+type DeleteObjectResponse struct {
 	// empty
 }

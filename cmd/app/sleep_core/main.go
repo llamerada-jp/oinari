@@ -136,7 +136,8 @@ func main() {
 
 	sleep := newSleep(context.Background(), uint64(durationSec))
 
-	err = oinari.Run(sleep)
+	mgr := oinari.NewManager()
+	err = mgr.Run(sleep)
 	if err != nil {
 		fmt.Println("😪", err)
 		os.Exit(1)
