@@ -25,6 +25,7 @@ import (
 	"github.com/llamerada-jp/oinari/node"
 	"github.com/llamerada-jp/oinari/node/apis/core"
 	ch "github.com/llamerada-jp/oinari/node/apis/core/handler"
+	th "github.com/llamerada-jp/oinari/node/apis/three/handler"
 	"github.com/llamerada-jp/oinari/node/controller"
 	"github.com/llamerada-jp/oinari/node/cri"
 	fd "github.com/llamerada-jp/oinari/node/frontend/driver"
@@ -153,6 +154,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	mh.InitMessagingHandler(na.col, containerCtrl, nodeCtrl)
 	fh.InitResourceHandler(na.nodeMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
 	ch.InitHandler(na.apiMpx, coreDriverManager, cri, podKvs, recordKVS)
+	th.InitHandler(na.apiMpx)
 
 	return nil
 }
