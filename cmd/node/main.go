@@ -27,12 +27,15 @@ import (
 	ch "github.com/llamerada-jp/oinari/node/apis/core/handler"
 	th "github.com/llamerada-jp/oinari/node/apis/three/handler"
 	"github.com/llamerada-jp/oinari/node/controller"
+	threeController "github.com/llamerada-jp/oinari/node/controller/three"
 	"github.com/llamerada-jp/oinari/node/cri"
 	fd "github.com/llamerada-jp/oinari/node/frontend/driver"
 	fh "github.com/llamerada-jp/oinari/node/frontend/handler"
-	"github.com/llamerada-jp/oinari/node/kvs"
-	md "github.com/llamerada-jp/oinari/node/messaging/driver"
-	mh "github.com/llamerada-jp/oinari/node/messaging/handler"
+	coreKVS "github.com/llamerada-jp/oinari/node/kvs"
+	threeKVS "github.com/llamerada-jp/oinari/node/kvs/three"
+	cmd "github.com/llamerada-jp/oinari/node/messaging/driver"
+	cmh "github.com/llamerada-jp/oinari/node/messaging/handler"
+	tmd "github.com/llamerada-jp/oinari/node/messaging/three/driver"
 )
 
 type nodeAgent struct {
@@ -124,12 +127,14 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	cri := cri.NewCRI(na.cl)
 
 	// messaging
-	messaging := md.NewMessagingDriver(na.col)
+	messaging := cmd.NewMessagingDriver(na.col)
+	threeMessaging := tmd.NewThreeMessagingDriver(na.col)
 
 	// KVS
-	accountKvs := kvs.NewAccountKvs(na.col)
-	podKvs := kvs.NewPodKvs(na.col)
-	recordKVS := kvs.NewRecordKvs(na.col)
+	accountKvs := coreKVS.NewAccountKvs(na.col)
+	podKvs := coreKVS.NewPodKvs(na.col)
+	recordKVS := coreKVS.NewRecordKvs(na.col)
+	objectKVS := threeKVS.NewObjectKVS(na.col)
 
 	// api driver manager
 	coreDriverManager := core.NewCoreDriverManager(na.cl)
@@ -139,6 +144,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	containerCtrl := controller.NewContainerController(localNid, cri, podKvs, recordKVS, coreDriverManager)
 	nodeCtrl := controller.NewNodeController(ctx, na.col, messaging, account, nodeName, nodeType)
 	podCtrl := controller.NewPodController(podKvs, messaging, localNid)
+	objectCtrl := threeController.NewObjectController(objectKVS, threeMessaging, nodeCtrl, podCtrl)
 
 	// manager
 	localDs := node.NewLocalDatastore(na.col)
@@ -151,10 +157,10 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	}()
 
 	// handlers
-	mh.InitMessagingHandler(na.col, containerCtrl, nodeCtrl)
+	cmh.InitMessagingHandler(na.col, containerCtrl, nodeCtrl)
 	fh.InitResourceHandler(na.nodeMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
 	ch.InitHandler(na.apiMpx, coreDriverManager, cri, podKvs, recordKVS)
-	th.InitHandler(na.apiMpx)
+	th.InitHandler(na.apiMpx, objectCtrl)
 
 	return nil
 }

@@ -15,7 +15,14 @@
  */
 package three
 
-import "github.com/llamerada-jp/oinari/api/core"
+import (
+	"github.com/google/uuid"
+	"github.com/llamerada-jp/oinari/api/core"
+)
+
+const (
+	ResourceTypeThreeObject = core.ResourceType("object")
+)
 
 type Object struct {
 	Meta *core.ObjectMeta `json:"meta"`
@@ -95,6 +102,10 @@ type Color struct {
 	R float32 `json:"r"`
 	G float32 `json:"g"`
 	B float32 `json:"b"`
+}
+
+func GenerateObjectUUID() string {
+	return uuid.Must(uuid.NewRandom()).String()
 }
 
 func (obj *Object) Validate() error {

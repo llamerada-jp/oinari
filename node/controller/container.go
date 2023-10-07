@@ -28,6 +28,10 @@ import (
 	"github.com/llamerada-jp/oinari/node/misc"
 )
 
+const (
+	ContainerLabelPodUUID = "pod-uuid"
+)
+
 type ContainerController interface {
 	GetContainerInfos() []*ContainerInfo
 	Reconcile(ctx context.Context, podUuid string) error
@@ -274,6 +278,9 @@ func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *core
 						Runtime: spec.Runtime,
 						Args:    spec.Args,
 						Envs:    envs,
+						Labels: map[string]string{
+							ContainerLabelPodUUID: pod.Meta.Uuid,
+						},
 					},
 				})
 				if err != nil {

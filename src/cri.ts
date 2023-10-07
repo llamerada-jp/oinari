@@ -19,7 +19,6 @@ import * as CT from "./container/types";
 
 const crosslinkCriPath: string = "cri";
 const containerTag: string = "containerID";
-const sandboxTag: string = "sandbox";
 const podSandboxIdMax: number = Math.floor(Math.pow(2, 30));
 const containerIdMax: number = Math.floor(Math.pow(2, 30));
 const imageRefIdMax: number = Math.floor(Math.pow(2, 30));
@@ -98,12 +97,13 @@ class ContainerImpl {
   runtime: string[]
   args: string[]
   envs: Record<string, string>
+  labels: Record<string, string>
   createdAt: string
   startedAt: string | undefined
   finishedAt: string | undefined
   exitCode: number | undefined
 
-  constructor(id: string, sandboxId: string, name: string, image: ImageImpl, runtime: string[], args: string[], envs: Record<string, string>) {
+  constructor(id: string, sandboxId: string, name: string, image: ImageImpl, runtime: string[], args: string[], envs: Record<string, string>, labels: Record<string, string>) {
     this.id = id;
     this.sandboxId = sandboxId;
     this.name = name;
@@ -111,6 +111,7 @@ class ContainerImpl {
     this.image = image;
     this.args = args;
     this.envs = envs;
+    this.labels = labels;
     this.createdAt = getTimestamp();
   }
 
@@ -144,7 +145,7 @@ class ContainerImpl {
     if (this.runtime.indexOf("core:dev1") !== -1) {
       let nodeMpx = new CL.MultiPlexer()
       rootMpx.setHandler("node", nodeMpx)
-      nodeMpx.setHandler("api", new ForwardToNode(this.sandboxId, this.id));
+      nodeMpx.setHandler("api", new ForwardToNode(this.id, this.labels));
     }
   }
 
@@ -271,7 +272,7 @@ class SandboxImpl {
     // this.containers.clear();
   }
 
-  createContainer(name: string, image: ImageImpl, runtime: string[], args: string[], envs: Record<string, string>): string {
+  createContainer(name: string, image: ImageImpl, runtime: string[], args: string[], envs: Record<string, string>, labels: Record<string, string>): string {
     console.assert(this.state == PodSandboxState.SandboxReady);
 
     let id: string = (Math.floor(Math.random() * containerIdMax)).toString(16);
@@ -286,7 +287,7 @@ class SandboxImpl {
       }
     }
 
-    let container = new ContainerImpl(id, this.id, name, image, runtime, args, envs);
+    let container = new ContainerImpl(id, this.id, name, image, runtime, args, envs, labels);
     containers.set(id, container);
     this.containers.set(id, container);
 
@@ -319,20 +320,22 @@ class ForwardToApplication implements CL.Handler {
 }
 
 class ForwardToNode implements CL.Handler {
-  sandboxId: string
-  containerId: string
+  containerID: string
+  labels: Record<string, string>
 
-  constructor(sandboxId: string, containerId: string) {
-    this.sandboxId = sandboxId;
-    this.containerId = containerId;
+  constructor(containerID:string, labels: Record<string, string>) {
+    this.containerID = containerID;
+    this.labels = labels;
   }
 
   serve(data: any, tags: Map<string, string>, writer: CL.ResponseWriter): void {
     let path = tags.get(CL.TAG_PATH);
     console.assert(path != null);
 
-    tags.set(sandboxTag, this.sandboxId);
-    tags.set(containerTag, this.containerId);
+    tags.set(containerTag, this.containerID)
+    for (const key in this.labels) {
+      tags.set(key, this.labels[key]);
+    }
 
     nodeCL.call(path!, data, tags).then((response) => {
       writer.replySuccess(response);
@@ -522,6 +525,7 @@ interface ContainerConfig {
   runtime: string[]
   args: string[]
   envs: KeyValue[]
+  labels: Record<string, string>
 }
 
 interface ContainerMetadata {
@@ -810,7 +814,7 @@ function createContainer(request: CreateContainerRequest): CreateContainerRespon
     }
   }
 
-  let id = sandbox.createContainer(request.config.metadata.name, image, runtime, args, envs);
+  let id = sandbox.createContainer(request.config.metadata.name, image, runtime, args, envs, request.config.labels);
   return { containerId: id };
 }
 

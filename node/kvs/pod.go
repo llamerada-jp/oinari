@@ -100,22 +100,22 @@ func (impl *podKvsImpl) Get(uuid string) (*core.Pod, error) {
 	key := string(core.ResourceTypePod) + "/" + uuid
 	val, err := impl.col.KvsGet(key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get pod data: %w", err)
+		return nil, fmt.Errorf("failed to get raw data: %w", err)
 	}
 
 	if val.IsNil() {
-		return nil, fmt.Errorf("pod is not exists")
+		return nil, fmt.Errorf("the record is not exists")
 	}
 
 	raw, err := val.GetBinary()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get pod data: %w", err)
+		return nil, fmt.Errorf("invalid raw data format: %w", err)
 	}
 
 	pod := &core.Pod{}
 	err = json.Unmarshal(raw, pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal raw data: %w", err)
 	}
 
 	return pod, nil
@@ -126,7 +126,7 @@ func (impl *podKvsImpl) Delete(uuid string) error {
 	key := string(core.ResourceTypePod) + "/" + uuid
 	// TODO check record before set nil for the record
 	if err := impl.col.KvsSet(key, nil, 0); err != nil {
-		return fmt.Errorf("failed to delete pod data: %w", err)
+		return fmt.Errorf("failed to delete the record: %w", err)
 	}
 	return nil
 }

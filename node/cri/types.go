@@ -142,9 +142,10 @@ type ContainerConfig struct {
 	Metadata ContainerMetadata `json:"metadata"`
 	Image    ImageSpec         `json:"image"`
 	// this field meaning the runtime environment of wasm, like  'core:dev1', 'go:1.19'
-	Runtime []string   `json:"runtime"`
-	Args    []string   `json:"args"`
-	Envs    []KeyValue `json:"envs"`
+	Runtime []string          `json:"runtime"`
+	Args    []string          `json:"args"`
+	Envs    []KeyValue        `json:"envs"`
+	Labels  map[string]string `json:"labels"`
 }
 
 type ContainerMetadata struct {

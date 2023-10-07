@@ -16,27 +16,50 @@
 package handler
 
 import (
+	"fmt"
+
 	"github.com/llamerada-jp/oinari/api/three"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
-	kvs "github.com/llamerada-jp/oinari/node/kvs/three"
+	coreCtrl "github.com/llamerada-jp/oinari/node/controller"
+	ctrl "github.com/llamerada-jp/oinari/node/controller/three"
 )
 
-func InitHandler(apiMpx crosslink.MultiPlexer, objectKVS kvs.ObjectKVS) {
+func InitHandler(apiMpx crosslink.MultiPlexer, objCtrl ctrl.ObjectController) {
 	mpx := crosslink.NewMultiPlexer()
 	apiMpx.SetHandler("three", mpx)
 
 	// CreateObject
 	mpx.SetHandler("createObject", crosslink.NewFuncHandler(func(request *three.CreateObjectRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		writer.ReplySuccess(&three.CreateObjectResponse{})
+		podUUID := tags[coreCtrl.ContainerLabelPodUUID]
+		uuid, err := objCtrl.Create(request.Name, podUUID, request.Spec)
+		if err != nil {
+			writer.ReplyError(fmt.Sprintf("failed to create object: %s", err.Error()))
+			return
+		}
+		writer.ReplySuccess(&three.CreateObjectResponse{
+			UUID: uuid,
+		})
 	}))
 
 	// UpdateObject
 	mpx.SetHandler("updateObject", crosslink.NewFuncHandler(func(request *three.UpdateObjectRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+		podUUID := tags[coreCtrl.ContainerLabelPodUUID]
+		err := objCtrl.Update(request.UUID, podUUID, request.Spec)
+		if err != nil {
+			writer.ReplyError(fmt.Sprintf("failed to update object: %s", err.Error()))
+			return
+		}
 		writer.ReplySuccess(&three.UpdateObjectResponse{})
 	}))
 
 	// DeleteObject
 	mpx.SetHandler("deleteObject", crosslink.NewFuncHandler(func(request *three.DeleteObjectRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+		podUUID := tags[coreCtrl.ContainerLabelPodUUID]
+		err := objCtrl.Delete(request.UUID, podUUID)
+		if err != nil {
+			writer.ReplyError(fmt.Sprintf("failed to delete object: %s", err.Error()))
+			return
+		}
 		writer.ReplySuccess(&three.DeleteObjectResponse{})
 	}))
 }
