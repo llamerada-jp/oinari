@@ -27,8 +27,11 @@ import * as UI_SI from "./ui/system_info";
 declare function ColonioModule(): Promise<any>;
 
 let rootMpx: CL.MultiPlexer;
+let frontendMpx: CL.MultiPlexer;
 let crosslink: CL.Crosslink;
 let command: CM.Commands;
+let readyUI: boolean = false;
+let readyMap: boolean = false;
 
 async function initController(): Promise<void> {
   // start controller worker
@@ -41,7 +44,7 @@ async function initController(): Promise<void> {
   // setup CRI
   CRI.initCRI(crosslink, rootMpx);
 
-  let frontendMpx = new CL.MultiPlexer();
+  frontendMpx = new CL.MultiPlexer();
   rootMpx.setHandler("frontend", frontendMpx);
 
   // setup colonio module handler
@@ -67,9 +70,20 @@ async function initController(): Promise<void> {
 
 function initUI() {
   UI_AL.init(command);
-  UI_MAP.init();
   UI_MI.init(command);
   UI_PL.init(command);
+  if (readyMap) {
+    UI_MAP.init(frontendMpx);
+  }
+  readyUI = true;
+}
+
+// This function will be called from google apis callback or initUI.
+export function initMap() {
+  if (readyUI && !readyMap) {
+    UI_MAP.init(frontendMpx);
+  }
+  readyMap = true;
 }
 
 async function main(): Promise<void> {

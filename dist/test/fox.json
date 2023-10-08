@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "name": "fox"
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "fox",
+        "image": "/test/fox.wasm",
+        "runtime": ["go:1.19", "core:dev1"]
+      }
+    ]
+  }
+}

@@ -32,7 +32,7 @@ type Object struct {
 type ObjectSpec struct {
 	Parts     []*PartSpec     `json:"parts"`
 	Materials []*MaterialSpec `json:"materials"`
-	Textures  []*TextureSpec  `json:"maps"`
+	Maps      []*TextureSpec  `json:"maps"`
 	Position  core.Vector3    `json:"position"`
 	// TODO: kind of the Z axis. (e.g. altitude, elevation)
 }

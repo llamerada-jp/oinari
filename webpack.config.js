@@ -9,7 +9,8 @@ module.exports = {
   },
   output: {
     path: `${__dirname}/dist`,
-    filename: "[name].js"
+    filename: "[name].js",
+    library: "Oinari"
   },
   module: {
     rules: [{
