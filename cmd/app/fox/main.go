@@ -143,8 +143,8 @@ func (f *fox) start() {
 }
 
 func (f *fox) loop() {
-	f.Longitude += rand.Float64() * 0.001
-	f.Latitude += rand.Float64() * 0.001
+	f.Longitude += rand.Float64() * 0.00001
+	f.Latitude += rand.Float64() * 0.00001
 
 	f.object.Position.X = f.Longitude
 	f.object.Position.Y = f.Latitude

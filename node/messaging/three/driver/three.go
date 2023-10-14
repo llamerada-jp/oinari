@@ -45,7 +45,7 @@ func (impl *threeMessagingDriverImpl) SpreadObject(uuid string, r, latitude, lon
 		return fmt.Errorf("failed to marshal: %w", err)
 	}
 
-	err = impl.col.SpreadPost(latitude, longitude, r, messaging.MessageNameSpreadObject, raw, 0)
+	err = impl.col.SpreadPost(math.Pi*longitude/180.0, math.Pi*latitude/180.0, r, messaging.MessageNameSpreadObject, raw, 0)
 	if err != nil {
 		return fmt.Errorf("failed to spread %s message: %w", messaging.MessageNameSpreadObject, err)
 	}

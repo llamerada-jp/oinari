@@ -73,7 +73,7 @@ func (impl *objectControllerImpl) Create(name string, podUUID string, spec *thre
 		return "", fmt.Errorf("failed to create object: %w", err)
 	}
 
-	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 10, spec.Position.X, spec.Position.Y); err != nil {
+	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 100, spec.Position.Y, spec.Position.X); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", name, obj.Meta.Uuid, err.Error())
 	}
 
@@ -100,7 +100,7 @@ func (impl *objectControllerImpl) Update(uuid string, podUUID string, spec *thre
 		return fmt.Errorf("failed to update object: %w", err)
 	}
 
-	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 10, spec.Position.X, spec.Position.Y); err != nil {
+	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 100, spec.Position.Y, spec.Position.X); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", obj.Meta.Name, obj.Meta.Uuid, err.Error())
 	}
 
@@ -135,7 +135,7 @@ func (impl *objectControllerImpl) Delete(uuid string, podUUID string) error {
 		return fmt.Errorf("failed to delete object: %w", err)
 	}
 
-	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 10*2, obj.Spec.Position.X, obj.Spec.Position.Y); err != nil {
+	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 100*2, obj.Spec.Position.Y, obj.Spec.Position.X); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", obj.Meta.Name, obj.Meta.Uuid, err.Error())
 	}
 

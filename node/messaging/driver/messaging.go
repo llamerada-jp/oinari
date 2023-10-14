@@ -18,6 +18,7 @@ package driver
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/api/core"
@@ -69,7 +70,7 @@ func (d *messagingDriverImpl) PublishNode(r float64, nid, name, account string, 
 		return fmt.Errorf("failed to marshal publishNode message: %w", err)
 	}
 
-	err = d.colonio.SpreadPost(latitude, longitude, r, messaging.MessageNamePublishNode, raw, 0)
+	err = d.colonio.SpreadPost(math.Pi*longitude/180, math.Pi*latitude/180, r, messaging.MessageNamePublishNode, raw, 0)
 	if err != nil {
 		return fmt.Errorf("failed to spread publishNode message: %w", err)
 	}

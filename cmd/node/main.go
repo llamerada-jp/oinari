@@ -36,6 +36,7 @@ import (
 	cmd "github.com/llamerada-jp/oinari/node/messaging/driver"
 	cmh "github.com/llamerada-jp/oinari/node/messaging/handler"
 	tmd "github.com/llamerada-jp/oinari/node/messaging/three/driver"
+	tmh "github.com/llamerada-jp/oinari/node/messaging/three/handler"
 )
 
 type nodeAgent struct {
@@ -158,6 +159,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 
 	// handlers
 	cmh.InitMessagingHandler(na.col, containerCtrl, nodeCtrl)
+	tmh.InitMessagingHandler(na.col, objectCtrl, na.frontendDriver)
 	fh.InitResourceHandler(na.nodeMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
 	ch.InitHandler(na.apiMpx, coreDriverManager, cri, podKvs, recordKVS)
 	th.InitHandler(na.apiMpx, objectCtrl)
