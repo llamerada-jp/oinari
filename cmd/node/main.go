@@ -145,7 +145,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	containerCtrl := controller.NewContainerController(localNid, cri, podKvs, recordKVS, coreDriverManager)
 	nodeCtrl := controller.NewNodeController(ctx, na.col, messaging, account, nodeName, nodeType)
 	podCtrl := controller.NewPodController(podKvs, messaging, localNid)
-	objectCtrl := threeController.NewObjectController(objectKVS, threeMessaging, nodeCtrl, podCtrl)
+	objectCtrl := threeController.NewObjectController(objectKVS, na.frontendDriver, threeMessaging, nodeCtrl, podCtrl)
 
 	// manager
 	localDs := node.NewLocalDatastore(na.col)
@@ -159,7 +159,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 
 	// handlers
 	cmh.InitMessagingHandler(na.col, containerCtrl, nodeCtrl)
-	tmh.InitMessagingHandler(na.col, objectCtrl, na.frontendDriver)
+	tmh.InitMessagingHandler(na.col, objectCtrl)
 	fh.InitResourceHandler(na.nodeMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
 	ch.InitHandler(na.apiMpx, coreDriverManager, cri, podKvs, recordKVS)
 	th.InitHandler(na.apiMpx, objectCtrl)

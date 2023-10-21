@@ -16,26 +16,24 @@
 package driver
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 
 	threeAPI "github.com/llamerada-jp/oinari/api/three"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 )
 
-type PutObjectRequest struct {
+type ApplyObjectsRequest struct {
 	Objects []threeAPI.Object `json:"objects"`
 }
 
-type DeleteObjectRequest struct {
+type DeleteObjectsRequest struct {
 	UUIDs []string `json:"uuids"`
 }
 
 type FrontendDriver interface {
 	// send a message that tell initialization complete
 	TellInitComplete() error
-	PutObjects(objects []threeAPI.Object) error
+	ApplyObjects(objects []threeAPI.Object) error
 	DeleteObjects(uuids []string) error
 }
 
@@ -59,28 +57,28 @@ func (impl *frontendDriverImpl) TellInitComplete() error {
 	return nil
 }
 
-func (impl *frontendDriverImpl) PutObjects(objects []threeAPI.Object) error {
-	raw, err := json.Marshal(PutObjectRequest{
-		Objects: objects,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to marshal: %w", err)
-	}
-	impl.cl.Call("frontend/putObjects", raw, nil, func(b []byte, err error) {
-		log.Fatalf("frontend/putObjects has an error: %s", err.Error())
-	})
+func (impl *frontendDriverImpl) ApplyObjects(objects []threeAPI.Object) error {
+	impl.cl.Call("frontend/applyObjects",
+		ApplyObjectsRequest{
+			Objects: objects,
+		},
+		nil, func(b []byte, err error) {
+			if err != nil {
+				log.Fatalf("frontend/applyObjects has an error: %s", err.Error())
+			}
+		})
 	return nil
 }
 
 func (impl *frontendDriverImpl) DeleteObjects(uuids []string) error {
-	raw, err := json.Marshal(DeleteObjectRequest{
-		UUIDs: uuids,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to marshal: %w", err)
-	}
-	impl.cl.Call("frontend/deleteObjects", raw, nil, func(b []byte, err error) {
-		log.Fatalf("frontend/deleteObjects has an error: %s", err.Error())
-	})
+	impl.cl.Call("frontend/deleteObjects",
+		DeleteObjectsRequest{
+			UUIDs: uuids,
+		},
+		nil, func(b []byte, err error) {
+			if err != nil {
+				log.Fatalf("frontend/deleteObjects has an error: %s", err.Error())
+			}
+		})
 	return nil
 }

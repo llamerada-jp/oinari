@@ -23,11 +23,11 @@ import { ThreeJSOverlayView } from "@googlemaps/three";
 import { Keys } from "../keys";
 
 
-interface PutObjectRequest {
+interface ApplyObjectsRequest {
   objects: Object[];
 }
 
-interface DeleteObjectRequest {
+interface DeleteObjectsRequest {
   uuids: string[];
 }
 
@@ -171,16 +171,17 @@ export function init(frontendMpx: CL.MultiPlexer): void {
 }
 
 function initHandler(frontendMpx: CL.MultiPlexer): void {
-  frontendMpx.setHandlerFunc("putObjects", (data: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
-    let request = data as PutObjectRequest;
+  frontendMpx.setHandlerFunc("applyObjects", (data: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
+    let request = data as ApplyObjectsRequest;
+    console.log(JSON.stringify(request));
     for (let obj of request.objects) {
-      putObject(obj);
+      applyObject(obj);
     }
     writer.replySuccess(null);
   });
 
   frontendMpx.setHandlerFunc("deleteObjects", (data: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
-    let request = data as DeleteObjectRequest;
+    let request = data as DeleteObjectsRequest;
     for (let uuid of request.uuids) {
       deleteObject(uuid);
     }
@@ -188,8 +189,8 @@ function initHandler(frontendMpx: CL.MultiPlexer): void {
   });
 }
 
-function putObject(obj: Object): void {
-  console.log("🤖 putObject:" + JSON.stringify(obj));
+function applyObject(obj: Object): void {
+  console.log("🤖 applyObject:" + JSON.stringify(obj));
 }
 
 function deleteObject(uuid: string): void {

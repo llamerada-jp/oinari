@@ -22,6 +22,7 @@ import (
 	coreAPI "github.com/llamerada-jp/oinari/api/core"
 	threeAPI "github.com/llamerada-jp/oinari/api/three"
 	coreController "github.com/llamerada-jp/oinari/node/controller"
+	fd "github.com/llamerada-jp/oinari/node/frontend/driver"
 	kvs "github.com/llamerada-jp/oinari/node/kvs/three"
 	messaging "github.com/llamerada-jp/oinari/node/messaging/three/driver"
 )
@@ -31,11 +32,15 @@ type ObjectController interface {
 	Update(uuid string, podUUID string, spec *threeAPI.ObjectSpec) error
 	Get(uuid string) (*threeAPI.Object, error)
 	Delete(uuid string, podUUID string) error
+
+	ReceiveSpreadEvent(uuid string) error
 }
 
 type objectControllerImpl struct {
 	// KVSs
 	objectKVS kvs.ObjectKVS
+	// frontend driver
+	frontendDriver fd.FrontendDriver
 	// messaging drivers
 	messagingDriver messaging.ThreeMessagingDriver
 	// controllers
@@ -43,9 +48,10 @@ type objectControllerImpl struct {
 	podCtrl  coreController.PodController
 }
 
-func NewObjectController(objectKVS kvs.ObjectKVS, messagingDriver messaging.ThreeMessagingDriver, nodeCtrl coreController.NodeController, podCtrl coreController.PodController) ObjectController {
+func NewObjectController(objectKVS kvs.ObjectKVS, frontendDriver fd.FrontendDriver, messagingDriver messaging.ThreeMessagingDriver, nodeCtrl coreController.NodeController, podCtrl coreController.PodController) ObjectController {
 	return &objectControllerImpl{
 		objectKVS:       objectKVS,
+		frontendDriver:  frontendDriver,
 		messagingDriver: messagingDriver,
 		nodeCtrl:        nodeCtrl,
 		podCtrl:         podCtrl,
@@ -76,6 +82,8 @@ func (impl *objectControllerImpl) Create(name string, podUUID string, spec *thre
 	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 100, spec.Position.Y, spec.Position.X); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", name, obj.Meta.Uuid, err.Error())
 	}
+	// colonio spread post is not send event to myself currently, so call ReceiveSpreadEvent directly.
+	go impl.ReceiveSpreadEvent(obj.Meta.Uuid)
 
 	return obj.Meta.Uuid, nil
 }
@@ -103,6 +111,8 @@ func (impl *objectControllerImpl) Update(uuid string, podUUID string, spec *thre
 	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 100, spec.Position.Y, spec.Position.X); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", obj.Meta.Name, obj.Meta.Uuid, err.Error())
 	}
+	// colonio spread post is not send event to myself currently, so call ReceiveSpreadEvent directly.
+	go impl.ReceiveSpreadEvent(obj.Meta.Uuid)
 
 	return nil
 }
@@ -137,6 +147,27 @@ func (impl *objectControllerImpl) Delete(uuid string, podUUID string) error {
 
 	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 100*2, obj.Spec.Position.Y, obj.Spec.Position.X); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", obj.Meta.Name, obj.Meta.Uuid, err.Error())
+	}
+	// colonio spread post is not send event to myself currently, so call ReceiveSpreadEvent directly.
+	go impl.ReceiveSpreadEvent(obj.Meta.Uuid)
+
+	return nil
+}
+
+func (impl *objectControllerImpl) ReceiveSpreadEvent(uuid string) error {
+	obj, err := impl.Get(uuid)
+	if err != nil {
+		return fmt.Errorf("failed to get object in spreadObject: %s", err.Error())
+	}
+
+	if obj != nil {
+		if err := impl.frontendDriver.ApplyObjects([]threeAPI.Object{*obj}); err != nil {
+			return fmt.Errorf("failed to put object: %s", err.Error())
+		}
+	} else {
+		if err := impl.frontendDriver.DeleteObjects([]string{uuid}); err != nil {
+			return fmt.Errorf("failed to delete object: %s", err.Error())
+		}
 	}
 
 	return nil

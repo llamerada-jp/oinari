@@ -20,16 +20,13 @@ import (
 	"log"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	api "github.com/llamerada-jp/oinari/api/three"
 	controller "github.com/llamerada-jp/oinari/node/controller/three"
-	driver "github.com/llamerada-jp/oinari/node/frontend/driver"
 	messaging "github.com/llamerada-jp/oinari/node/messaging/three"
 )
 
-func InitMessagingHandler(col colonio.Colonio, threeCtrl controller.ObjectController, fd driver.FrontendDriver) error {
-	col.MessagingSetHandler(messaging.MessageNameSpreadObject, func(mr *colonio.MessagingRequest, mrw colonio.MessagingResponseWriter) {
-		raw, err := mr.Message.GetBinary()
-		defer mrw.Write(nil)
+func InitMessagingHandler(col colonio.Colonio, threeCtrl controller.ObjectController) error {
+	col.SpreadSetHandler(messaging.MessageNameSpreadObject, func(sr *colonio.SpreadRequest) {
+		raw, err := sr.Message.GetBinary()
 		if err != nil {
 			log.Printf("failed to read spreadObject message: %s", err.Error())
 			return
@@ -42,22 +39,9 @@ func InitMessagingHandler(col colonio.Colonio, threeCtrl controller.ObjectContro
 				return
 			}
 
-			obj, err := threeCtrl.Get(msg.UUID)
-			if err != nil {
-				log.Printf("failed to get object in spreadObject: %s", err.Error())
+			if err := threeCtrl.ReceiveSpreadEvent(msg.UUID); err != nil {
+				log.Printf("failed to receive spreadObject message: %s", err.Error())
 				return
-			}
-
-			if obj != nil {
-				if err := fd.PutObjects([]api.Object{*obj}); err != nil {
-					log.Printf("failed to put object: %s", err.Error())
-					return
-				}
-			} else {
-				if err := fd.DeleteObjects([]string{msg.UUID}); err != nil {
-					log.Printf("failed to delete object: %s", err.Error())
-					return
-				}
 			}
 		}(raw)
 	})
