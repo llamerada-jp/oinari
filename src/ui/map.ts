@@ -98,6 +98,8 @@ interface Vec3 {
 }
 
 let map: google.maps.Map;
+let applyingObjects: Map<string, Object> = new Map();
+let deletingObjects: Set<string> = new Set();
 
 const mapOptions = {
   tilt: 0,
@@ -129,36 +131,25 @@ export function init(frontendMpx: CL.MultiPlexer): void {
   directionalLight.position.set(0, 10, 50);
   scene.add(directionalLight);
 
-  // Load the model.
-  const loader = new GLTFLoader();
-  const url =
-    "https://raw.githubusercontent.com/googlemaps/js-samples/main/assets/pin.gltf";
+  let { tilt, heading, zoom } = mapOptions;
 
-  loader.load(url, (gltf) => {
-    gltf.scene.scale.set(10, 10, 10);
-    gltf.scene.rotation.x = Math.PI / 2;
-    scene.add(gltf.scene);
+  const animate = () => {
+    if (tilt < 67.5) {
+      tilt += 0.5;
+    } else if (heading <= 360) {
+      heading += 0.2;
+      zoom -= 0.0005;
+    } else {
+      // exit animation loop
+      return;
+    }
 
-    let { tilt, heading, zoom } = mapOptions;
-
-    const animate = () => {
-      if (tilt < 67.5) {
-        tilt += 0.5;
-      } else if (heading <= 360) {
-        heading += 0.2;
-        zoom -= 0.0005;
-      } else {
-        // exit animation loop
-        return;
-      }
-
-      map.moveCamera({ tilt, heading, zoom });
-
-      requestAnimationFrame(animate);
-    };
+    map.moveCamera({ tilt, heading, zoom });
 
     requestAnimationFrame(animate);
-  });
+  };
+
+  requestAnimationFrame(animate);
 
   let overlayView = new ThreeJSOverlayView({
     map,
@@ -166,7 +157,8 @@ export function init(frontendMpx: CL.MultiPlexer): void {
     anchor: { ...mapOptions.center, altitude: 100 },
   });
 
-  overlayView.onDraw = ({gl, transformer}) => {
+  overlayView.onDraw = ({ gl, transformer }) => {
+    draw(gl, transformer);
   };
 }
 
@@ -175,7 +167,7 @@ function initHandler(frontendMpx: CL.MultiPlexer): void {
     let request = data as ApplyObjectsRequest;
     console.log(JSON.stringify(request));
     for (let obj of request.objects) {
-      applyObject(obj);
+      applyingObjects.set(obj.meta.uuid, obj);
     }
     writer.replySuccess(null);
   });
@@ -183,16 +175,21 @@ function initHandler(frontendMpx: CL.MultiPlexer): void {
   frontendMpx.setHandlerFunc("deleteObjects", (data: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
     let request = data as DeleteObjectsRequest;
     for (let uuid of request.uuids) {
-      deleteObject(uuid);
+      applyingObjects.delete(uuid);
+      deletingObjects.add(uuid);
     }
     writer.replySuccess(null);
   });
 }
 
+function draw(gl: WebGLRenderingContext, transformer: google.maps.CoordinateTransformer): void {
+
+}
+
 function applyObject(obj: Object): void {
-  console.log("🤖 applyObject:" + JSON.stringify(obj));
+
 }
 
 function deleteObject(uuid: string): void {
-  console.log("🤖 deleteObject:" + uuid);
+
 }
