@@ -17,8 +17,6 @@
 import * as CL from "../crosslink";
 
 import { AmbientLight, DirectionalLight, Scene } from "three";
-
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { ThreeJSOverlayView } from "@googlemaps/three";
 import { Keys } from "../keys";
 
@@ -97,12 +95,13 @@ interface Vec3 {
   z: number;
 }
 
+let overlayView: ThreeJSOverlayView;
 let map: google.maps.Map;
 let applyingObjects: Map<string, Object> = new Map();
 let deletingObjects: Set<string> = new Set();
 
 const mapOptions = {
-  tilt: 0,
+  tilt: 67.5,
   heading: 0,
   zoom: 18,
   center: { lat: 35.6594945, lng: 139.6999859 },
@@ -131,44 +130,20 @@ export function init(frontendMpx: CL.MultiPlexer): void {
   directionalLight.position.set(0, 10, 50);
   scene.add(directionalLight);
 
-  let { tilt, heading, zoom } = mapOptions;
-
-  const animate = () => {
-    if (tilt < 67.5) {
-      tilt += 0.5;
-    } else if (heading <= 360) {
-      heading += 0.2;
-      zoom -= 0.0005;
-    } else {
-      // exit animation loop
-      return;
-    }
-
-    map.moveCamera({ tilt, heading, zoom });
-
-    requestAnimationFrame(animate);
-  };
-
-  requestAnimationFrame(animate);
-
-  let overlayView = new ThreeJSOverlayView({
-    map,
-    scene,
+  overlayView = new OinariOverlayView({
+    map: map,
+    scene: scene,
     anchor: { ...mapOptions.center, altitude: 100 },
   });
-
-  overlayView.onDraw = ({ gl, transformer }) => {
-    draw(gl, transformer);
-  };
 }
 
 function initHandler(frontendMpx: CL.MultiPlexer): void {
   frontendMpx.setHandlerFunc("applyObjects", (data: any, _: Map<string, string>, writer: CL.ResponseWriter) => {
     let request = data as ApplyObjectsRequest;
-    console.log(JSON.stringify(request));
     for (let obj of request.objects) {
       applyingObjects.set(obj.meta.uuid, obj);
     }
+    overlayView.requestRedraw();
     writer.replySuccess(null);
   });
 
@@ -178,18 +153,15 @@ function initHandler(frontendMpx: CL.MultiPlexer): void {
       applyingObjects.delete(uuid);
       deletingObjects.add(uuid);
     }
+    overlayView.requestRedraw();
     writer.replySuccess(null);
   });
 }
 
-function draw(gl: WebGLRenderingContext, transformer: google.maps.CoordinateTransformer): void {
+class OinariOverlayView extends ThreeJSOverlayView {
+  onDraw({ gl, transformer }: google.maps.WebGLDrawOptions): void {
+    super.onDraw({ gl, transformer });
 
-}
-
-function applyObject(obj: Object): void {
-
-}
-
-function deleteObject(uuid: string): void {
-
+    console.log("😎draw!");
+  }
 }
