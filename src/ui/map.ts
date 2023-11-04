@@ -267,6 +267,7 @@ class ObjectWrapper extends THREE.Group {
 
     if (sprite === undefined) {
       sprite = new THREE.Sprite(material as THREE.SpriteMaterial);
+      sprite.scale.set(10, 10, 10);
       this.add(sprite);
       this.sprites.set(part.name, sprite);
     }
@@ -296,7 +297,12 @@ class ObjectWrapper extends THREE.Group {
   applySpriteMaterial(material: MaterialSpec): void {
     let entry = this.materials.get(material.name);
     if (entry === undefined || entry.type !== "SpriteMaterial") {
-      let color = material.spriteMaterial.color !== undefined ? { r: 1, g: 1, b: 1 } as THREE.Color : undefined;
+      let color: THREE.Color;
+      if (material.spriteMaterial === undefined || material.spriteMaterial.color === undefined) {
+        color = new THREE.Color(0xffffff);
+      } else {
+        color = new THREE.Color(material.spriteMaterial.color.r, material.spriteMaterial.color.g, material.spriteMaterial.color.b);
+      }
       entry = new THREE.SpriteMaterial({
         color: color,
         map: this.textures.get(material.spriteMaterial.mapTexture)?.texture,
