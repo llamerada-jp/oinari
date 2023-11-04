@@ -55,7 +55,11 @@ interface PartSpec {
   sprite: SpriteSpec;
 }
 
-interface SpriteSpec {
+interface PartBaseSpec {
+  scale: Vec3;
+}
+
+interface SpriteSpec extends PartBaseSpec {
   material: string;
   center: Vec2;
 }
@@ -65,7 +69,11 @@ interface MaterialSpec {
   spriteMaterial: SpriteMaterialSpec;
 }
 
-interface SpriteMaterialSpec {
+interface MaterialBaseSpec {
+  alphaTest: number;
+}
+
+interface SpriteMaterialSpec extends MaterialBaseSpec {
   color: Color;
   mapTexture: string;
 }
@@ -76,6 +84,10 @@ interface TextureSpec {
 }
 
 interface TextureBaseSpec {
+  wrapS: number;
+  wrapT: number;
+  offset: Vec2;
+  repeat: Vec2;
 }
 
 interface URLTextureSpec extends TextureBaseSpec {
@@ -267,9 +279,12 @@ class ObjectWrapper extends THREE.Group {
 
     if (sprite === undefined) {
       sprite = new THREE.Sprite(material as THREE.SpriteMaterial);
-      sprite.scale.set(10, 10, 10);
       this.add(sprite);
       this.sprites.set(part.name, sprite);
+    }
+
+    if (part.sprite.scale !== undefined) {
+      sprite.scale.set(part.sprite.scale.x, part.sprite.scale.y, part.sprite.scale.z);
     }
   }
 
@@ -304,6 +319,7 @@ class ObjectWrapper extends THREE.Group {
         color = new THREE.Color(material.spriteMaterial.color.r, material.spriteMaterial.color.g, material.spriteMaterial.color.b);
       }
       entry = new THREE.SpriteMaterial({
+        alphaTest: material.spriteMaterial.alphaTest,
         color: color,
         map: this.textures.get(material.spriteMaterial.mapTexture)?.texture,
       });
@@ -347,6 +363,19 @@ class ObjectWrapper extends THREE.Group {
           url: texture.urlTexture.url,
         };
         this.textures.set(texture.name, entry);
+      }
+
+      if (texture.urlTexture.wrapS !== 0 && texture.urlTexture.wrapS !== entry.texture.wrapS) {
+        entry.texture.wrapS = texture.urlTexture.wrapS as THREE.Wrapping;
+      }
+      if (texture.urlTexture.wrapT !== 0 && texture.urlTexture.wrapT !== entry.texture.wrapT) {
+        entry.texture.wrapT = texture.urlTexture.wrapT as THREE.Wrapping;
+      }
+      if (texture.urlTexture.offset !== undefined) {
+        entry.texture.offset.set(texture.urlTexture.offset.x, texture.urlTexture.offset.y);
+      }
+      if (texture.urlTexture.repeat !== undefined) {
+        entry.texture.repeat.set(texture.urlTexture.repeat.x, texture.urlTexture.repeat.y);
       }
     }
 

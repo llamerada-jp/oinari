@@ -24,8 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/llamerada-jp/oinari/api/core"
-	api "github.com/llamerada-jp/oinari/api/three"
+	threeAPI "github.com/llamerada-jp/oinari/api/three"
 	"github.com/llamerada-jp/oinari/lib/oinari"
 	threeLib "github.com/llamerada-jp/oinari/lib/three"
 )
@@ -35,41 +34,61 @@ type fox struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	three  threeLib.ThreeAPI
-	object *api.ObjectSpec
+	object *threeAPI.ObjectSpec
 
 	ObjectUUID string  `json:"objectUUID"`
 	Latitude   float64 `json:"latitude"`
 	Longitude  float64 `json:"longitude"`
+	Frame      int     `json:"frame"`
 }
 
 var _ oinari.Application = (*fox)(nil)
 
 func (f *fox) Setup(isInitialize bool, record []byte) error {
-	f.object = &api.ObjectSpec{
-		Parts: []*api.PartSpec{
+	f.object = &threeAPI.ObjectSpec{
+		Parts: []*threeAPI.PartSpec{
 			{
 				Name: "sprite",
-				Sprite: &api.SpriteSpec{
+				Sprite: &threeAPI.SpriteSpec{
+					PartBaseSpec: threeAPI.PartBaseSpec{
+						Scale: &threeAPI.Vector3{
+							X: 100 / 3,
+							Y: 100,
+							Z: 1,
+						},
+					},
 					Material: "matFox",
-					Center: &core.Vector2{
+					Center: &threeAPI.Vector2{
 						X: 0,
 						Y: 0,
 					},
 				},
 			},
 		},
-		Materials: []*api.MaterialSpec{
+		Materials: []*threeAPI.MaterialSpec{
 			{
 				Name: "matFox",
-				SpriteMaterial: &api.SpriteMaterialSpec{
+				SpriteMaterial: &threeAPI.SpriteMaterialSpec{
+					MaterialBaseSpec: threeAPI.MaterialBaseSpec{
+						AlphaTest: 0.1,
+					},
 					MapTexture: "mapFox",
 				},
 			},
 		},
-		Maps: []*api.TextureSpec{
+		Maps: []*threeAPI.TextureSpec{
 			{
 				Name: "mapFox",
-				URLTexture: &api.URLTextureSpec{
+				URLTexture: &threeAPI.URLTextureSpec{
+					TextureBaseSpec: threeAPI.TextureBaseSpec{
+						WrapS: threeAPI.RepeatWrapping,
+						WrapT: threeAPI.RepeatWrapping,
+						Repeat: &threeAPI.Vector2{
+							X: 0.333333,
+							Y: 1,
+						},
+						Offset: &threeAPI.Vector2{},
+					},
 					URL: "/img/fox1b.png",
 				},
 			},
@@ -79,7 +98,7 @@ func (f *fox) Setup(isInitialize bool, record []byte) error {
 	if isInitialize || record == nil {
 		f.Latitude = 35.6594945
 		f.Longitude = 139.6999859
-		f.object.Position = core.Vector3{
+		f.object.Position = &threeAPI.Vector3{
 			X: f.Longitude,
 			Y: f.Latitude,
 			Z: 0,
@@ -97,7 +116,7 @@ func (f *fox) Setup(isInitialize bool, record []byte) error {
 			return err
 		}
 
-		f.object.Position = core.Vector3{
+		f.object.Position = &threeAPI.Vector3{
 			X: f.Longitude,
 			Y: f.Latitude,
 			Z: 0,
@@ -150,10 +169,11 @@ func (f *fox) loop() {
 	f.object.Position.X = f.Longitude
 	f.object.Position.Y = f.Latitude
 
-	fmt.Printf("🦊 at %.3f, %.3f\n", f.Longitude, f.Latitude)
+	f.Frame++
+	f.object.Maps[0].URLTexture.Offset.X = float64(f.Frame%3) * 0.333333
 
 	if err := f.three.UpdateObject(f.ObjectUUID, f.object); err != nil {
-		fmt.Println("🦊 update object:", err)
+		fmt.Println("🦊 update object error:", err)
 	}
 }
 

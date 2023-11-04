@@ -22,7 +22,18 @@ import (
 
 const (
 	ResourceTypeThreeObject = core.ResourceType("object")
+
+	// constant values for three.js
+	// see: https://github.com/mrdoob/three.js/blob/master/src/constants.js
+
+	// Wrapping Modes
+	RepeatWrapping         = 1000
+	ClampToEdgeWrapping    = 1001
+	MirroredRepeatWrapping = 1002
 )
+
+type Vector2 core.Vector2
+type Vector3 core.Vector3
 
 type Object struct {
 	Meta *core.ObjectMeta `json:"meta"`
@@ -33,7 +44,7 @@ type ObjectSpec struct {
 	Parts     []*PartSpec     `json:"parts"`
 	Materials []*MaterialSpec `json:"materials"`
 	Maps      []*TextureSpec  `json:"maps"`
-	Position  core.Vector3    `json:"position"`
+	Position  *Vector3        `json:"position"`
 	// TODO: kind of the Z axis. (e.g. altitude, elevation)
 }
 
@@ -44,15 +55,20 @@ type PartSpec struct {
 	// Group  *GroupSpec  `json:"group,omitempty"`
 }
 
+type PartBaseSpec struct {
+	Scale *Vector3 `json:"scale,omitempty"`
+}
+
 /*
 type MeshSpec struct {
 }
 */
 
 type SpriteSpec struct {
+	PartBaseSpec
 	// see: https://threejs.org/docs/?q=sprite#api/en/objects/Sprite
-	Material string        `json:"material,omitempty"`
-	Center   *core.Vector2 `json:"center,omitempty"`
+	Material string   `json:"material,omitempty"`
+	Center   *Vector2 `json:"center,omitempty"`
 }
 
 /*
@@ -72,6 +88,7 @@ type MaterialSpec struct {
 
 type MaterialBaseSpec struct {
 	// see: https://threejs.org/docs/?q=material#api/en/materials/Material
+	AlphaTest float32 `json:"alphaTest,omitempty"`
 }
 
 type SpriteMaterialSpec struct {
@@ -89,6 +106,10 @@ type TextureSpec struct {
 
 type TextureBaseSpec struct {
 	// see: https://threejs.org/docs/?q=Texture#api/en/textures/Texture
+	WrapS  int      `json:"wrapS,omitempty"`
+	WrapT  int      `json:"wrapT,omitempty"`
+	Offset *Vector2 `json:"offset,omitempty"`
+	Repeat *Vector2 `json:"repeat,omitempty"`
 }
 
 type URLTextureSpec struct {
@@ -99,6 +120,7 @@ type URLTextureSpec struct {
 }
 
 type Color struct {
+	// see: https://threejs.org/docs/#api/en/math/Color
 	R float32 `json:"r"`
 	G float32 `json:"g"`
 	B float32 `json:"b"`
