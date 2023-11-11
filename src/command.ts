@@ -3,6 +3,9 @@ import * as CL from "./crosslink";
 const CL_SYSTEM_PATH: string = "node/system";
 const CL_RESOURCE_PATH: string = "node/resource";
 
+export const CONFIG_KEY_ALLOW_APPLICATIONS: string = "allowApplications";
+export const CONFIG_KEY_SAMPLE_PREFIX: string = "samplePrefix";
+
 export interface ConnectInfo {
   account: string
   node: string
@@ -90,6 +93,11 @@ interface EnvVar {
   name: string
   value: string
   // valueFrom is not supported yet.
+}
+
+interface Config {
+  key: string
+  value: string
 }
 
 export class Commands {
@@ -181,5 +189,12 @@ export class Commands {
     return this.cl.call(CL_RESOURCE_PATH + "/deletePod", {
       uuid: uuid,
     } as DeletePodRequest);
+  }
+
+  setConfiguration(key: string, value: string): void {
+    this.cl.call(CL_RESOURCE_PATH + "/config", {
+      key: key,
+      value: value,
+    } as Config);
   }
 }

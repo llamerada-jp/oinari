@@ -54,6 +54,7 @@ type reconcileState struct {
 type containerControllerImpl struct {
 	localNid             string
 	cri                  cri.CRI
+	appFilter            ApplicationFilter
 	podKvs               kvs.PodKvs
 	recordKvs            kvs.RecordKvs
 	apiCoreDriverManager *coreAPI.Manager
@@ -62,10 +63,11 @@ type containerControllerImpl struct {
 	mtx             sync.Mutex
 }
 
-func NewContainerController(localNid string, cri cri.CRI, podKvs kvs.PodKvs, recordKVS kvs.RecordKvs, apiCoreDriverManager *coreAPI.Manager) ContainerController {
+func NewContainerController(localNid string, cri cri.CRI, appFilter ApplicationFilter, podKvs kvs.PodKvs, recordKVS kvs.RecordKvs, apiCoreDriverManager *coreAPI.Manager) ContainerController {
 	return &containerControllerImpl{
 		localNid:             localNid,
 		cri:                  cri,
+		appFilter:            appFilter,
 		podKvs:               podKvs,
 		recordKvs:            recordKVS,
 		apiCoreDriverManager: apiCoreDriverManager,
@@ -184,6 +186,11 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUUID stri
 
 // return sandboxId
 func (impl *containerControllerImpl) letRunning(state *reconcileState, pod *core.Pod) error {
+	if !impl.appFilter.IsAllowed(pod) {
+		log.Printf("the application is not allowed to run on this node: %s/%s", pod.Meta.Owner, pod.Meta.Name)
+		return nil
+	}
+
 	// create sandbox if it isn't exist
 	if len(state.containerInfo.SandboxID) == 0 {
 		res, err := impl.cri.RunPodSandbox(&cri.RunPodSandboxRequest{

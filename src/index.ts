@@ -22,6 +22,7 @@ import * as UI_AL from "./ui/app_loader";
 import * as UI_MAP from "./ui/map";
 import * as UI_MI from "./ui/migrate";
 import * as UI_PL from "./ui/proc_list";
+import * as UI_SE from "./ui/settings";
 import * as UI_SI from "./ui/system_info";
 
 declare function ColonioModule(): Promise<any>;
@@ -72,6 +73,7 @@ function initUI() {
   UI_AL.init(command);
   UI_MI.init(command);
   UI_PL.init(command);
+  UI_SE.init(command);
   if (readyMap) {
     UI_MAP.init(frontendMpx);
   }
@@ -114,6 +116,7 @@ async function main(): Promise<void> {
     "PC");
   UI_SI.set(info.account, info.node);
   UI_PL.setNodeInfo(info.account, info.node);
+  UI_SE.setInitConfigs();
 
   // set a position for sample playing
   await command.setPosition(35.6594945, 139.6999859, 0);

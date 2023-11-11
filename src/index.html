@@ -28,6 +28,10 @@
         data-mdb-target="#modalProcList">
         <i class="fas bi-compass fa-2x"></i>
       </button>
+      <button type="button" class="btn btn-light" id="settingsButton" data-mdb-toggle="modal"
+        data-mdb-target="#modalSettings">
+        <i class="fas bi-gear fa-2x"></i>
+      </button>
     </div>
   </nav>
 
@@ -158,6 +162,35 @@
               </div>
             </div>
           </template>
+        </div><!-- End of modal-body -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for settings -->
+  <div class="modal fade" id="modalSettings" tabindex="-1" aria-labelledby="modalSettingsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header" role="tablist">
+          <h5 class="modal-title">Settings</h5>
+          <div>
+            <button type="button" class="btn-close" id="settingsClose" data-mdb-dismiss="modal"
+              aria-label="Close"></button>
+          </div>
+        </div><!-- End of modal-header -->
+
+        <div class="modal-body">
+          <ul class="list-group list-group-light">
+            <li class="list-group-item">
+              Allow applications to run on this node.
+              <select class="form-select" id="settingsAllowApplications">
+                <option value="samples" selected>Provided as samples</option>
+                <option value="myself">Launched by myself</option>
+                <option value="samplesAndMyself">Provided as samples and launch by myself</option>
+                <option value="any">Any</option>
+              </select>
+            </li>
+          </ul>
         </div><!-- End of modal-body -->
       </div>
     </div>
