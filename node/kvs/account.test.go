@@ -20,6 +20,7 @@ import (
 	"math"
 
 	"github.com/llamerada-jp/oinari/api/core"
+	"github.com/llamerada-jp/oinari/node/misc"
 	"github.com/llamerada-jp/oinari/node/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -35,7 +36,8 @@ func NewAccountKvsTest() suite.TestingSuite {
 	return &accountKvsTest{
 		col: colonioMock,
 		impl: &accountKvsImpl{
-			col: colonioMock,
+			col:         colonioMock,
+			progressing: misc.NewUniqueSet(),
 		},
 	}
 }

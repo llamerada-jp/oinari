@@ -22,6 +22,7 @@ import (
 
 	"github.com/llamerada-jp/colonio/go/colonio"
 	api "github.com/llamerada-jp/oinari/api/three"
+	"github.com/llamerada-jp/oinari/node/misc"
 )
 
 type ObjectKVS interface {
@@ -32,12 +33,14 @@ type ObjectKVS interface {
 }
 
 type objectKVSImpl struct {
-	col colonio.Colonio
+	col         colonio.Colonio
+	progressing *misc.UniqueSet
 }
 
 func NewObjectKVS(col colonio.Colonio) ObjectKVS {
 	return &objectKVSImpl{
-		col: col,
+		col:         col,
+		progressing: misc.NewUniqueSet(),
 	}
 }
 
@@ -51,6 +54,9 @@ func (impl *objectKVSImpl) Create(object *api.Object) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal: %w", err)
 	}
+
+	impl.progressing.Insert(key)
+	defer impl.progressing.Remove(key)
 
 	val, err := impl.col.KvsGet(key)
 	if errors.Is(err, colonio.ErrKvsNotFound) {
@@ -84,6 +90,9 @@ func (impl *objectKVSImpl) Update(object *api.Object) error {
 		return fmt.Errorf("failed to marshal: %w", err)
 	}
 
+	impl.progressing.Insert(key)
+	defer impl.progressing.Remove(key)
+
 	val, err := impl.col.KvsGet(key)
 	if err != nil {
 		return fmt.Errorf("failed to check for the existence of the data: %w", err)
@@ -97,6 +106,9 @@ func (impl *objectKVSImpl) Update(object *api.Object) error {
 
 func (impl *objectKVSImpl) Get(uuid string) (*api.Object, error) {
 	key := string(api.ResourceTypeThreeObject) + "/" + uuid
+	impl.progressing.Insert(key)
+	defer impl.progressing.Remove(key)
+
 	val, err := impl.col.KvsGet(key)
 	if err != nil {
 		if errors.Is(err, colonio.ErrKvsNotFound) {
@@ -125,6 +137,9 @@ func (impl *objectKVSImpl) Get(uuid string) (*api.Object, error) {
 
 func (impl *objectKVSImpl) Delete(uuid string) error {
 	key := string(api.ResourceTypeThreeObject) + "/" + uuid
+	impl.progressing.Insert(key)
+	defer impl.progressing.Remove(key)
+
 	// TODO check record before set nil for the record
 	if err := impl.col.KvsSet(key, nil, 0); err != nil {
 		return fmt.Errorf("failed to delete the record: %w", err)

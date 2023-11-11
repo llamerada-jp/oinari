@@ -22,6 +22,7 @@ import (
 
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/api/core"
+	"github.com/llamerada-jp/oinari/node/misc"
 )
 
 type PodKvs interface {
@@ -32,12 +33,14 @@ type PodKvs interface {
 }
 
 type podKvsImpl struct {
-	col colonio.Colonio
+	col         colonio.Colonio
+	progressing *misc.UniqueSet
 }
 
 func NewPodKvs(col colonio.Colonio) PodKvs {
 	return &podKvsImpl{
-		col: col,
+		col:         col,
+		progressing: misc.NewUniqueSet(),
 	}
 }
 
@@ -84,6 +87,9 @@ func (impl *podKvsImpl) Update(pod *core.Pod) error {
 		return fmt.Errorf("failed to update pod data: %w", err)
 	}
 
+	impl.progressing.Insert(key)
+	defer impl.progressing.Remove(key)
+
 	val, err := impl.col.KvsGet(key)
 	if err != nil {
 		return fmt.Errorf("failed to check for the existence of the data: %w", err)
@@ -98,6 +104,9 @@ func (impl *podKvsImpl) Update(pod *core.Pod) error {
 // return pod
 func (impl *podKvsImpl) Get(uuid string) (*core.Pod, error) {
 	key := string(core.ResourceTypePod) + "/" + uuid
+	impl.progressing.Insert(key)
+	defer impl.progressing.Remove(key)
+
 	val, err := impl.col.KvsGet(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get raw data: %w", err)
@@ -124,6 +133,9 @@ func (impl *podKvsImpl) Get(uuid string) (*core.Pod, error) {
 // set nil instead of remove record
 func (impl *podKvsImpl) Delete(uuid string) error {
 	key := string(core.ResourceTypePod) + "/" + uuid
+	impl.progressing.Insert(key)
+	defer impl.progressing.Remove(key)
+
 	// TODO check record before set nil for the record
 	if err := impl.col.KvsSet(key, nil, 0); err != nil {
 		return fmt.Errorf("failed to delete the record: %w", err)

@@ -21,6 +21,7 @@ import (
 
 	"github.com/llamerada-jp/colonio/go/colonio"
 	"github.com/llamerada-jp/oinari/api/core"
+	"github.com/llamerada-jp/oinari/node/misc"
 )
 
 type RecordKvs interface {
@@ -30,17 +31,22 @@ type RecordKvs interface {
 }
 
 type recordKVSImpl struct {
-	col colonio.Colonio
+	col         colonio.Colonio
+	progressing *misc.UniqueSet
 }
 
 func NewRecordKvs(col colonio.Colonio) RecordKvs {
 	return &recordKVSImpl{
-		col: col,
+		col:         col,
+		progressing: misc.NewUniqueSet(),
 	}
 }
 
 func (impl *recordKVSImpl) Get(podUuid string) (*core.Record, error) {
 	key := string(core.ResourceTypeRecord) + "/" + podUuid
+	impl.progressing.Insert(key)
+	defer impl.progressing.Remove(key)
+
 	val, err := impl.col.KvsGet(key)
 	if err != nil {
 		if errors.Is(err, colonio.ErrKvsNotFound) {
@@ -65,7 +71,8 @@ func (impl *recordKVSImpl) Get(podUuid string) (*core.Record, error) {
 	}
 
 	if err := record.Validate(); err != nil {
-		impl.Delete(podUuid)
+		// colonio does not have delete method on KVS, set nil instead of that
+		impl.col.KvsSet(key, nil, 0)
 		return nil, nil
 	}
 
@@ -83,12 +90,18 @@ func (impl *recordKVSImpl) Set(record *core.Record) error {
 	}
 
 	key := string(core.ResourceTypeRecord) + "/" + record.Meta.Uuid
+	impl.progressing.Insert(key)
+	defer impl.progressing.Remove(key)
+
 	err = impl.col.KvsSet(key, raw, 0)
 	return err
 }
 
 func (impl *recordKVSImpl) Delete(podUuid string) error {
 	key := string(core.ResourceTypeRecord) + "/" + podUuid
+	impl.progressing.Insert(key)
+	defer impl.progressing.Remove(key)
+
 	// colonio does not have delete method on KVS, set nil instead of that
 	return impl.col.KvsSet(key, nil, 0)
 }
