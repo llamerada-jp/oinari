@@ -341,6 +341,18 @@ func (ct *CriTest) TestSandbox() {
 	})
 	ct.NoError(err)
 	ct.Len(listRes.Items, 0)
+
+	// recreate sandbox with the same name
+	_, err = ct.cri.RunPodSandbox(&RunPodSandboxRequest{
+		Config: PodSandboxConfig{
+			Metadata: PodSandboxMetadata{
+				Name:      "sandbox1",
+				UID:       "uid1",
+				Namespace: "ns1",
+			},
+		},
+	})
+	ct.NoError(err)
 }
 
 func (ct *CriTest) TestContainer() {

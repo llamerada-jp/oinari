@@ -163,7 +163,7 @@ func (impl *containerControllerImpl) Reconcile(ctx context.Context, podUUID stri
 
 		if terminated {
 			// remove sandbox if containers have terminated
-			if err = impl.removeSandbox(podUUID); err != nil {
+			if err = impl.removeSandbox(state.containerInfo.SandboxID); err != nil {
 				return err
 			}
 
