@@ -178,7 +178,6 @@ class OinariOverlayView extends ThreeJSOverlayView {
     for (let obj of objects) {
       this.applyingObjects.set(obj.meta.uuid, obj);
     }
-    this.requestRedraw();
   }
 
   deleteObjects(uuids: string[]): void {
@@ -186,7 +185,6 @@ class OinariOverlayView extends ThreeJSOverlayView {
       this.applyingObjects.delete(uuid);
       this.deletingObjects.add(uuid);
     }
-    this.requestRedraw();
   }
 
   onDraw({ gl, transformer }: google.maps.WebGLDrawOptions): void {
@@ -212,6 +210,19 @@ class OinariOverlayView extends ThreeJSOverlayView {
       this.objects.delete(uuid);
     }
     this.deletingObjects.clear();
+
+    for (const [_, wrapper] of this.objects) {
+      // wrapper.transformPosition(transformer);
+      // TODO: this code is workaround. i couldn't find the correct way.
+      wrapper.position.copy(this.latLngAltitudeToVector3({
+        lat: wrapper.objPosition.y,
+        lng: wrapper.objPosition.x,
+        altitude: wrapper.objPosition.z,
+      }));
+
+    }
+
+    this.requestRedraw();
   }
 }
 
@@ -224,7 +235,8 @@ class ObjectWrapper extends THREE.Group {
   sprites: Map<string, THREE.Sprite>;
   materials: Map<string, THREE.Material>;
   textures: Map<string, TextureEntry>;
-  // pos: Vec3;
+  objPosition: Vec3;
+  position!: THREE.Vector3;
 
   constructor() {
     super();
@@ -232,14 +244,24 @@ class ObjectWrapper extends THREE.Group {
     this.sprites = new Map<string, THREE.Sprite>();
     this.materials = new Map<string, THREE.Material>();
     this.textures = new Map<string, TextureEntry>();
-    // this.pos = { x: 0, y: 0, z: 0 };
+    this.objPosition = { x: 0, y: 0, z: 0 } as Vec3;
   }
 
   applyObject(obj: Object): void {
     this.applyTextures(obj.spec.maps);
     this.applyMaterials(obj.spec.materials);
     this.applyParts(obj.spec.parts);
-    // this.pos = obj.spec.position;
+    this.objPosition = obj.spec.position;
+  }
+
+  transformPosition(transformer: google.maps.CoordinateTransformer): void {
+    // TODO: this is wrong code. i couldn't find the correct way.
+    let pos = transformer.fromLatLngAltitude({
+      lat: this.objPosition.y,
+      lng: this.objPosition.x,
+      altitude: this.objPosition.z
+    });
+    this.position.set(pos[0], pos[1], pos[2]);
   }
 
   applyParts(parts: PartSpec[]): void {
