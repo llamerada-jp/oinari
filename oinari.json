@@ -1,5 +1,7 @@
 {
   "documentRoot": "./dist",
+  "templateRoot": "./templates",
+  "secretParameter": "./secrets.json",
   "headers": {
     "Cross-Origin-Resource-Policy": "cross-origin"
   },

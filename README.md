@@ -7,9 +7,9 @@ Oinari(オイナリ) is the PoC project using distributed algorithms. In this pr
 Prepare keys for embedding and build this project.
 
 ```sh
-$ cat keys.json
+$ cat secrets.json
 {
-    "google_analytics_tracking_id": "<key of google analytics>",
+    "cookie_key_pair": "<random base64 encoded key for cookie>",
     "google_api_key": "<google api key>",
     "google_map_id": "<ID of google map>"
 }

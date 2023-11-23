@@ -17,7 +17,7 @@
 /dist/wasm_exec.js
 /docs/.hugo_build.lock
 /docs/resources/_gen/
-/keys.json
+/secrets.json
 /localhost.crt
 /localhost.key
 /node_modules

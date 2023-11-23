@@ -26,5 +26,5 @@ jobs:
         key: ${{ runner.os }}-${{ hashFiles('Makefile') }}-${{hashFiles('package-lock.json')}}
     - shell: bash
       run: |
-        echo '{ "google_analytics_tracking_id":"DUMMY", "google_api_key":"DUMMY", "google_map_id":"DUMMY"}' > keys.json
+        echo '{ "cookie_key_pair": "RmdxSzJhWUxEMmtpV0F3aHdqWStnQ0Yva0E3V0JrSGlDUGZCK3NWNTFKZz0=", "google_api_key":"DUMMY", "google_map_id":"DUMMY"}' > secrets.json
         ./ci.sh

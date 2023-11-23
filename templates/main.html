@@ -19,19 +19,30 @@
 <body>
   <!-- Menu on bottom-->
   <nav class="navbar fixed-bottom navbar-light bg-light">
-    <div class="container-fluid justify-content-center">
-      <button type="button" class="btn btn-light" id="loadAppButton" data-mdb-toggle="modal"
-        data-mdb-target="#modalLoadApp">
-        <i class="fas bi-box-seam fa-2x"></i>
-      </button>
-      <button type="button" class="btn btn-light" id="procListButton" data-mdb-toggle="modal"
-        data-mdb-target="#modalProcList">
-        <i class="fas bi-compass fa-2x"></i>
-      </button>
-      <button type="button" class="btn btn-light" id="settingsButton" data-mdb-toggle="modal"
-        data-mdb-target="#modalSettings">
-        <i class="fas bi-gear fa-2x"></i>
-      </button>
+    <div class="container-fluid">
+      <a href="./signout" role="button" class="btn btn-light">
+        <i class="fas fa-door-open fa-2x"></i>
+      </a>
+
+      <div class="d-flex align-items-center">
+        <button type="button" class="btn btn-light" id="loadAppButton" data-mdb-toggle="modal"
+          data-mdb-target="#modalLoadApp">
+          <i class="fas bi-box-seam fa-2x"></i>
+        </button>
+        <button type="button" class="btn btn-light" id="procListButton" data-mdb-toggle="modal"
+          data-mdb-target="#modalProcList">
+          <i class="fas bi-compass fa-2x"></i>
+        </button>
+        <button type="button" class="btn btn-light" id="settingsButton" data-mdb-toggle="modal"
+          data-mdb-target="#modalSettings">
+          <i class="fas bi-gear fa-2x"></i>
+        </button>
+      </div>
+
+      <!-- putting dummy to keep balance -->
+      <a href="#" role="button" class="btn invisible">
+        <i class="fas fa-door-open fa-2x"></i>
+      </a>
     </div>
   </nav>
 
@@ -277,7 +288,6 @@
     }
   </script>
 
-  <script async src="https://www.googletagmanager.com/gtag/js?id={{.google_analytics_tracking_id}}"></script>
   <script>
     // for debug, autoreload if update the server files
     fetch("/utime").then((res) => {
@@ -302,16 +312,6 @@
         });
       }, 1000);
     });
-
-    // for google analytics
-    window.dataLayer = window.dataLayer || [];
-
-    function gtag() {
-      dataLayer.push(arguments);
-    }
-    gtag('js', new Date());
-
-    gtag('config', '{{.google_analytics_tracking_id}}');
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"

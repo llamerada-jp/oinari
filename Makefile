@@ -4,7 +4,7 @@ COLONIO_BRANCH := main
 COLONIO_FILES := dist/colonio.js dist/colonio_go.js dist/colonio.wasm
 GO_FILES := $(shell find . -name *.go | grep -v ./build/)
 TS_FILES := $(shell find ./src/ -name *.ts) src/colonio.d.ts src/colonio_go.d.ts src/keys.ts
-OINARI_FILES := dist/wasm_exec.js dist/404.html dist/error.html dist/index.html
+OINARI_FILES := dist/wasm_exec.js dist/404.html dist/error.html
 MAP_FILES := dist/colonio.wasm.map dist/colonio_go.js.map
 
 .PHONY: build
@@ -42,16 +42,16 @@ setup:
 .PHONY: s
 s: build generate-cert
 	sudo sysctl -w net.core.rmem_max=2500000
-	while true; do go run ./cmd/test_seed; done
+	while true; do go run ./cmd/seed --debug; done
 
 .PHONY: test
 test: build generate-cert
 	sudo sysctl -w net.core.rmem_max=2500000
 	npm t
-	go run ./cmd/test_seed --test
+	go run ./cmd/seed --test
 
-dist/404.html: src/404.html keys.json
-	go run ./cmd/tool template -i src/404.html -v keys.json > $@
+dist/404.html: src/404.html secrets.json
+	go run ./cmd/tool template -i src/404.html -v secrets.json > $@
   
 dist/colonio.js: build/colonio/output/colonio.js
 	cp $< $@
@@ -68,11 +68,8 @@ dist/colonio_go.js: build/colonio/src/js/colonio_go.js
 dist/colonio_go.js.map: build/colonio/src/js/colonio_go.js.map
 	cp $< $@
 
-dist/error.html: src/error.html keys.json
-	go run ./cmd/tool template -i src/error.html -v keys.json > $@
-
-dist/index.html: src/index.html keys.json
-	go run ./cmd/tool template -i src/index.html -v keys.json > $@
+dist/error.html: src/error.html secrets.json
+	go run ./cmd/tool template -i src/error.html -v secrets.json > $@
 
 dist/wasm_exec.js: $(shell go env GOROOT)/misc/wasm/wasm_exec.js
 	cp $< $@
@@ -83,8 +80,8 @@ src/colonio.d.ts: build/colonio/src/js/core.d.ts
 src/colonio_go.d.ts: build/colonio/src/js/colonio_go.d.ts
 	cp $< $@
 
-src/keys.ts: src/keys.temp keys.json
-	go run ./cmd/tool template -i src/keys.temp -v keys.json > $@
+src/keys.ts: src/keys.temp secrets.json
+	go run ./cmd/tool template -i src/keys.temp -v secrets.json > $@
 
 .PHONY: generate-cert
 generate-cert:
