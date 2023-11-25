@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import * as CM from "../command";
-import * as Util from "./util";
+import * as CMD from "../command";
+import * as UTIL from "./util";
 
 interface AppEntry {
   name: string
@@ -30,9 +30,9 @@ const listElementId = "loadAppLibraryList";
 
 let applications: AppEntry[] | undefined;
 let downloading: boolean = false;
-let command: CM.Commands;
+let command: CMD.Commands;
 
-export function init(cmd: CM.Commands): void {
+export function init(cmd: CMD.Commands): void {
   command = cmd;
 
   let btnLoadApp = document.getElementById("loadAppButton");
@@ -98,7 +98,7 @@ function setupList(): void {
     (<HTMLElement>item.querySelector(".appName")).innerText = entry.name;
     (<HTMLElement>item.querySelector(".appDescription")).innerText = entry.description;
     (<HTMLElement>item.querySelector(".list-group-item")).addEventListener("click", () => {
-      Util.closeModal("loadAppClose");
+      UTIL.closeModal("loadAppClose");
       loadApplication(entry.url);
     });
     list.append(item);
@@ -114,7 +114,7 @@ function setupCustom(): void {
       return;
     }
 
-    Util.closeModal("loadAppClose");
+    UTIL.closeModal("loadAppClose");
     loadApplication(url);
   });
 }

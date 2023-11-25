@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -42,14 +43,12 @@ const (
 )
 
 var (
-	embed        map[string]string
 	templateRoot string
 
 	oauth2Github *oauth2.Config
 )
 
 func Init(mux *http.ServeMux, secret map[string]string, templatePath string, withoutSignin bool) error {
-	embed = secret
 	templateRoot = templatePath
 
 	// setup cookie store
@@ -71,28 +70,38 @@ func Init(mux *http.ServeMux, secret map[string]string, templatePath string, wit
 
 	// setup handlers
 	mux.HandleFunc("/index.html", func(w http.ResponseWriter, r *http.Request) {
+		account := "no account"
+		accountID := "no name"
+
 		// check session
 		if !withoutSignin {
 			session, err := store.Get(r, SESSION_KEY)
 			if err != nil {
 				log.Printf("failed to get session: %v", err)
-				writeError(w)
+				writeErrorPage(w, http.StatusInternalServerError)
 				return
 			}
 
 			if session.IsNew {
-				writePage(w, "signin.html")
+				writePage(w, "signin.html", nil)
 				return
 			}
 
 			_, ok := session.Values["auth_type"]
 			if !ok {
-				writePage(w, "signin.html")
+				writePage(w, "signin.html", nil)
 				return
 			}
+
+			account = session.Values["auth_type"].(string) + ":" + session.Values["user"].(string)
+			accountID = session.Values["user"].(string)
 		}
 
-		writePage(w, "main.html")
+		writePage(w, "main.html", map[string]any{
+			"google_api_key": secret["google_api_key"],
+			"account":        account,
+			"account_id":     accountID,
+		})
 	})
 
 	mux.HandleFunc("/signin_github", func(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +124,7 @@ func Init(mux *http.ServeMux, secret map[string]string, templatePath string, wit
 		session, err := store.Get(r, SESSION_KEY)
 		if err != nil {
 			log.Printf("failed to get session: %v", err)
-			writeError(w)
+			writeErrorPage(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -128,12 +137,12 @@ func Init(mux *http.ServeMux, secret map[string]string, templatePath string, wit
 		expectedState, ok := session.Values["signin_github_state"]
 		if !ok {
 			log.Printf("failed to get state")
-			writeError(w)
+			writeErrorPage(w, http.StatusInternalServerError)
 			return
 		}
 		if r.URL.Query().Get("state") != expectedState {
 			log.Printf("state is invalid")
-			writeError(w)
+			writeErrorPage(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -141,8 +150,8 @@ func Init(mux *http.ServeMux, secret map[string]string, templatePath string, wit
 		code := r.URL.Query().Get("code")
 		tok, err := oauth2Github.Exchange(context.Background(), code)
 		if err != nil {
-			log.Printf("Unable to exchange code for token")
-			writeError(w)
+			log.Printf("unable to exchange code for token")
+			writeErrorPage(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -150,8 +159,8 @@ func Init(mux *http.ServeMux, secret map[string]string, templatePath string, wit
 
 		user, _, err := client.Users.Get(context.Background(), "")
 		if err != nil {
-			log.Printf("Unable to get github user")
-			writeError(w)
+			log.Printf("unable to get github user")
+			writeErrorPage(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -172,7 +181,7 @@ func Init(mux *http.ServeMux, secret map[string]string, templatePath string, wit
 		session, err := store.Get(r, SESSION_KEY)
 		if err != nil {
 			log.Printf("failed to get session: %v", err)
-			writeError(w)
+			http.Redirect(w, r, "./index.html", http.StatusTemporaryRedirect)
 			return
 		}
 
@@ -197,18 +206,59 @@ func Init(mux *http.ServeMux, secret map[string]string, templatePath string, wit
 	return nil
 }
 
-func writeError(w http.ResponseWriter) {
+func writeErrorPage(w http.ResponseWriter, code int) {
 	w.WriteHeader(http.StatusInternalServerError)
-	writePage(w, "error.html")
+	tpl, err := template.ParseFiles(filepath.Join(templateRoot, "error.html"))
+	if err != nil {
+		log.Printf("failed to read error template file: %v", err)
+		return
+	}
+
+	obj := map[string]any{
+		"code": code,
+		"text": http.StatusText(code),
+	}
+
+	if err = tpl.Execute(w, obj); err != nil {
+		log.Printf("failed to generate error html: %v", err)
+	}
 }
 
-func writePage(w http.ResponseWriter, file string) {
+func writePage(w http.ResponseWriter, file string, embed map[string]any) {
 	tpl, err := template.ParseFiles(filepath.Join(templateRoot, file))
 	if err != nil {
-		log.Fatalf("failed to read template file: %v", err)
+		log.Printf("failed to read template file: %v", err)
+		writeErrorPage(w, http.StatusInternalServerError)
+		return
 	}
 
 	if err = tpl.Execute(w, embed); err != nil {
-		log.Fatalf("failed to generate html: %v", err)
+		log.Printf("failed to generate html: %v", err)
+		writeErrorPage(w, http.StatusInternalServerError)
+		return
+	}
+}
+
+func writeErrorJSON(w http.ResponseWriter, code int) {
+	w.WriteHeader(code)
+	_, err := w.Write([]byte("{}"))
+	if err != nil {
+		log.Printf("failed to write response json: %v", err)
+	}
+}
+
+func writeJSON(w http.ResponseWriter, obj any) {
+	raw, err := json.Marshal(obj)
+	if err != nil {
+		log.Printf("failed to marshal response json object: %v", err)
+		writeErrorJSON(w, http.StatusInternalServerError)
+		return
+	}
+
+	_, err = w.Write(raw)
+	if err != nil {
+		log.Printf("failed to write response json: %v", err)
+		writeErrorJSON(w, http.StatusInternalServerError)
+		return
 	}
 }

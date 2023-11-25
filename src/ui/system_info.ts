@@ -14,12 +14,33 @@
  * limitations under the License.
  */
 
-export function set(account: string, node: string): void {
-  setText("#systemAccount", account);
-  setText("#systemNode", node);
+import * as LS from "../local_settings";
+import * as POS from "../position";
+
+const systemInfoElID = "systemInfo";
+const accountElID = "systemInfoAccount";
+const deviceNameElID = "systemInfoDeviceName";
+const positionElID = "systemInfoPosition";
+
+export function init(localSettings: LS.LocalSettings, position: POS.Position): void {
+  setText(accountElID, localSettings.account);
+  setText(deviceNameElID, localSettings.deviceName);
+  updatePosition(position.coordinate);
+  position.addListener((coordinate: POS.Coordinate) => {
+    updatePosition(coordinate);
+  });
 }
 
-function setText(query: string, text:string):void{
-  let el = document.querySelector(query) as HTMLElement;
+export function show(): void {
+  let el = document.getElementById(systemInfoElID) as HTMLElement;
+  el.classList.remove("d-none");
+}
+
+function updatePosition(coordinate: POS.Coordinate): void {
+  setText(positionElID, `${coordinate.latitude}, ${coordinate.longitude}`);
+}
+
+function setText(elID: string, text:string):void{
+  let el = document.getElementById(elID) as HTMLElement;
   el.innerText = text;
 }

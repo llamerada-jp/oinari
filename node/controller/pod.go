@@ -28,11 +28,11 @@ import (
 )
 
 type ApplicationDigest struct {
-	Name        string `json:"name"`
-	Uuid        string `json:"uuid"`
-	RunningNode string `json:"runningNode"`
-	Owner       string `json:"owner"`
-	State       string `json:"state"`
+	Name          string `json:"name"`
+	Uuid          string `json:"uuid"`
+	RunningNodeID string `json:"runningNodeID"`
+	Owner         string `json:"owner"`
+	State         string `json:"state"`
 }
 
 type PodController interface {

@@ -17,8 +17,100 @@
 </head>
 
 <body>
-  <!-- Menu on bottom-->
-  <nav class="navbar fixed-bottom navbar-light bg-light">
+  <!-- Initial setting -->
+  <div class="container d-none" id="initSettings">
+    <div class="row">
+      <h2 class="pt-4 mb-4">Initial settings</h2>
+
+      <h4 class="mb-3">Account</h4>
+      <div class="mb-3 col">
+        <i class="fab fa-github"></i>&nbsp;{{.account_id}}
+      </div>
+
+      <h4 class="mb-3">Device</h4>
+      <label for="initSettingsDeviceName">Device name</label>
+      <div class="input-group">
+        <input type="text" id="initSettingsDeviceName" class="form-control" />
+        <button type="button" class="btn btn-outline-secondary" id="initSettingsDeviceNameRandom" data-mdb-ripple-init>
+          <i class="fas fa-random"></i>
+          &nbsp;re generate random
+        </button>
+      </div>
+      <div class="mb-3 form-text">
+        Device name is used to identify devices when there are multiple devices. Any appropriate name is OK.
+      </div>
+
+      <label for="initSettingsViewType">View type</label>
+      <div class="input-group">
+        <select class="form-select" id="initSettingsViewType">
+          <option value="landscape" selected>landscape</option>
+        </select>
+      </div>
+      <div class="mb-3 form-text">
+        View type is used to adjust UI behavior and object size.
+      </div>
+
+      <div class="mb-3 input-group">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" id="initSettingsLocalStore" />
+          <label class="form-check-label" for="initSettingsLocalStore">Save the settings in local storage</label>
+        </div>
+      </div>
+      <div class="mb-3 form-text">
+        By saving the settings in local storage, you can omit input them next time.
+        Saving the settings is not recommended for devices that is shared with others.
+      </div>
+
+      <h4 class="mb-3">Position</h4>
+      <div class="mb-3 input-group">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" id="initSettingsSyncGNSS" />
+          <label class="form-check-label" for="initSettingsSyncGNSS">Sync position using GNSS</label>
+        </div>
+      </div>
+
+      <label for="initSettingsSpawnPosition">Spawn position</label>
+      <div class="input-group">
+        <select class="form-select" id="initSettingsSpawnPosition">
+          <option value="35.6938,139.7034" selected>Shinjuku (Tokyo)</option>
+        </select>
+      </div>
+      <div class="mb-3 form-text">
+        If GNSS is not used, select a spawn location.
+      </div>
+
+      <h4 class="mb-3">Security</h4>
+      <label for="initSettingsAllowApplications">Allow applications</label>
+      <div class="input-group">
+        <select class="form-select" id="initSettingsAllowApplications">
+          <option value="samples" selected>Provided as samples</option>
+          <option value="myself">Launched by myself</option>
+          <option value="samplesAndMyself">Provided as samples and launch by myself</option>
+          <option value="any">Any</option>
+        </select>
+      </div>
+      <div class="mb-3 form-text">
+        Select the type of application you want to allow to run on this node (not shared between your account).
+        Basically, there is no need to change it.
+        Do not use `Any` except in experiments where all risks are acceptable, since `Any` will disable application
+        filtering.
+      </div>
+
+      <div class="col d-flex justify-content-evenly">
+        <a href="./signout" role="button" class="btn btn-secondary btn-lg">
+          <i class="fas fa-door-open"></i>
+          &nbsp;Sign out
+        </a>
+        <button type="button" class="btn btn-primary btn-lg" id="initSettingsSubmit">
+          <i class="fas fa-globe"></i>
+          &nbsp;Connect
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menu on bottom -->
+  <nav id="menu" class="navbar fixed-bottom navbar-light bg-light d-none">
     <div class="container-fluid">
       <a href="./signout" role="button" class="btn btn-light">
         <i class="fas fa-door-open fa-2x"></i>
@@ -191,17 +283,66 @@
         </div><!-- End of modal-header -->
 
         <div class="modal-body">
-          <ul class="list-group list-group-light">
-            <li class="list-group-item">
-              Allow applications to run on this node.
+          <div class="row">
+            <h5 class="mb-3">Account</h5>
+            <div class="mb-3 col">
+              <i class="fab fa-github"></i>&nbsp;{{.account_id}}
+            </div>
+
+            <h5 class="mb-3">Device</h5>
+            <h6>Device name</h6>
+            <div class="mb-3 col" id="settingsDeviceName">todo</div>
+
+            <h6>View type</h6>
+            <div class="mb-3 col" id="settingsViewType">todo</div>
+
+            <div class="mb-3 input-group">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="settingsLocalStore" />
+                <label class="form-check-label" for="settingsLocalStore">Save the settings in local storage</label>
+              </div>
+            </div>
+            <div class="mb-3 form-text">
+              By saving the settings in local storage, you can omit input them next time.
+              Saving the settings is not recommended for devices that is shared with others.
+            </div>
+
+            <h5 class="mb-3">Position</h5>
+            <div class="mb-3 input-group">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="settingsSyncGNSS" />
+                <label class="form-check-label" for="settingsSyncGNSS">Sync position using GNSS</label>
+              </div>
+            </div>
+
+            <label for="settingsSpawnPosition">Spawn position</label>
+            <div class="input-group">
+              <select class="form-select" id="settingsSpawnPosition">
+                <option value="35.6938,139.7034" selected>Shinjuku (Tokyo)</option>
+              </select>
+            </div>
+            <div class="mb-3 form-text">
+              If GNSS is not used, select a spawn location.
+            </div>
+
+            <h5 class="mb-3">Security</h5>
+            <label for="settingsAllowApplications">Allow applications</label>
+            <div class="input-group">
               <select class="form-select" id="settingsAllowApplications">
                 <option value="samples" selected>Provided as samples</option>
                 <option value="myself">Launched by myself</option>
                 <option value="samplesAndMyself">Provided as samples and launch by myself</option>
                 <option value="any">Any</option>
               </select>
-            </li>
-          </ul>
+            </div>
+            <div class="mb-3 form-text">
+              Select the type of application you want to allow to run on this node (not shared between your account).
+              Basically, there is no need to change it.
+              Do not use `Any` except in experiments where all risks are acceptable, since `Any` will disable
+              application
+              filtering.
+            </div>
+          </div>
         </div><!-- End of modal-body -->
       </div>
     </div>
@@ -258,37 +399,42 @@
     </div>
   </div>
 
-  <div id="systemInfo" class="position-absolute fixed-top">
+  <div id="systemInfo" class="position-absolute fixed-top d-none">
     <!-- System info -->
     <div class="container-fluid d-flex flex-row justify-content-end">
       <div class="d-flex flex-column">
         <div>
           <i class="bi-person-circle"></i>&nbsp;
-          <span id="systemAccount">connecting</span>
+          <span id="systemInfoAccount"></span>
         </div>
         <div>
           <i class="bi-laptop"></i>&nbsp;
-          <span id="systemNode">connecting</span>
+          <span id="systemInfoDeviceName"></span>
         </div>
         <div>
           <i class="bi-pin-map"></i>&nbsp;
-          <span id="systemLocation">connecting</span>
+          <span id="systemInfoPosition"></span>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="map">
+  <div id="map" class="d-none">
   </div>
 
-  <script src="https://maps.googleapis.com/maps/api/js?key={{.google_api_key}}&callback=initMap&v=beta" defer></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key={{.google_api_key}}&callback=readyMap&v=beta" defer></script>
   <script>
-    function initMap() {
-      window.Oinari.initMap();
+    function readyMap() {
+      window.Oinari.readyMap();
     }
   </script>
 
   <script>
+    // to use mdb forms
+    document.querySelectorAll('.form-outline').forEach((formOutline) => {
+      new mdb.Input(formOutline).update();
+    });
+
     // for debug, autoreload if update the server files
     fetch("/utime").then((res) => {
       if (!res.ok) {
@@ -312,6 +458,9 @@
         });
       }, 1000);
     });
+
+    // call Oinari main
+    window.Oinari.main("{{.account}}");
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"

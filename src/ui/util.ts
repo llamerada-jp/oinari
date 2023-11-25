@@ -50,3 +50,12 @@ export function makeListShow(list: HTMLElement | null): void {
   if (list == null) return;
   list.classList.remove("d-none");
 }
+
+export function setSelectValue(select: HTMLSelectElement, value: string): void {
+  for (let i = 0; i < select.options.length; i++) {
+    if (select.options[i].value === value) {
+      select.selectedIndex = i;
+      break;
+    }
+  }
+}

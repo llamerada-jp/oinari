@@ -184,11 +184,11 @@ func InitResourceHandler(nodeMpx crosslink.MultiPlexer, appFilter controller.App
 					continue
 				}
 				res.Digests = append(res.Digests, controller.ApplicationDigest{
-					Name:        pod.Meta.Name,
-					Uuid:        uuid,
-					RunningNode: pod.Status.RunningNode,
-					Owner:       pod.Meta.Owner,
-					State:       podCtrl.GetContainerStateMessage(pod),
+					Name:          pod.Meta.Name,
+					Uuid:          uuid,
+					RunningNodeID: pod.Status.RunningNode,
+					Owner:         pod.Meta.Owner,
+					State:         podCtrl.GetContainerStateMessage(pod),
 				})
 			}
 

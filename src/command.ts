@@ -8,13 +8,13 @@ export const CONFIG_KEY_SAMPLE_PREFIX: string = "samplePrefix";
 
 export interface ConnectInfo {
   account: string
-  node: string
+  nodeID: string
 }
 
 export interface ApplicationDigest {
   name: string
   uuid: string
-  runningNode: string
+  runningNodeID: string
   owner: string
   state: string
 }

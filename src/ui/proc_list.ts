@@ -14,28 +14,26 @@
  * limitations under the License.
  */
 
-import * as CM from "../command";
+import * as CMD from "../command";
+import * as LS from "../local_settings";
 import * as MI from "./migrate";
-import * as Util from "./util";
+import * as UTIL from "./util";
 
-let command: CM.Commands;
+let command: CMD.Commands;
 let processing: boolean = false;
 let account: string;
-let node: string;
+let nodeID: string;
 let spinners = ["procListByAccountSpinner1", "procListByAccountSpinner2"];
 
-export function init(cmd: CM.Commands): void {
+export function init(cmd: CMD.Commands, localSettings: LS.LocalSettings, nID: string): void {
   command = cmd;
+  account = localSettings.account;
+  nodeID = nID;
 
   let btnProcList = document.getElementById("procListButton");
   btnProcList?.addEventListener("click", reload);
   let btnProcRefresh = document.getElementById("procListRefresh");
   btnProcRefresh?.addEventListener("click", reload);
-}
-
-export function setNodeInfo(a: string, n: string) {
-  account = a;
-  node = n;
 }
 
 async function reload(): Promise<void> {
@@ -56,7 +54,14 @@ async function reload(): Promise<void> {
 
   // make list empty
   for (let list of [listByAccount, listByNode]) {
-    Util.makeListEmptyHide(list);
+    UTIL.makeListEmptyHide(list);
+  }
+
+  // make nodeID - name map
+  let nodeList = await command.listNode();
+  let nodeMap = new Map<string, string>();
+  for (let node of nodeList) {
+    nodeMap.set(node.id, node.name);
   }
 
   // get process list
@@ -64,24 +69,28 @@ async function reload(): Promise<void> {
 
   // add list items
   for (let proc of procList) {
-    let content = new Map<string, string | Util.clickEventCB>();
+    let node = proc.runningNodeID;
+    if (nodeMap.has(node)) {
+      node = nodeMap.get(node)!;
+    }
+    let content = new Map<string, string | UTIL.clickEventCB>();
     content.set(".appName", proc.name);
     content.set(".appState", proc.state);
     content.set(".appOwnerAccount", proc.owner);
-    content.set(".appRunningNode", proc.runningNode);
+    content.set(".appRunningNode", node);
     content.set(".appMenuTerminate", () => {
       command.terminateProcess(proc.uuid);
     });
     content.set(".appMenuMigrate", () => {
-      Util.closeModal("procListClose");
-      MI.showMigrateModal(proc.uuid, proc.runningNode);
+      UTIL.closeModal("procListClose");
+      MI.showMigrateModal(proc.uuid, proc.runningNodeID);
     });
 
     if (proc.owner === account && listByAccount != null) {
-      Util.addListItem(listByAccount, temp, content);
+      UTIL.addListItem(listByAccount, temp, content);
     }
-    if (proc.runningNode === node && listByNode != null) {
-      Util.addListItem(listByNode, temp, content);
+    if (proc.runningNodeID === nodeID && listByNode != null) {
+      UTIL.addListItem(listByNode, temp, content);
     }
   }
 
@@ -91,7 +100,7 @@ async function reload(): Promise<void> {
     spinner?.classList.add("d-none");
   }
   for (let list of [listByAccount, listByNode]) {
-    Util.makeListShow(list);
+    UTIL.makeListShow(list);
   }
 
   processing = false;

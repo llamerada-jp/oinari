@@ -30,7 +30,7 @@ type connectRequest struct {
 
 type connectResponse struct {
 	Account string `json:"account"`
-	Node    string `json:"node"`
+	NodeID  string `json:"nodeID"`
 }
 
 type closeRequest struct {
@@ -48,7 +48,7 @@ func InitSystemHandler(nodeMpx crosslink.MultiPlexer, sysCtrl controller.SystemC
 		}
 		writer.ReplySuccess(connectResponse{
 			Account: sysCtrl.GetAccount(),
-			Node:    sysCtrl.GetNode(),
+			NodeID:  sysCtrl.GetNode(),
 		})
 	}))
 

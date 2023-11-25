@@ -15,17 +15,19 @@
  */
 
 import * as LS from "../local_settings";
+import * as POS from "../position";
 import * as UTIL from "./util";
+import { faker } from "@faker-js/faker";
 
-const settingsButtonID = "settingsButton";
-const settingsCloseButtonID = "settingsClose";
-
-const deviceNameElID = "settingsDeviceName";
-const viewTypeElID = "settingsViewType";
-const localStoreInputID = "settingsLocalStore";
-const syncGNSSInputID = "settingsSyncGNSS";
-const spawnPositionInputID = "settingsSpawnPosition";
-const allowApplicationsInputID = "settingsAllowApplications";
+const initSettingsDivID = "initSettings";
+const deviceNameGenButtonID = "initSettingsDeviceNameRandom";
+const deviceNameInputID = "initSettingsDeviceName";
+const viewTypeInputID = "initSettingsViewType";
+const localStoreInputID = "initSettingsLocalStore";
+const syncGNSSInputID = "initSettingsSyncGNSS";
+const spawnPositionInputID = "initSettingsSpawnPosition";
+const allowApplicationsInputID = "initSettingsAllowApplications";
+const submitButtonID = "initSettingsSubmit";
 
 let localSettings: LS.LocalSettings;
 let onSubmit: () => void;
@@ -35,20 +37,25 @@ export function init(ls: LS.LocalSettings, submit: () => void): void {
   onSubmit = submit;
 
   initElements();
+  loadSettings();
+  updateInputs();
 }
 
-export function initElements(): void {
-  let settingsButton = document.getElementById(settingsButtonID);
-  settingsButton?.addEventListener("click", loadSettings);
-  
-  let settingsCloseButton = document.getElementById(settingsCloseButtonID);
-  settingsCloseButton?.addEventListener("click", ()=>{
-    storeSettings();
-    onSubmit();
-  });
-
+function initElements(): void {
+  let deviceNameGenButton = document.getElementById(deviceNameGenButtonID);
+  let deviceNameInput = document.getElementById(deviceNameInputID) as HTMLInputElement;
   let syncGNSSInput = document.getElementById(syncGNSSInputID) as HTMLInputElement;
   let spawnPositionInput = document.getElementById(spawnPositionInputID) as HTMLInputElement;
+  let submitButton = document.getElementById(submitButtonID) as HTMLButtonElement;
+
+  deviceNameInput?.addEventListener("change", () => {
+    updateInputs();
+  });
+
+  deviceNameGenButton?.addEventListener("click", () => {
+    deviceNameInput!.value = faker.animal.type();
+    deviceNameInput!.dispatchEvent(new Event("change"));
+  });
 
   if (!!navigator.geolocation) {
     syncGNSSInput?.addEventListener("click", () => {
@@ -64,14 +71,53 @@ export function initElements(): void {
     syncGNSSInput!.checked = false;
     spawnPositionInput!.disabled = false;
   }
+
+  submitButton?.addEventListener("click", () => {
+    if (!validateInputs()) {
+      throw new Error("could submit with invalid inputs.");
+    }
+    storeSettings();
+    onSubmit();
+  });
+}
+
+export function show(): void {
+  loadSettings();
+  let initSettingsEl = document.getElementById(initSettingsDivID);
+  initSettingsEl!.classList.remove("d-none");
+}
+
+export function hide(): void {
+  let initSettingsEl = document.getElementById(initSettingsDivID);
+  initSettingsEl!.classList.add("d-none");
+}
+
+function updateInputs(): void {
+  let submitButton = document.getElementById(submitButtonID) as HTMLButtonElement;
+
+  if (validateInputs()) {
+    submitButton!.disabled = false;
+  } else {
+    submitButton!.disabled = true;
+  }
+}
+
+function validateInputs(): boolean {
+  let deviceNameInput = document.getElementById(deviceNameInputID) as HTMLInputElement;
+
+  if (deviceNameInput!.value.length === 0) {
+    return false;
+  }
+
+  return true;
 }
 
 function loadSettings(): void {
-  let deviceNameEl = document.getElementById(deviceNameElID) as HTMLInputElement;
-  deviceNameEl!.innerText = localSettings.deviceName;
+  let deviceNameInput = document.getElementById(deviceNameInputID) as HTMLInputElement;
+  deviceNameInput!.value = localSettings.deviceName;
 
-  let viewTypeEl = document.getElementById(viewTypeElID) as HTMLSelectElement;
-  viewTypeEl!.innerText = localSettings.viewType;
+  let viewTypeInput = document.getElementById(viewTypeInputID) as HTMLSelectElement;
+  UTIL.setSelectValue(viewTypeInput!, localSettings.viewType)
 
   let localStoreInput = document.getElementById(localStoreInputID) as HTMLInputElement;
   localStoreInput!.checked = localSettings.enableLocalStore;
@@ -89,6 +135,12 @@ function loadSettings(): void {
 }
 
 function storeSettings(): void {
+  let deviceNameInput = document.getElementById(deviceNameInputID) as HTMLInputElement;
+  localSettings.deviceName = deviceNameInput!.value;
+
+  let viewTypeInput = document.getElementById(viewTypeInputID) as HTMLInputElement;
+  localSettings.viewType = viewTypeInput!.value;
+
   let localStoreInput = document.getElementById(localStoreInputID) as HTMLInputElement;
   localSettings.enableLocalStore = localStoreInput!.checked;
 

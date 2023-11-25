@@ -15,11 +15,11 @@
  */
 
 import * as CL from "../crosslink";
+import * as POS from "../position";
 
 import * as THREE from "three";
 import { ThreeJSOverlayView } from "@googlemaps/three";
 import { Keys } from "../keys";
-
 
 interface ApplyObjectsRequest {
   objects: Object[];
@@ -111,7 +111,12 @@ interface Vec3 {
   z: number;
 }
 
+const mapElID = "map";
+
 let overlayView: OinariOverlayView;
+let position: POS.Position;
+let hadReady: boolean = false;
+let onReady: () => void;
 
 const mapOptions = {
   tilt: 67.5,
@@ -125,9 +130,33 @@ const mapOptions = {
   keyboardShortcuts: false,
 };
 
-export function init(frontendMpx: CL.MultiPlexer): void {
+export function init(frontendMpx: CL.MultiPlexer, pos: POS.Position, ready: () => void): void {
   initHandler(frontendMpx);
-  overlayView = new OinariOverlayView();
+  position = pos;
+
+  if (hadReady) {
+    ready();
+    start();
+  } else {
+    onReady = ready;
+  }
+}
+
+export function readyMap(): void {
+  hadReady = true;
+  if (onReady) {
+    onReady();
+    start();
+  }
+}
+
+export function show(): void {
+  let mapEl = document.getElementById(mapElID);
+  mapEl!.classList.remove("d-none");
+}
+
+function start(): void {
+  overlayView = new OinariOverlayView(position);
 }
 
 function initHandler(frontendMpx: CL.MultiPlexer): void {
@@ -150,7 +179,13 @@ class OinariOverlayView extends ThreeJSOverlayView {
   objects: Map<string, ObjectWrapper>;
   scene: THREE.Scene;
 
-  constructor() {
+  constructor(position: POS.Position) {
+    let coordinate = position.coordinate;
+    mapOptions.center = {
+      lat: coordinate.latitude,
+      lng: coordinate.longitude,
+    };
+
     const mapDiv = document.getElementById("map") as HTMLElement;
     const map = new google.maps.Map(mapDiv, mapOptions);
     const scene = new THREE.Scene();
