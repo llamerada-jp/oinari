@@ -1,6 +1,8 @@
 {
   "documentRoot": "./dist",
   "templateRoot": "./templates",
+  "termsURL": "./terms.html",
+  "privacyURL": "./privacy.html",
   "secretParameter": "./secrets.json",
   "headers": {
     "Cross-Origin-Resource-Policy": "cross-origin"

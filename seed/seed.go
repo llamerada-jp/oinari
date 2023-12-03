@@ -53,7 +53,10 @@ type SeedInfo struct {
 	CommitHash string `json:"commitHash"`
 }
 
-func Init(mux *http.ServeMux, secret map[string]string, templatePath string, withoutSignin bool, seedInfo *SeedInfo) error {
+func Init(mux *http.ServeMux, secret map[string]string,
+	templatePath string, withoutSignin bool, seedInfo *SeedInfo,
+	termsURL, privacyURL string) error {
+
 	templateRoot = templatePath
 
 	// setup cookie store
@@ -91,14 +94,19 @@ func Init(mux *http.ServeMux, secret map[string]string, templatePath string, wit
 				return
 			}
 
+			embed := map[string]any{
+				"terms_url":   termsURL,
+				"privacy_url": privacyURL,
+			}
+
 			if session.IsNew {
-				writePage(w, "signin.html", nil)
+				writePage(w, "signin.html", embed)
 				return
 			}
 
 			_, ok := session.Values["auth_type"]
 			if !ok {
-				writePage(w, "signin.html", nil)
+				writePage(w, "signin.html", embed)
 				return
 			}
 

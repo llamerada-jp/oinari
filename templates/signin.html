@@ -23,13 +23,6 @@
       align-items: center;
     }
 
-    #signin {
-      width: 100%;
-      max-width: 330px;
-      padding: 15px;
-      margin: auto;
-    }
-
     .btn {
       /* cancel capitalize */
       text-transform: unset !important;
@@ -44,24 +37,30 @@
     }
 
     #logo {
-      aspect-ratio: 1/1;
-      max-height: 30%;
-      height: auto;
+      height: 96px;
       width: 96px;
     }
     -->
   </style>
 </head>
 
-<body>
-  <div id="signin" class="text-center">
-    <img src="img/logo.png" class="mx-auto d-block pixelscaled" id="logo">
-    <br>
-    <h1>Oinari</h1>
-    <div>
-    <a href="./signin_github" role="button" class="btn text-white" data-mdb-ripple-init
-      style="background-color: #333333;">
-      <i class="fab fa-github"></i>&nbsp;&nbsp;Sign in with Github</a>
+<body class="text-center">
+  <div class="cover-container d-flex h-100 mx-auto flex-column">
+    <div class="mb-auto"></div>
+    <div class="inner cover">
+      <img src="img/logo.png" class="mx-auto d-block pixelscaled" id="logo">
+      <br>
+      <h1>Oinari</h1>
+      <div>
+        <a href="./signin_github" role="button" class="btn text-white" data-mdb-ripple-init
+          style="background-color: #333333;">
+          <i class="fab fa-github"></i>&nbsp;&nbsp;Sign in with Github</a>
+      </div>
+    </div>
+    <div class="mt-auto mb-4">
+      <a href="{{.terms_url}}" target="_blank" rel="noopener noreferrer" class="link-secondary">Terms of use</a>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <a href="{{.privacy_url}}" target="_blank" rel="noopener noreferrer" class="link-secondary">Privacy policy</a>
     </div>
   </div>
 </body>
