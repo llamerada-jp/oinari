@@ -120,6 +120,14 @@ export class Commands {
     return this.cl.call(CL_SYSTEM_PATH + "/disconnect", {});
   }
 
+  setConfiguration(key: string, value: string): void {
+    this.cl.call(CL_SYSTEM_PATH + "/config", {
+      key: key,
+      value: value,
+    } as Config);
+  }
+
+
   // lat: latitude[degree]
   // lon: longitude[degree]
   // alt: altitude[meter]
@@ -189,12 +197,5 @@ export class Commands {
     return this.cl.call(CL_RESOURCE_PATH + "/deletePod", {
       uuid: uuid,
     } as DeletePodRequest);
-  }
-
-  setConfiguration(key: string, value: string): void {
-    this.cl.call(CL_RESOURCE_PATH + "/config", {
-      key: key,
-      value: value,
-    } as Config);
   }
 }

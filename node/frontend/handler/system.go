@@ -16,6 +16,8 @@
 package command
 
 import (
+	"log"
+
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	"github.com/llamerada-jp/oinari/node/controller"
 )
@@ -36,7 +38,7 @@ type connectResponse struct {
 type closeRequest struct {
 }
 
-func InitSystemHandler(nodeMpx crosslink.MultiPlexer, sysCtrl controller.SystemController) error {
+func InitSystemHandler(nodeMpx crosslink.MultiPlexer, appFilter controller.ApplicationFilter, sysCtrl controller.SystemController) error {
 	mpx := crosslink.NewMultiPlexer()
 	nodeMpx.SetHandler("system", mpx)
 
@@ -60,6 +62,19 @@ func InitSystemHandler(nodeMpx crosslink.MultiPlexer, sysCtrl controller.SystemC
 		}
 		writer.ReplySuccess(nil)
 	}))
+
+	mpx.SetHandler("config", crosslink.NewFuncHandler(
+		func(param *configRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+			switch param.Key {
+			case "allowApplications":
+				appFilter.SetFilter(param.Value)
+			case "samplePrefix":
+				appFilter.SetSamplePrefix(param.Value)
+			default:
+				log.Fatalln("unknown config key: ", param.Key)
+			}
+			writer.ReplySuccess(nil)
+		}))
 
 	return nil
 }

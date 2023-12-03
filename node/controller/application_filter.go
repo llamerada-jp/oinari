@@ -22,6 +22,7 @@ import (
 )
 
 type ApplicationFilter interface {
+	SetAccount(account string)
 	SetFilter(filter string)
 	SetSamplePrefix(prefix string)
 	IsAllowed(pod *coreAPI.Pod) bool
@@ -33,11 +34,14 @@ type applicationFilterImpl struct {
 	account      string
 }
 
-func NewApplicationFilter(account string) ApplicationFilter {
+func NewApplicationFilter() ApplicationFilter {
 	return &applicationFilterImpl{
-		filter:  "samples",
-		account: account,
+		filter: "samples",
 	}
+}
+
+func (impl *applicationFilterImpl) SetAccount(account string) {
+	impl.account = account
 }
 
 func (impl *applicationFilterImpl) SetFilter(filter string) {

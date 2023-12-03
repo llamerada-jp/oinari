@@ -45,13 +45,15 @@ type nodeAgent struct {
 	cl      crosslink.Crosslink
 	nodeMpx crosslink.MultiPlexer
 	apiMpx  crosslink.MultiPlexer
+
 	// frontend driver
 	frontendDriver fd.FrontendDriver
 
 	// colonio
 	col colonio.Colonio
 	// system
-	sysCtrl controller.SystemController
+	sysCtrl   controller.SystemController
+	appFilter controller.ApplicationFilter
 }
 
 func (na *nodeAgent) initCrosslink() error {
@@ -77,6 +79,8 @@ func (na *nodeAgent) initColonio() error {
 func (na *nodeAgent) initSystem() error {
 	na.frontendDriver = fd.NewFrontendDriver(na.cl)
 	na.sysCtrl = controller.NewSystemController(na.col, na, na.frontendDriver)
+	na.appFilter = controller.NewApplicationFilter()
+
 	go func() {
 		err := na.sysCtrl.Start(na.ctx)
 		if err != nil {
@@ -84,7 +88,7 @@ func (na *nodeAgent) initSystem() error {
 		}
 	}()
 
-	fh.InitSystemHandler(na.nodeMpx, na.sysCtrl)
+	fh.InitSystemHandler(na.nodeMpx, na.appFilter, na.sysCtrl)
 	return nil
 }
 
@@ -124,6 +128,9 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	account := na.sysCtrl.GetAccount()
 	localNid := na.col.GetLocalNid()
 
+	// application filter
+	na.appFilter.SetAccount(account)
+
 	// CRI
 	cri := cri.NewCRI(na.cl)
 
@@ -141,9 +148,8 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	coreDriverManager := core.NewCoreDriverManager(na.cl)
 
 	// controllers
-	appFilter := controller.NewApplicationFilter(account)
 	accountCtrl := controller.NewAccountController(account, localNid, accountKvs)
-	containerCtrl := controller.NewContainerController(localNid, cri, appFilter, podKvs, recordKVS, coreDriverManager)
+	containerCtrl := controller.NewContainerController(localNid, cri, na.appFilter, podKvs, recordKVS, coreDriverManager)
 	nodeCtrl := controller.NewNodeController(ctx, na.col, messaging, account, nodeName, nodeType)
 	podCtrl := controller.NewPodController(podKvs, messaging, localNid)
 	objectCtrl := threeController.NewObjectController(objectKVS, na.frontendDriver, threeMessaging, nodeCtrl, podCtrl)
@@ -161,7 +167,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	// handlers
 	cmh.InitMessagingHandler(na.col, containerCtrl, nodeCtrl)
 	tmh.InitMessagingHandler(na.col, objectCtrl)
-	fh.InitResourceHandler(na.nodeMpx, appFilter, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
+	fh.InitResourceHandler(na.nodeMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
 	ch.InitHandler(na.apiMpx, coreDriverManager, cri, podKvs, recordKVS)
 	th.InitHandler(na.apiMpx, objectCtrl)
 

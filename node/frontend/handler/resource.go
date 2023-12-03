@@ -65,7 +65,7 @@ type configRequest struct {
 	Value string `json:"value"`
 }
 
-func InitResourceHandler(nodeMpx crosslink.MultiPlexer, appFilter controller.ApplicationFilter, accCtrl controller.AccountController, containerCtrl controller.ContainerController, nodeCtrl controller.NodeController, podCtrl controller.PodController) {
+func InitResourceHandler(nodeMpx crosslink.MultiPlexer, accCtrl controller.AccountController, containerCtrl controller.ContainerController, nodeCtrl controller.NodeController, podCtrl controller.PodController) {
 	mpx := crosslink.NewMultiPlexer()
 	nodeMpx.SetHandler("resource", mpx)
 
@@ -211,19 +211,6 @@ func InitResourceHandler(nodeMpx crosslink.MultiPlexer, appFilter controller.App
 			if err != nil {
 				writer.ReplyError(err.Error())
 				return
-			}
-			writer.ReplySuccess(nil)
-		}))
-
-	mpx.SetHandler("config", crosslink.NewFuncHandler(
-		func(param *configRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-			switch param.Key {
-			case "allowApplications":
-				appFilter.SetFilter(param.Value)
-			case "samplePrefix":
-				appFilter.SetSamplePrefix(param.Value)
-			default:
-				log.Fatalln("unknown config key: ", param.Key)
 			}
 			writer.ReplySuccess(nil)
 		}))
