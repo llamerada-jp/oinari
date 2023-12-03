@@ -152,7 +152,8 @@ export class Commands {
     });
   }
 
-  runApplication(url: string, postfix?: string | undefined): Promise<ApplicationDigest> {
+  runApplication(url: string): Promise<ApplicationDigest> {
+    let app: ApplicationDefinition;
     return fetch(url).then((response: Response) => {
       if (!response.ok) {
         throw new Error("Application could not start: " + response.statusText);
@@ -160,14 +161,28 @@ export class Commands {
       return response.json();
 
     }).then((a) => {
-      let app = a as ApplicationDefinition
+      app = a as ApplicationDefinition
+
+      return this.cl.call(CL_RESOURCE_PATH + "/listPod", {});
+
+    }).then((l) => {
+      let pods = l as ListPodResponse;
+      let podNames = pods.digests.map((d) => d.name);
+
       for (let container of app.spec.containers) {
         container.image = new URL(container.image, url).toString();
       }
       let name = app.metadata.name;
-      if (postfix != null) {
-        name = name + postfix;
+
+      // put a number suffix if the name is already used.
+      if (podNames.includes(name)) {
+        let i = 1;
+        while (podNames.includes(name + "-" + i)) {
+          i++;
+        }
+        name = name + "-" + i;          
       }
+
       return this.cl.call(CL_RESOURCE_PATH + "/createPod", {
         name: name,
         spec: app.spec
