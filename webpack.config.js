@@ -2,9 +2,9 @@ module.exports = {
   mode: "development",
 
   entry: {
-    index: "./src/index.ts",
-    container: "./src/container/index.ts",
-    controller: "./src/controller/index.ts",
+    oinari: "./src/main.ts",
+    container: "./src/container/main.ts",
+    controller: "./src/controller/main.ts",
     test: "./src/test.ts"
   },
   output: {
