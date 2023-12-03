@@ -21,14 +21,16 @@ import * as CRI from "./cri";
 import * as LS from "./local_settings";
 import * as POS from "./position";
 import * as UI_AL from "./ui/app_loader";
+import * as UI_INFO from "./ui/device_info";
 import * as UI_IS from "./ui/init_settings";
 import * as UI_MAP from "./ui/map";
 import * as UI_MI from "./ui/migrate";
 import * as UI_PL from "./ui/proc_list";
 import * as UI_SE from "./ui/settings";
-import * as UI_SI from "./ui/system_info";
 
 declare function ColonioModule(): Promise<any>;
+
+let controllerWorker: Worker;
 
 let rootMpx: CL.MultiPlexer;
 let frontendMpx: CL.MultiPlexer;
@@ -38,6 +40,8 @@ let command: CM.Commands;
 let localSettings: LS.LocalSettings;
 let position: POS.Position;
 
+let intervalForCheckSeed: number = 0;
+
 export function main(account: string): void {
   // start controller
   initController().then(() => {
@@ -45,6 +49,18 @@ export function main(account: string): void {
 
     localSettings = new LS.LocalSettings(command, account);
     position = new POS.Position(command);
+
+    return checkSeedInfo();
+
+  }).then((checkResult) => {
+    if (!checkResult) {
+      return;
+    }
+
+    // check seed info every 1 minute
+    intervalForCheckSeed = window.setInterval(() => {
+      checkSeedInfo();
+    }, 60000);
 
     // init ui after window loaded
     if (document.readyState !== "loading") {
@@ -64,11 +80,11 @@ export function readyMap(): void {
 
 async function initController(): Promise<void> {
   // start controller worker
-  const controller = new Worker("controller.js");
+  controllerWorker = new Worker("controller.js");
 
   // setup crosslink
   rootMpx = new CL.MultiPlexer();
-  crosslink = new CL.Crosslink(new CL.WorkerImpl(controller), rootMpx);
+  crosslink = new CL.Crosslink(new CL.WorkerImpl(controllerWorker), rootMpx);
 
   // setup CRI
   CRI.initCRI(crosslink, rootMpx);
@@ -170,13 +186,59 @@ function startLandscape(connectInfo: CM.ConnectInfo): void {
       position.setCoordinateByStr(localSettings.position);
     }
   });
-  UI_SI.init(localSettings, position);
+  UI_INFO.init(localSettings, position);
 
   UI_MAP.init(frontendMpx, position, () => {
     // show
-    UI_SI.show();
+    UI_INFO.show();
     UI_MAP.show();
     let menuEl = document.getElementById("menu") as HTMLDivElement;
     menuEl.classList.remove("d-none");
   });
+}
+
+async function terminate(): Promise<void> {
+  if (intervalForCheckSeed != 0) {
+    window.clearInterval(intervalForCheckSeed);
+  }
+
+  await command.disconnect();
+  controllerWorker.terminate();
+  CRI.terminate();
+}
+
+let seedUtime: string = "";
+let nodeCommitHash: string = "";
+
+async function checkSeedInfo(): Promise<boolean> {
+  if (nodeCommitHash == "") {
+    let nodeInfo = await command.getNodeInfo();
+    nodeCommitHash = nodeInfo.commitHash;
+  }
+
+  let response = await fetch("/seed_info.json")
+  if (!response.ok || response.status != 200) {
+    console.error("Failed to fetch seed info: " + response.statusText);
+    // It may be due to network conditions. 
+    // Returns true since there is no explicit need to stop.
+    return true;
+  }
+
+  let seedInfo = await response.json() as {
+    utime: string
+    commitHash: string
+  };
+
+  if (seedUtime == "") {
+    seedUtime = seedInfo.utime;
+  }
+
+  if (seedUtime != seedInfo.utime || nodeCommitHash != seedInfo.commitHash) {
+    const button = document.getElementById("checkSeedButton") as HTMLButtonElement;
+    button.dispatchEvent(new Event("click"));
+    await terminate();
+    return false;
+  }
+
+  return true;
 }

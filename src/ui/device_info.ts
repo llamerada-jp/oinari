@@ -17,10 +17,10 @@
 import * as LS from "../local_settings";
 import * as POS from "../position";
 
-const systemInfoElID = "systemInfo";
-const accountElID = "systemInfoAccount";
-const deviceNameElID = "systemInfoDeviceName";
-const positionElID = "systemInfoPosition";
+const deviceInfoElID = "deviceInfo";
+const accountElID = "deviceInfoAccount";
+const deviceNameElID = "deviceInfoDeviceName";
+const positionElID = "deviceInfoPosition";
 
 export function init(localSettings: LS.LocalSettings, position: POS.Position): void {
   setText(accountElID, localSettings.account);
@@ -32,7 +32,7 @@ export function init(localSettings: LS.LocalSettings, position: POS.Position): v
 }
 
 export function show(): void {
-  let el = document.getElementById(systemInfoElID) as HTMLElement;
+  let el = document.getElementById(deviceInfoElID) as HTMLElement;
   el.classList.remove("d-none");
 }
 

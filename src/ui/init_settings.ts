@@ -15,7 +15,6 @@
  */
 
 import * as LS from "../local_settings";
-import * as POS from "../position";
 import * as UTIL from "./util";
 import { faker } from "@faker-js/faker";
 

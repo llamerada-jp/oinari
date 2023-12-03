@@ -6,6 +6,10 @@ const CL_RESOURCE_PATH: string = "node/resource";
 export const CONFIG_KEY_ALLOW_APPLICATIONS: string = "allowApplications";
 export const CONFIG_KEY_SAMPLE_PREFIX: string = "samplePrefix";
 
+export interface NodeInfo {
+  commitHash: string
+}
+
 export interface ConnectInfo {
   account: string
   nodeID: string
@@ -106,6 +110,10 @@ export class Commands {
     this.cl = cl;
   }
 
+  getNodeInfo(): Promise<NodeInfo> {
+    return this.cl.call(CL_SYSTEM_PATH + "/info", {}) as Promise<NodeInfo>;
+  }
+
   connect(url: string, account: string, token: string, nodeName: string, nodeType: string): Promise<ConnectInfo> {
     return this.cl.call(CL_SYSTEM_PATH + "/connect", {
       url: url,
@@ -126,7 +134,6 @@ export class Commands {
       value: value,
     } as Config);
   }
-
 
   // lat: latitude[degree]
   // lon: longitude[degree]

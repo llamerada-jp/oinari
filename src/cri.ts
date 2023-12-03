@@ -430,6 +430,24 @@ function initHandler(rootMpx: CL.MultiPlexer) {
   });
 }
 
+export function terminate() {
+  // delete all containers
+  for (const [_, container] of containers) {
+    container.stop();
+    container.cleanup();
+  }
+  containers.clear();
+
+  // delete all sandboxes
+  for (const [_, sandbox] of sandboxes) {
+    sandbox.stop();
+  }
+  sandboxes.clear();
+
+  // delete all images
+  images.clear();
+}
+
 // interfaces for CRI
 
 interface RunPodSandboxRequest {
@@ -656,10 +674,6 @@ interface RemoveImageRequest {
 interface RemoveImageResponse {
   // nothing
 }
-
-// interfaces for communicate with worker 
-
-
 
 function runPodSandbox(request: RunPodSandboxRequest): RunPodSandboxResponse {
   // check duplication of name/namespace or uid
@@ -988,7 +1002,7 @@ function pullImage(request: PullImageRequest): Promise<PullImageResponse> {
   }
 
   return new Promise<PullImageResponse>((resolve, reject) => {
-    let intervalId = setInterval(() => {
+    let intervalId = window.setInterval(() => {
       if (image == null) {
         clearInterval(intervalId);
         reject("logic error on pullImage");
@@ -1013,7 +1027,7 @@ function pullImage(request: PullImageRequest): Promise<PullImageResponse> {
           break;
       }
 
-      clearInterval(intervalId);
+      window.clearInterval(intervalId);
     }, 1000);
   });
 }

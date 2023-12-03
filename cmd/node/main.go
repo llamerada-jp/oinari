@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"log"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
@@ -56,6 +57,9 @@ type nodeAgent struct {
 	appFilter controller.ApplicationFilter
 }
 
+//go:embed commit_hash.txt
+var commitHash []byte
+
 func (na *nodeAgent) initCrosslink() error {
 	rootMpx := crosslink.NewMultiPlexer()
 	na.nodeMpx = crosslink.NewMultiPlexer()
@@ -88,7 +92,10 @@ func (na *nodeAgent) initSystem() error {
 		}
 	}()
 
-	fh.InitSystemHandler(na.nodeMpx, na.appFilter, na.sysCtrl)
+	fh.InitSystemHandler(na.nodeMpx, na.appFilter, na.sysCtrl, &fh.Info{
+		CommitHash: string(commitHash),
+	})
+
 	return nil
 }
 

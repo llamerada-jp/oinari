@@ -24,6 +24,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/llamerada-jp/colonio/go/service"
 	"github.com/llamerada-jp/oinari/seed"
@@ -31,6 +32,9 @@ import (
 )
 
 var (
+	//go:embed commit_hash.txt
+	commitHash []byte
+
 	configPath string
 
 	// run mode
@@ -74,7 +78,11 @@ var cmd = &cobra.Command{
 		}
 
 		// setup seed handler
-		if err := seed.Init(sv.Mux, secret, config.TemplateRoot, withoutSignin); err != nil {
+		seedInfo := &seed.SeedInfo{
+			CommitHash: string(commitHash),
+			Utime:      time.Now().Format(time.RFC3339),
+		}
+		if err := seed.Init(sv.Mux, secret, config.TemplateRoot, withoutSignin, seedInfo); err != nil {
 			return err
 		}
 

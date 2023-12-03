@@ -12,11 +12,14 @@ build: $(COLONIO_FILES) $(OINARI_FILES) build-go build-ts
 
 .PHONY: build-go
 build-go: $(GO_FILES) go.mod go.sum
-	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/node/*.go
-	GOOS=js GOARCH=wasm go build -o ./dist/test/exit.wasm ./cmd/app/exit/*.go
-	GOOS=js GOARCH=wasm go build -o ./dist/test/fox.wasm ./cmd/app/fox/*.go
-	GOOS=js GOARCH=wasm go build -o ./dist/test/sleep.wasm ./cmd/app/sleep/*.go
-	GOOS=js GOARCH=wasm go build -o ./dist/test/sleep_core.wasm ./cmd/app/sleep_core/*.go
+	git show --format='%H' --no-patch > ./cmd/seed/commit_hash.txt
+	go build -o ./bin/seed ./cmd/seed
+	git show --format='%H' --no-patch > ./cmd/node/commit_hash.txt
+	GOOS=js GOARCH=wasm go build -o ./dist/oinari.wasm ./cmd/node
+	GOOS=js GOARCH=wasm go build -o ./dist/test/exit.wasm ./cmd/app/exit
+	GOOS=js GOARCH=wasm go build -o ./dist/test/fox.wasm ./cmd/app/fox
+	GOOS=js GOARCH=wasm go build -o ./dist/test/sleep.wasm ./cmd/app/sleep
+	GOOS=js GOARCH=wasm go build -o ./dist/test/sleep_core.wasm ./cmd/app/sleep_core
 	GOOS=js GOARCH=wasm go test -o ./dist/test/test_crosslink.wasm -c ./lib/crosslink/
 	## should edit TESTS@src/test.ts to run test build by wasm
 	GOOS=js GOARCH=wasm go test -o ./dist/test/test_api_core.wasm -c ./api/core/

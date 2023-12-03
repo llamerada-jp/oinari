@@ -1,5 +1,8 @@
 /.vscode/
+/bin/seed
 /build/
+/cmd/node/commit_hash.txt
+/cmd/seed/commit_hash.txt
 /coverage
 /dist/*.map
 /dist/*.wasm
@@ -16,10 +19,10 @@
 /dist/wasm_exec.js
 /docs/.hugo_build.lock
 /docs/resources/_gen/
-/secrets.json
 /localhost.crt
 /localhost.key
 /node_modules
+/secrets.json
 /src/colonio_go.d.ts
 /src/colonio.d.ts
 /src/colonio.js

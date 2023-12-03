@@ -399,21 +399,41 @@
     </div>
   </div>
 
-  <div id="systemInfo" class="position-absolute fixed-top d-none">
-    <!-- System info -->
+  <!-- show node information on top left of the screen -->
+  <div id="deviceInfo" class="position-absolute fixed-top d-none">
     <div class="container-fluid d-flex flex-row justify-content-end">
       <div class="d-flex flex-column">
         <div>
           <i class="bi-person-circle"></i>&nbsp;
-          <span id="systemInfoAccount"></span>
+          <span id="deviceInfoAccount"></span>
         </div>
         <div>
           <i class="bi-laptop"></i>&nbsp;
-          <span id="systemInfoDeviceName"></span>
+          <span id="deviceInfoDeviceName"></span>
         </div>
         <div>
           <i class="bi-pin-map"></i>&nbsp;
-          <span id="systemInfoPosition"></span>
+          <span id="deviceInfoPosition"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal to let page reload for user -->
+  <button type="button" class="d-none" id="checkSeedButton" data-mdb-toggle="modal" data-mdb-target="#checkSeed">work
+    around</button>
+  <div class="modal fade" id="checkSeed" data-mdb-backdrop="static" data-mdb-keyboard="false" tabindex="-1"
+    aria-labelledby="checkSeedLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="checkSeedLabel">Please reload your browser</h5>
+        </div>
+        <div class="modal-body">
+          The system version has increased or the seed has been rebooted. Please reload this page and reload the
+          program.
+          If the dialog still appears after reloading the page, there may be a remaining cache. Please try clearing the
+          cache.
         </div>
       </div>
     </div>
@@ -423,48 +443,22 @@
   </div>
 
   <script src="https://maps.googleapis.com/maps/api/js?key={{.google_api_key}}&callback=readyMap&v=beta" defer></script>
-  <script>
-    function readyMap() {
-      window.Oinari.readyMap();
-    }
-  </script>
 
   <script>
     // to use mdb forms
     document.querySelectorAll('.form-outline').forEach((formOutline) => {
       new mdb.Input(formOutline).update();
     });
+  </script>
 
-    // for debug, autoreload if update the server files
-    fetch("/utime").then((res) => {
-      if (!res.ok) {
-        return null;
-      }
-      return res.text();
-    }).then(UTIME => {
-      if (UTIME === null) return;
-      console.log("autoreload on", UTIME);
-
-      setInterval(() => {
-        fetch("/utime").then((res) => {
-          if (!res.ok) {
-            return null;
-          }
-          return res.text();
-        }).then(utime => {
-          if (utime !== null && utime !== UTIME) {
-            location.reload();
-          }
-        });
-      }, 1000);
-    });
+  <script>
+    function readyMap() {
+      window.Oinari.readyMap();
+    }
 
     // call Oinari main
     window.Oinari.main("{{.account}}");
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
-    crossorigin="anonymous"></script>
 </body>
 
 </html>

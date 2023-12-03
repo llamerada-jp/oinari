@@ -38,9 +38,17 @@ type connectResponse struct {
 type closeRequest struct {
 }
 
-func InitSystemHandler(nodeMpx crosslink.MultiPlexer, appFilter controller.ApplicationFilter, sysCtrl controller.SystemController) error {
+type Info struct {
+	CommitHash string `json:"commitHash"`
+}
+
+func InitSystemHandler(nodeMpx crosslink.MultiPlexer, appFilter controller.ApplicationFilter, sysCtrl controller.SystemController, info *Info) error {
 	mpx := crosslink.NewMultiPlexer()
 	nodeMpx.SetHandler("system", mpx)
+
+	mpx.SetHandler("info", crosslink.NewFuncHandler(func(_ *interface{}, tags map[string]string, writer crosslink.ResponseWriter) {
+		writer.ReplySuccess(info)
+	}))
 
 	mpx.SetHandler("connect", crosslink.NewFuncHandler(func(request *connectRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		err := sysCtrl.Connect(request.Url, request.Account, request.Token, request.NodeName, request.NodeType)

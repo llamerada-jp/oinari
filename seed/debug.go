@@ -31,11 +31,6 @@ import (
 const rootPath = "."
 
 func InitDebug(mux *http.ServeMux) error {
-	utime := time.Now().Format(time.RFC3339)
-	mux.HandleFunc("/utime", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(utime))
-	})
-
 	dfw, err := newDebugFileWatcher(rootPath)
 	if err != nil {
 		return err

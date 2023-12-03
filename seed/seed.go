@@ -48,7 +48,12 @@ var (
 	oauth2Github *oauth2.Config
 )
 
-func Init(mux *http.ServeMux, secret map[string]string, templatePath string, withoutSignin bool) error {
+type SeedInfo struct {
+	Utime      string `json:"utime"`
+	CommitHash string `json:"commitHash"`
+}
+
+func Init(mux *http.ServeMux, secret map[string]string, templatePath string, withoutSignin bool, seedInfo *SeedInfo) error {
 	templateRoot = templatePath
 
 	// setup cookie store
@@ -67,6 +72,10 @@ func Init(mux *http.ServeMux, secret map[string]string, templatePath string, wit
 		RedirectURL:  "https://localhost:8080/callback_github",
 		Scopes:       []string{"user"},
 	}
+
+	mux.HandleFunc("/seed_info.json", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, seedInfo)
+	})
 
 	// setup handlers
 	mux.HandleFunc("/index.html", func(w http.ResponseWriter, r *http.Request) {
