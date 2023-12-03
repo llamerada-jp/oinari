@@ -38,9 +38,9 @@ var (
 	configPath string
 
 	// run mode
-	debug         bool
-	test          bool
-	withoutSignin bool
+	debug        bool
+	test         bool
+	withoutLogin bool
 )
 
 type oinariConfig struct {
@@ -85,7 +85,7 @@ var cmd = &cobra.Command{
 			CommitHash: string(commitHash),
 			Utime:      time.Now().Format(time.RFC3339),
 		}
-		if err := seed.Init(sv.Mux, secret, config.TemplateRoot, withoutSignin, seedInfo,
+		if err := seed.Init(sv.Mux, secret, config.TemplateRoot, withoutLogin, seedInfo,
 			config.TermsURL, config.PrivacyURL); err != nil {
 
 			return err
@@ -155,7 +155,7 @@ func init() {
 	flags.StringVarP(&configPath, "config", "c", "./oinari.json", "config file path")
 	flags.BoolVarP(&debug, "debug", "d", false, "run debug mode")
 	flags.BoolVarP(&test, "test", "t", false, "run test using headless browser")
-	flags.BoolVarP(&withoutSignin, "without-signin", "w", false, "run without signin")
+	flags.BoolVarP(&withoutLogin, "without-login", "w", false, "run without login")
 }
 
 func main() {

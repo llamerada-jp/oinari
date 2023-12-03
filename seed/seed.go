@@ -54,7 +54,7 @@ type SeedInfo struct {
 }
 
 func Init(mux *http.ServeMux, secret map[string]string,
-	templatePath string, withoutSignin bool, seedInfo *SeedInfo,
+	templatePath string, withoutLogin bool, seedInfo *SeedInfo,
 	termsURL, privacyURL string) error {
 
 	templateRoot = templatePath
@@ -86,7 +86,7 @@ func Init(mux *http.ServeMux, secret map[string]string,
 		accountID := "no name"
 
 		// check session
-		if !withoutSignin {
+		if !withoutLogin {
 			session, err := store.Get(r, SESSION_KEY)
 			if err != nil {
 				log.Printf("failed to get session: %v", err)
@@ -100,13 +100,13 @@ func Init(mux *http.ServeMux, secret map[string]string,
 			}
 
 			if session.IsNew {
-				writePage(w, "signin.html", embed)
+				writePage(w, "entry.html", embed)
 				return
 			}
 
 			_, ok := session.Values["auth_type"]
 			if !ok {
-				writePage(w, "signin.html", embed)
+				writePage(w, "entry.html", embed)
 				return
 			}
 
@@ -121,7 +121,7 @@ func Init(mux *http.ServeMux, secret map[string]string,
 		})
 	})
 
-	mux.HandleFunc("/signin_github", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/login_github", func(w http.ResponseWriter, r *http.Request) {
 		session := sessions.NewSession(store, SESSION_KEY)
 
 		// create new state string
@@ -130,7 +130,7 @@ func Init(mux *http.ServeMux, secret map[string]string,
 
 		}
 		state := base64.StdEncoding.EncodeToString(binaryData)
-		session.Values["signin_github_state"] = state
+		session.Values["login_github_state"] = state
 		session.Save(r, w)
 
 		url := oauth2Github.AuthCodeURL(state)
@@ -151,7 +151,7 @@ func Init(mux *http.ServeMux, secret map[string]string,
 		}
 
 		// check state
-		expectedState, ok := session.Values["signin_github_state"]
+		expectedState, ok := session.Values["login_github_state"]
 		if !ok {
 			log.Printf("failed to get state")
 			writeErrorPage(w, http.StatusInternalServerError)
@@ -194,7 +194,7 @@ func Init(mux *http.ServeMux, secret map[string]string,
 		http.Redirect(w, r, "./index.html", http.StatusTemporaryRedirect)
 	})
 
-	mux.HandleFunc("/signout", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 		session, err := store.Get(r, SESSION_KEY)
 		if err != nil {
 			log.Printf("failed to get session: %v", err)
