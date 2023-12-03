@@ -112,29 +112,37 @@
   <!-- Menu on bottom -->
   <nav id="menu" class="navbar fixed-bottom navbar-light bg-light d-none">
     <div class="container-fluid">
-      <a href="./signout" role="button" class="btn btn-light">
-        <i class="fas fa-door-open fa-2x"></i>
-      </a>
+      <div class="d-flex flex-row">
+        <button type="button" class="btn btn-light btn-floating mx-1" data-mdb-toggle="collapse"
+          data-mdb-target="#subMenu">
+          <i class="fas fa-bars fa-2x"></i>
+        </button>
+        <div class="collapse" id="subMenu">
+          <div class="mx-1" style="position: fixed;">
+            <a href="./signout" role="button" class="btn btn-light btn-floating mx-1">
+              <i class="fas fa-door-open fa-2x"></i>
+            </a>
+            <button type="button" class="btn btn-light btn-floating mx-1" id="settingsButton" data-mdb-toggle="modal"
+              data-mdb-target="#modalSettings">
+              <i class="fas bi-gear fa-2x"></i>
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div class="d-flex align-items-center">
-        <button type="button" class="btn btn-light" id="loadAppButton" data-mdb-toggle="modal"
+        <button type="button" class="btn btn-light btn-floating mx-1" id="loadAppButton" data-mdb-toggle="modal"
           data-mdb-target="#modalLoadApp">
           <i class="fas bi-box-seam fa-2x"></i>
         </button>
-        <button type="button" class="btn btn-light" id="procListButton" data-mdb-toggle="modal"
+        <button type="button" class="btn btn-light btn-floating mx-1" id="procListButton" data-mdb-toggle="modal"
           data-mdb-target="#modalProcList">
           <i class="fas bi-compass fa-2x"></i>
-        </button>
-        <button type="button" class="btn btn-light" id="settingsButton" data-mdb-toggle="modal"
-          data-mdb-target="#modalSettings">
-          <i class="fas bi-gear fa-2x"></i>
         </button>
       </div>
 
       <!-- putting dummy to keep balance -->
-      <a href="#" role="button" class="btn invisible">
-        <i class="fas fa-door-open fa-2x"></i>
-      </a>
+      <button type="button" class="btn btn-light btn-floating mx-1 invisible"></button>
     </div>
   </nav>
 
