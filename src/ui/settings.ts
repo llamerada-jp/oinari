@@ -17,8 +17,8 @@
 import * as LS from "../local_settings";
 import * as UTIL from "./util";
 
-const settingsButtonID = "settingsButton";
-const settingsCloseButtonID = "settingsClose";
+const settingsLinkID = "settingsLink";
+const settingsSubmitButtonID = "settingsSubmit";
 
 const deviceNameElID = "settingsDeviceName";
 const viewTypeElID = "settingsViewType";
@@ -38,11 +38,11 @@ export function init(ls: LS.LocalSettings, submit: () => void): void {
 }
 
 export function initElements(): void {
-  let settingsButton = document.getElementById(settingsButtonID);
+  let settingsButton = document.getElementById(settingsLinkID);
   settingsButton?.addEventListener("click", loadSettings);
-  
-  let settingsCloseButton = document.getElementById(settingsCloseButtonID);
-  settingsCloseButton?.addEventListener("click", ()=>{
+
+  let settingsCloseButton = document.getElementById(settingsSubmitButtonID);
+  settingsCloseButton?.addEventListener("click", () => {
     storeSettings();
     onSubmit();
   });
@@ -78,6 +78,7 @@ function loadSettings(): void {
 
   let syncGNSSInput = document.getElementById(syncGNSSInputID) as HTMLInputElement;
   syncGNSSInput!.checked = localSettings.enableGNSS;
+  syncGNSSInput!.dispatchEvent(new Event("click"));
 
   if (localSettings.position) {
     let spawnPositionSelect = document.getElementById(spawnPositionInputID) as HTMLSelectElement;
