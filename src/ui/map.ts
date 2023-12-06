@@ -203,6 +203,15 @@ class OinariOverlayView extends ThreeJSOverlayView {
       anchor: { ...mapOptions.center, altitude: 100 },
     });
 
+    position.addListener((coordinate) => {
+      map.setOptions({
+        center: {
+          lat: coordinate.latitude,
+          lng: coordinate.longitude,
+        }
+      });
+    });
+
     this.applyingObjects = new Map<string, Object>();
     this.deletingObjects = new Set<string>();
     this.objects = new Map<string, ObjectWrapper>();

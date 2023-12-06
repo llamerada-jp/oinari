@@ -152,6 +152,7 @@ async function connect(): Promise<void> {
     if (!localSettings.enableGNSS) {
       position.setCoordinateByStr(localSettings.position);
     }
+    position.applyPosition();
 
     // publish node info
     await command.setPublicity(10.0);
@@ -185,6 +186,7 @@ function startLandscape(connectInfo: CM.ConnectInfo): void {
     if (!localSettings.enableGNSS) {
       position.setCoordinateByStr(localSettings.position);
     }
+    position.applyPosition();
   });
   UI_INFO.init(localSettings, position);
 
