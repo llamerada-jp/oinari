@@ -17,7 +17,6 @@ package core
 
 import (
 	"encoding/json"
-	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,9 +47,11 @@ func TestMarshaller(t *testing.T) {
 					Name:      "node name",
 					Timestamp: "2021-04-09T14:00:40+09:00",
 					NodeType:  NodeTypeGrass,
-					Latitude:  35.681236,
-					Longitude: math.NaN(),
-					Altitude:  1.0,
+					Position: &Vector3{
+						X: 123.45678,
+						Y: 35.681236,
+						Z: 1.0,
+					},
 				},
 			},
 		},
@@ -61,9 +62,9 @@ func TestMarshaller(t *testing.T) {
 
 	dst := Account{}
 	assert.NoError(json.Unmarshal(raw, &dst))
-	assert.InDelta(35.681236, dst.State.Nodes["nid"].Latitude, 0.000001)
-	assert.True(math.IsNaN(dst.State.Nodes["nid"].Longitude))
-	assert.InDelta(1.0, dst.State.Nodes["nid"].Altitude, 0.000001)
+	assert.InDelta(123.45678, dst.State.Nodes["nid"].Position.X, 0.000001)
+	assert.InDelta(35.681236, dst.State.Nodes["nid"].Position.Y, 0.000001)
+	assert.InDelta(1.0, dst.State.Nodes["nid"].Position.Z, 0.000001)
 }
 
 func TestAccountValidate(t *testing.T) {

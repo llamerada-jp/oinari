@@ -27,11 +27,9 @@ type ReconcileContainer struct {
 }
 
 type PublishNode struct {
-	Name      string        `json:"name"`
-	ID        string        `json:"id"`
-	Account   string        `json:"account"`
-	NodeType  core.NodeType `json:"nodeType"`
-	Latitude  float64       `json:"latitude"`
-	Longitude float64       `json:"longitude"`
-	Altitude  float64       `json:"altitude"`
+	Name     string        `json:"name"`
+	ID       string        `json:"id"`
+	Account  string        `json:"account"`
+	NodeType core.NodeType `json:"nodeType"`
+	Position *core.Vector3 `json:"position"`
 }

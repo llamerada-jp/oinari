@@ -34,6 +34,14 @@ type UpdateObjectResponse struct {
 	// empty
 }
 
+type GetObjectRequest struct {
+	UUID string `json:"uuid"`
+}
+
+type GetObjectResponse struct {
+	Object *Object `json:"object"`
+}
+
 type DeleteObjectRequest struct {
 	UUID string `json:"uuid"`
 }

@@ -68,13 +68,11 @@ func InitMessagingHandler(col colonio.Colonio, containerCtrl controller.Containe
 			}
 
 			err = nodeCtrl.ReceivePublishingNode(controller.NodeState{
-				Name:      msg.Name,
-				ID:        msg.ID,
-				Account:   msg.Account,
-				NodeType:  msg.NodeType,
-				Latitude:  msg.Latitude,
-				Longitude: msg.Longitude,
-				Altitude:  msg.Altitude,
+				Name:     msg.Name,
+				ID:       msg.ID,
+				Account:  msg.Account,
+				NodeType: msg.NodeType,
+				Position: msg.Position,
 			})
 			if err != nil {
 				log.Printf("failed on NodeController.ReceivePublishingNode: %s", err.Error())

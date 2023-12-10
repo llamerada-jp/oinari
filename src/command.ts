@@ -28,9 +28,7 @@ export interface NodeState {
   id: string
   account: string
   nodeType: string
-  latitude: number | undefined
-  longitude: number | undefined
-  altitude: number | undefined
+  position: Vector3 | null
 }
 
 interface ListNodeResponse {
@@ -104,6 +102,12 @@ interface Config {
   value: string
 }
 
+interface Vector3 {
+  x: number
+  y: number
+  z: number
+}
+
 export class Commands {
   private cl: CL.Crosslink;
   constructor(cl: CL.Crosslink) {
@@ -135,14 +139,12 @@ export class Commands {
     } as Config);
   }
 
-  // lat: latitude[degree]
-  // lon: longitude[degree]
-  // alt: altitude[meter]
-  setPosition(lat: number, lon: number, alt: number): Promise<any> {
+  // position.x: latitude[degree]
+  // position.y: longitude[degree]
+  // position.z: altitude[meter]
+  setPosition(position: Vector3): Promise<any> {
     return this.cl.call(CL_RESOURCE_PATH + "/setNodePosition", {
-      latitude: lat,
-      longitude: lon,
-      altitude: alt,
+      position: position,
     });
   }
 
@@ -187,7 +189,7 @@ export class Commands {
         while (podNames.includes(name + "-" + i)) {
           i++;
         }
-        name = name + "-" + i;          
+        name = name + "-" + i;
       }
 
       return this.cl.call(CL_RESOURCE_PATH + "/createPod", {

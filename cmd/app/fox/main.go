@@ -35,18 +35,34 @@ type fox struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	three  threeLib.ThreeAPI
-	object *threeAPI.ObjectSpec
 
-	ObjectUUID string  `json:"objectUUID"`
-	Latitude   float64 `json:"latitude"`
-	Longitude  float64 `json:"longitude"`
-	Frame      int     `json:"frame"`
+	ObjectUUID string `json:"objectUUID"`
+	Frame      int    `json:"frame"`
 }
 
 var _ oinari.Application = (*fox)(nil)
 
 func (f *fox) Setup(isInitialize bool, record []byte) error {
-	f.object = &threeAPI.ObjectSpec{
+	if isInitialize || record == nil {
+		f.initObject()
+
+	} else {
+		err := json.Unmarshal(record, f)
+		if err != nil {
+			return err
+		}
+	}
+
+	f.start()
+
+	return nil
+}
+
+// create new object
+func (f *fox) initObject() error {
+	var err error
+	// oinari system fill position using default position when create object without specifying to position.
+	f.ObjectUUID, err = f.three.CreateObject("fox", &threeAPI.ObjectSpec{
 		Parts: []*threeAPI.PartSpec{
 			{
 				Name: "sprite",
@@ -94,39 +110,9 @@ func (f *fox) Setup(isInitialize bool, record []byte) error {
 				},
 			},
 		},
-	}
+	})
 
-	if isInitialize || record == nil {
-		f.Latitude = 35.6594945
-		f.Longitude = 139.6999859
-		f.object.Position = &threeAPI.Vector3{
-			X: f.Longitude,
-			Y: f.Latitude,
-			Z: 0,
-		}
-
-		uuid, err := f.three.CreateObject("fox", f.object)
-		if err != nil {
-			return err
-		}
-		f.ObjectUUID = uuid
-
-	} else {
-		err := json.Unmarshal(record, f)
-		if err != nil {
-			return err
-		}
-
-		f.object.Position = &threeAPI.Vector3{
-			X: f.Longitude,
-			Y: f.Latitude,
-			Z: 0,
-		}
-	}
-
-	f.start()
-
-	return nil
+	return err
 }
 
 func (f *fox) Marshal() ([]byte, error) {
@@ -162,16 +148,18 @@ func (f *fox) start() {
 }
 
 func (f *fox) loop() {
-	f.Longitude += rand.Float64() * 0.00001
-	f.Latitude += rand.Float64() * 0.00001
-
-	f.object.Position.X = f.Longitude
-	f.object.Position.Y = f.Latitude
+	// get object to get current position
+	object, err := f.three.GetObject(f.ObjectUUID)
+	if err != nil {
+		fmt.Println("🦊 get object error:", err)
+	}
+	object.Spec.Position.X += rand.Float64() * 0.00001
+	object.Spec.Position.Y += rand.Float64() * 0.00001
 
 	f.Frame++
-	f.object.Maps[0].URLTexture.Offset.X = float64(f.Frame%3) * 0.333333
+	object.Spec.Maps[0].URLTexture.Offset.X = float64(f.Frame%3) * 0.333333
 
-	if err := f.three.UpdateObject(f.ObjectUUID, f.object); err != nil {
+	if err := f.three.UpdateObject(f.ObjectUUID, object.Spec); err != nil {
 		fmt.Println("🦊 update object error:", err)
 	}
 }

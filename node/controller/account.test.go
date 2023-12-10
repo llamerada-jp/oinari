@@ -364,9 +364,11 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 			Name:      "node name",
 			Timestamp: "2023-04-15T17:30:40+09:00",
 			NodeType:  core.NodeTypeServer,
-			Latitude:  35.681167,
-			Longitude: 139.767052,
-			Altitude:  10.0,
+			Position: &core.Vector3{
+				X: 139.767052,
+				Y: 35.681167,
+				Z: 10.0,
+			},
 		})
 
 	data, err := test.impl.accountKvs.Get(account)
@@ -384,9 +386,9 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 	test.Equal("node name", data.State.Nodes[nodeID1].Name)
 	test.Equal("2023-04-15T17:30:40+09:00", data.State.Nodes[nodeID1].Timestamp)
 	test.Equal(core.NodeTypeServer, data.State.Nodes[nodeID1].NodeType)
-	test.Equal(35.681167, data.State.Nodes[nodeID1].Latitude)
-	test.Equal(139.767052, data.State.Nodes[nodeID1].Longitude)
-	test.Equal(10.0, data.State.Nodes[nodeID1].Altitude)
+	test.Equal(35.681167, data.State.Nodes[nodeID1].Position.Y)
+	test.Equal(139.767052, data.State.Nodes[nodeID1].Position.X)
+	test.Equal(10.0, data.State.Nodes[nodeID1].Position.Z)
 
 	/// normal pattern: update exists
 	test.impl.UpdatePodAndNodeState(account,
@@ -405,9 +407,11 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 			Name:      "node name",
 			Timestamp: "2023-04-15T17:30:41+09:00",
 			NodeType:  core.NodeTypeServer,
-			Latitude:  36.681167,
-			Longitude: 140.767052,
-			Altitude:  11.0,
+			Position: &core.Vector3{
+				X: 140.767052,
+				Y: 36.681167,
+				Z: 11.0,
+			},
 		})
 	data, err = test.impl.accountKvs.Get(account)
 	test.NoError(err)
@@ -448,9 +452,11 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 			Name:      "node name 2",
 			Timestamp: "2023-04-15T17:30:41+09:00",
 			NodeType:  core.NodeTypeGrass,
-			Latitude:  37.681167,
-			Longitude: 141.767052,
-			Altitude:  12.0,
+			Position: &core.Vector3{
+				X: 141.767052,
+				Y: 37.681167,
+				Z: 12.0,
+			},
 		})
 	data, err = test.impl.accountKvs.Get(account)
 	test.NoError(err)
@@ -458,12 +464,12 @@ func (test *accountControllerTest) TestUpdatePodAndNodeState() {
 	test.Len(data.State.Nodes, 2)
 	test.Equal("node name", data.State.Nodes[nodeID1].Name)
 	test.Equal(core.NodeTypeServer, data.State.Nodes[nodeID1].NodeType)
-	test.Equal(36.681167, data.State.Nodes[nodeID1].Latitude)
-	test.Equal(140.767052, data.State.Nodes[nodeID1].Longitude)
-	test.Equal(11.0, data.State.Nodes[nodeID1].Altitude)
+	test.Equal(140.767052, data.State.Nodes[nodeID1].Position.X)
+	test.Equal(36.681167, data.State.Nodes[nodeID1].Position.Y)
+	test.Equal(11.0, data.State.Nodes[nodeID1].Position.Z)
 	test.Equal("node name 2", data.State.Nodes[nodeID2].Name)
 	test.Equal(core.NodeTypeGrass, data.State.Nodes[nodeID2].NodeType)
-	test.Equal(37.681167, data.State.Nodes[nodeID2].Latitude)
-	test.Equal(141.767052, data.State.Nodes[nodeID2].Longitude)
-	test.Equal(12.0, data.State.Nodes[nodeID2].Altitude)
+	test.Equal(37.681167, data.State.Nodes[nodeID2].Position.Y)
+	test.Equal(141.767052, data.State.Nodes[nodeID2].Position.X)
+	test.Equal(12.0, data.State.Nodes[nodeID2].Position.Z)
 }

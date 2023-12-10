@@ -112,7 +112,11 @@ async function sidenode(param: SideNodeParam) {
     writer.replySuccess("");
     let command = new CM.Commands(crosslink);
     command.connect("https://localhost:8080/seed", param.account, "", param.nodeName, param.nodeType).then(() => {
-      return command.setPosition(param.latitude, param.longitude, param.altitude);
+      return command.setPosition({
+        x: param.longitude,
+        y: param.latitude,
+        z: param.altitude,
+      });
 
     }).then(() => {
       console.log("STANDBY");

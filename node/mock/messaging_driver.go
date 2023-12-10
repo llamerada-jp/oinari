@@ -26,8 +26,7 @@ import (
 type MessagingRecord struct {
 	DestNodeID         string
 	DestR              float64
-	DestLat            float64
-	DestLon            float64
+	DestPosition       core.Vector3
 	PublishNode        *messaging.PublishNode
 	ReconcileContainer *messaging.ReconcileContainer
 }
@@ -52,22 +51,19 @@ func (md *MessagingDriver) ResetRecord() {
 	md.Records = make([]*MessagingRecord, 0)
 }
 
-func (md *MessagingDriver) PublishNode(r float64, nid, name, account string, nodeType core.NodeType, latitude, longitude, altitude float64) error {
+func (md *MessagingDriver) PublishNode(r float64, nid, name, account string, nodeType core.NodeType, position *core.Vector3) error {
 	md.mutex.Lock()
 	defer md.mutex.Unlock()
 
 	md.Records = append(md.Records, &MessagingRecord{
-		DestR:   r,
-		DestLat: latitude,
-		DestLon: longitude,
+		DestR:        r,
+		DestPosition: *position,
 		PublishNode: &messaging.PublishNode{
-			Name:      name,
-			ID:        nid,
-			Account:   account,
-			NodeType:  nodeType,
-			Latitude:  latitude,
-			Longitude: longitude,
-			Altitude:  altitude,
+			Name:     name,
+			ID:       nid,
+			Account:  account,
+			NodeType: nodeType,
+			Position: position,
 		},
 	})
 

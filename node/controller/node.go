@@ -17,7 +17,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -25,18 +24,16 @@ import (
 	"time"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
-	"github.com/llamerada-jp/oinari/api/core"
+	coreAPI "github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/messaging/driver"
 )
 
 type NodeState struct {
-	Name      string        `json:"name"`
-	ID        string        `json:"id"`
-	Account   string        `json:"account"`
-	NodeType  core.NodeType `json:"nodeType"`
-	Latitude  float64       `json:"latitude"`
-	Longitude float64       `json:"longitude"`
-	Altitude  float64       `json:"altitude"`
+	Name     string           `json:"name"`
+	ID       string           `json:"id"`
+	Account  string           `json:"account"`
+	NodeType coreAPI.NodeType `json:"nodeType"`
+	Position *coreAPI.Vector3 `json:"position,omitempty"`
 }
 
 type NodeRecord struct {
@@ -46,9 +43,10 @@ type NodeRecord struct {
 
 type NodeController interface {
 	GetNid() string
-	GetNodeState() *core.AccountNodeState
+	GetNodeState() *coreAPI.AccountNodeState
 	ReceivePublishingNode(state NodeState) error
-	SetPosition(latitude, longitude, altitude float64) error
+	SetPosition(position *coreAPI.Vector3) error
+	GetPosition() *coreAPI.Vector3
 	SetPublicity(r float64) error
 	ListNode() ([]NodeState, error)
 }
@@ -60,12 +58,10 @@ type nodeControllerImpl struct {
 	account   string
 	nodeID    string
 	nodeName  string
-	nodeType  core.NodeType
+	nodeType  coreAPI.NodeType
 	nodes     map[string]NodeRecord
 	publicity float64
-	latitude  float64
-	longitude float64
-	altitude  float64
+	position  *coreAPI.Vector3
 }
 
 const (
@@ -73,7 +69,7 @@ const (
 	NODE_RECORD_LIFETIME  = 90 * time.Second
 )
 
-func NewNodeController(ctx context.Context, col colonio.Colonio, messaging driver.MessagingDriver, account, nodeName string, nodeType core.NodeType) NodeController {
+func NewNodeController(ctx context.Context, col colonio.Colonio, messaging driver.MessagingDriver, account, nodeName string, nodeType coreAPI.NodeType) NodeController {
 	impl := &nodeControllerImpl{
 		col:       col,
 		messaging: messaging,
@@ -83,9 +79,6 @@ func NewNodeController(ctx context.Context, col colonio.Colonio, messaging drive
 		nodeType:  nodeType,
 		nodes:     make(map[string]NodeRecord),
 		publicity: 0,
-		latitude:  math.NaN(),
-		longitude: math.NaN(),
-		altitude:  math.NaN(),
 	}
 
 	go func() {
@@ -111,13 +104,11 @@ func (impl *nodeControllerImpl) GetNid() string {
 	return impl.nodeID
 }
 
-func (impl *nodeControllerImpl) GetNodeState() *core.AccountNodeState {
-	return &core.AccountNodeState{
-		Name:      impl.nodeName,
-		NodeType:  impl.nodeType,
-		Latitude:  impl.latitude,
-		Longitude: impl.longitude,
-		Altitude:  impl.altitude,
+func (impl *nodeControllerImpl) GetNodeState() *coreAPI.AccountNodeState {
+	return &coreAPI.AccountNodeState{
+		Name:     impl.nodeName,
+		NodeType: impl.nodeType,
+		Position: impl.position,
 	}
 }
 
@@ -133,14 +124,14 @@ func (impl *nodeControllerImpl) ReceivePublishingNode(state NodeState) error {
 	return nil
 }
 
-func (impl *nodeControllerImpl) SetPosition(latitude, longitude, altitude float64) error {
-	if latitude < -90.0 || 90 < latitude {
-		return fmt.Errorf("latitude should between -90.0 and 90deg")
+func (impl *nodeControllerImpl) SetPosition(position *coreAPI.Vector3) error {
+	if position.Y < -90.0 || 90 < position.Y {
+		return fmt.Errorf("Y coordinate (latitude) should between -90.0 and 90deg")
 	}
-	if longitude < -180 || 180 < longitude {
-		return fmt.Errorf("longitude should between -180.0 and 180deg")
+	if position.X < -180 || 180 < position.X {
+		return fmt.Errorf("X coordinate (longitude) should between -180.0 and 180deg")
 	}
-	_, _, err := impl.col.SetPosition(math.Pi*longitude/180.0, math.Pi*latitude/180.0)
+	_, _, err := impl.col.SetPosition(math.Pi*position.X/180.0, math.Pi*position.Y/180.0)
 	if err != nil {
 		return fmt.Errorf("failed to set position of colonio: %w", err)
 	}
@@ -148,11 +139,16 @@ func (impl *nodeControllerImpl) SetPosition(latitude, longitude, altitude float6
 	impl.mtx.Lock()
 	defer impl.mtx.Unlock()
 
-	impl.latitude = latitude
-	impl.longitude = longitude
-	impl.altitude = altitude
+	impl.position = position
 
 	return nil
+}
+
+func (impl *nodeControllerImpl) GetPosition() *coreAPI.Vector3 {
+	impl.mtx.Lock()
+	defer impl.mtx.Unlock()
+
+	return impl.position
 }
 
 func (impl *nodeControllerImpl) SetPublicity(r float64) error {
@@ -195,78 +191,15 @@ func (impl *nodeControllerImpl) publish() error {
 		return nil
 	}
 
-	// skip if latitude and longitude have not set
-	if math.IsNaN(impl.latitude) || math.IsNaN(impl.longitude) {
+	// skip if position have not set
+	if impl.position == nil {
 		return nil
 	}
 
-	err := impl.messaging.PublishNode(impl.publicity, impl.nodeID, impl.nodeName, impl.account, impl.nodeType, impl.latitude, impl.longitude, impl.altitude)
+	err := impl.messaging.PublishNode(impl.publicity, impl.nodeID, impl.nodeName, impl.account, impl.nodeType, impl.position)
 	if err != nil {
 		return fmt.Errorf("failed to publish node info: %w", err)
 	}
 
-	return nil
-}
-
-func (ns NodeState) MarshalJSON() ([]byte, error) {
-	type Alias NodeState
-
-	var lat *float64
-	var lon *float64
-	var alt *float64
-
-	if !math.IsNaN(ns.Latitude) {
-		lat = &ns.Latitude
-	}
-	if !math.IsNaN(ns.Longitude) {
-		lon = &ns.Longitude
-	}
-	if !math.IsNaN(ns.Altitude) {
-		alt = &ns.Altitude
-	}
-
-	return json.Marshal(&struct {
-		Alias
-		AliasLatitude  *float64 `json:"latitude,omitempty"`
-		AliasLongitude *float64 `json:"longitude,omitempty"`
-		AliasAltitude  *float64 `json:"altitude,omitempty"`
-	}{
-		Alias:          (Alias)(ns),
-		AliasLatitude:  lat,
-		AliasLongitude: lon,
-		AliasAltitude:  alt,
-	})
-}
-
-func (ns *NodeState) UnmarshalJSON(b []byte) error {
-	type Alias NodeState
-
-	aux := &struct {
-		*Alias
-		AliasLatitude  *float64 `json:"latitude,omitempty"`
-		AliasLongitude *float64 `json:"longitude,omitempty"`
-		AliasAltitude  *float64 `json:"altitude,omitempty"`
-	}{
-		Alias: (*Alias)(ns),
-	}
-	if err := json.Unmarshal(b, &aux); err != nil {
-		return err
-	}
-
-	if aux.AliasLatitude != nil {
-		ns.Latitude = *aux.AliasLatitude
-	} else {
-		ns.Latitude = math.NaN()
-	}
-	if aux.AliasLongitude != nil {
-		ns.Longitude = *aux.AliasLongitude
-	} else {
-		ns.Longitude = math.NaN()
-	}
-	if aux.AliasAltitude != nil {
-		ns.Altitude = *aux.AliasAltitude
-	} else {
-		ns.Altitude = math.NaN()
-	}
 	return nil
 }

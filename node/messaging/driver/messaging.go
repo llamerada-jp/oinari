@@ -26,7 +26,7 @@ import (
 )
 
 type MessagingDriver interface {
-	PublishNode(r float64, nid, name, account string, nodeType core.NodeType, latitude, longitude, altitude float64) error
+	PublishNode(r float64, nid, name, account string, nodeType core.NodeType, position *core.Vector3) error
 	ReconcileContainer(nid, uuid string) error
 }
 
@@ -56,21 +56,19 @@ func (d *messagingDriverImpl) ReconcileContainer(nid, podUuid string) error {
 	return nil
 }
 
-func (d *messagingDriverImpl) PublishNode(r float64, nid, name, account string, nodeType core.NodeType, latitude, longitude, altitude float64) error {
+func (d *messagingDriverImpl) PublishNode(r float64, nid, name, account string, nodeType core.NodeType, position *core.Vector3) error {
 	raw, err := json.Marshal(messaging.PublishNode{
-		Name:      name,
-		ID:        nid,
-		Account:   account,
-		NodeType:  nodeType,
-		Latitude:  latitude,
-		Longitude: longitude,
-		Altitude:  altitude,
+		Name:     name,
+		ID:       nid,
+		Account:  account,
+		NodeType: nodeType,
+		Position: position,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to marshal publishNode message: %w", err)
 	}
 
-	err = d.colonio.SpreadPost(math.Pi*longitude/180, math.Pi*latitude/180, r, messaging.MessageNamePublishNode, raw, 0)
+	err = d.colonio.SpreadPost(math.Pi*position.X/180, math.Pi*position.Y/180, r, messaging.MessageNamePublishNode, raw, 0)
 	if err != nil {
 		return fmt.Errorf("failed to spread publishNode message: %w", err)
 	}

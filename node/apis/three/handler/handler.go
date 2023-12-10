@@ -21,16 +21,27 @@ import (
 	"github.com/llamerada-jp/oinari/api/three"
 	"github.com/llamerada-jp/oinari/lib/crosslink"
 	coreCtrl "github.com/llamerada-jp/oinari/node/controller"
-	ctrl "github.com/llamerada-jp/oinari/node/controller/three"
+	threeCtrl "github.com/llamerada-jp/oinari/node/controller/three"
 )
 
-func InitHandler(apiMpx crosslink.MultiPlexer, objCtrl ctrl.ObjectController) {
+func InitHandler(apiMpx crosslink.MultiPlexer, nodeCtrl coreCtrl.NodeController, objCtrl threeCtrl.ObjectController) {
 	mpx := crosslink.NewMultiPlexer()
 	apiMpx.SetHandler("three", mpx)
 
 	// CreateObject
 	mpx.SetHandler("createObject", crosslink.NewFuncHandler(func(request *three.CreateObjectRequest, tags map[string]string, writer crosslink.ResponseWriter) {
 		podUUID := tags[coreCtrl.ContainerLabelPodUUID]
+
+		// use system position if position is not specified
+		if request.Spec.Position == nil {
+			pos := nodeCtrl.GetPosition()
+			request.Spec.Position = &three.Vector3{
+				X: pos.X,
+				Y: pos.Y,
+				Z: pos.Z,
+			}
+		}
+
 		uuid, err := objCtrl.Create(request.Name, podUUID, request.Spec)
 		if err != nil {
 			writer.ReplyError(fmt.Sprintf("failed to create object: %s", err.Error()))
@@ -50,6 +61,19 @@ func InitHandler(apiMpx crosslink.MultiPlexer, objCtrl ctrl.ObjectController) {
 			return
 		}
 		writer.ReplySuccess(&three.UpdateObjectResponse{})
+	}))
+
+	// GetObject
+	mpx.SetHandler("getObject", crosslink.NewFuncHandler(func(request *three.GetObjectRequest, tags map[string]string, writer crosslink.ResponseWriter) {
+		podUUID := tags[coreCtrl.ContainerLabelPodUUID]
+		object, err := objCtrl.Get(request.UUID, podUUID)
+		if err != nil {
+			writer.ReplyError(fmt.Sprintf("failed to get object: %s", err.Error()))
+			return
+		}
+		writer.ReplySuccess(&three.GetObjectResponse{
+			Object: object,
+		})
 	}))
 
 	// DeleteObject

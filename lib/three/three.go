@@ -65,6 +65,16 @@ func (impl *threeAPIImpl) UpdateObject(uuid string, spec *api.ObjectSpec) error 
 	return nil
 }
 
+func (impl *threeAPIImpl) GetObject(uuid string) (*api.Object, error) {
+	res, err := callHelper[api.GetObjectRequest, api.GetObjectResponse](impl, "getObject", &api.GetObjectRequest{
+		UUID: uuid,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error on GetObject API: %w", err)
+	}
+	return res.Object, nil
+}
+
 func (impl *threeAPIImpl) DeleteObject(uuid string) error {
 	_, err := callHelper[api.DeleteObjectRequest, api.DeleteObjectResponse](impl, "deleteObject", &api.DeleteObjectRequest{
 		UUID: uuid,

@@ -17,7 +17,6 @@ package kvs
 
 import (
 	"encoding/json"
-	"math"
 
 	"github.com/llamerada-jp/oinari/api/core"
 	"github.com/llamerada-jp/oinari/node/misc"
@@ -153,9 +152,6 @@ func (test *accountKvsTest) TestSet() {
 					Name:      "test-node",
 					NodeType:  core.NodeTypeMobile,
 					Timestamp: "2023-04-15T17:30:40+09:00",
-					Latitude:  math.NaN(),
-					Longitude: math.NaN(),
-					Altitude:  math.NaN(),
 				},
 			},
 		},

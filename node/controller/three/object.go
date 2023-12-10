@@ -30,7 +30,7 @@ import (
 type ObjectController interface {
 	Create(name string, podUUID string, spec *threeAPI.ObjectSpec) (string, error)
 	Update(uuid string, podUUID string, spec *threeAPI.ObjectSpec) error
-	Get(uuid string) (*threeAPI.Object, error)
+	Get(uuid string, podUUID string) (*threeAPI.Object, error)
 	Delete(uuid string, podUUID string) error
 
 	ReceiveSpreadEvent(uuid string) error
@@ -79,7 +79,7 @@ func (impl *objectControllerImpl) Create(name string, podUUID string, spec *thre
 		return "", fmt.Errorf("failed to create object: %w", err)
 	}
 
-	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 100, spec.Position.Y, spec.Position.X); err != nil {
+	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, spec.Position, 100); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", name, obj.Meta.Uuid, err.Error())
 	}
 	// colonio spread post is not send event to myself currently, so call ReceiveSpreadEvent directly.
@@ -108,7 +108,7 @@ func (impl *objectControllerImpl) Update(uuid string, podUUID string, spec *thre
 		return fmt.Errorf("failed to update object: %w", err)
 	}
 
-	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 100, spec.Position.Y, spec.Position.X); err != nil {
+	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, spec.Position, 100); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", obj.Meta.Name, obj.Meta.Uuid, err.Error())
 	}
 	// colonio spread post is not send event to myself currently, so call ReceiveSpreadEvent directly.
@@ -117,10 +117,19 @@ func (impl *objectControllerImpl) Update(uuid string, podUUID string, spec *thre
 	return nil
 }
 
-func (impl *objectControllerImpl) Get(uuid string) (*threeAPI.Object, error) {
+func (impl *objectControllerImpl) Get(uuid string, podUUID string) (*threeAPI.Object, error) {
+	pod, err := impl.podCtrl.GetPodData(podUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pod data: %w", err)
+	}
+
 	obj, err := impl.objectKVS.Get(uuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get object: %w", err)
+	}
+
+	if obj.Meta.Owner != pod.Meta.Owner {
+		return nil, fmt.Errorf("object is not owned by pod owner")
 	}
 
 	return obj, nil
@@ -145,7 +154,7 @@ func (impl *objectControllerImpl) Delete(uuid string, podUUID string) error {
 		return fmt.Errorf("failed to delete object: %w", err)
 	}
 
-	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, 100*2, obj.Spec.Position.Y, obj.Spec.Position.X); err != nil {
+	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, obj.Spec.Position, 100*2); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", obj.Meta.Name, obj.Meta.Uuid, err.Error())
 	}
 	// colonio spread post is not send event to myself currently, so call ReceiveSpreadEvent directly.
@@ -155,7 +164,7 @@ func (impl *objectControllerImpl) Delete(uuid string, podUUID string) error {
 }
 
 func (impl *objectControllerImpl) ReceiveSpreadEvent(uuid string) error {
-	obj, err := impl.Get(uuid)
+	obj, err := impl.objectKVS.Get(uuid)
 	if err != nil {
 		return fmt.Errorf("failed to get object in spreadObject: %s", err.Error())
 	}

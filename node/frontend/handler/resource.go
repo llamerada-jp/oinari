@@ -25,9 +25,7 @@ import (
 )
 
 type setPositionRequest struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Altitude  float64 `json:"altitude"`
+	Position core.Vector3 `json:"position"`
 }
 
 type SetPublicityRequest struct {
@@ -71,7 +69,7 @@ func InitResourceHandler(nodeMpx crosslink.MultiPlexer, accCtrl controller.Accou
 
 	// node resource
 	mpx.SetHandler("setNodePosition", crosslink.NewFuncHandler(func(request *setPositionRequest, tags map[string]string, writer crosslink.ResponseWriter) {
-		err := nodeCtrl.SetPosition(request.Latitude, request.Longitude, request.Altitude)
+		err := nodeCtrl.SetPosition(&request.Position)
 		if err != nil {
 			writer.ReplyError(err.Error())
 			return
@@ -110,13 +108,11 @@ func InitResourceHandler(nodeMpx crosslink.MultiPlexer, accCtrl controller.Accou
 				continue
 			}
 			nodes = append(nodes, controller.NodeState{
-				Name:      state.Name,
-				ID:        nodeID,
-				Account:   account,
-				NodeType:  state.NodeType,
-				Latitude:  state.Latitude,
-				Longitude: state.Longitude,
-				Altitude:  state.Altitude,
+				Name:     state.Name,
+				ID:       nodeID,
+				Account:  account,
+				NodeType: state.NodeType,
+				Position: state.Position,
 			})
 		}
 

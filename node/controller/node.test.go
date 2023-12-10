@@ -41,13 +41,15 @@ func NewNodeControllerTest() suite.TestingSuite {
 	return &nodeControllerTest{
 		col: colonioMock,
 		impl: &nodeControllerImpl{
-			col:       colonioMock,
-			nodeID:    nodeID,
-			nodeName:  nodeName,
-			nodeType:  nodeType,
-			latitude:  12.345,
-			longitude: 67.890,
-			altitude:  10.0,
+			col:      colonioMock,
+			nodeID:   nodeID,
+			nodeName: nodeName,
+			nodeType: nodeType,
+			position: &core.Vector3{
+				X: 67.890,
+				Y: 12.345,
+				Z: 10.0,
+			},
 		},
 	}
 }
@@ -61,20 +63,24 @@ func (test *nodeControllerTest) TestGetNodeState() {
 	test.Equal(nodeName, nodeState.Name)
 	test.Empty(nodeState.Timestamp)
 	test.Equal(nodeType, nodeState.NodeType)
-	test.InDelta(12.345, nodeState.Latitude, 0.0001)
-	test.InDelta(67.890, nodeState.Longitude, 0.0001)
-	test.InDelta(10.0, nodeState.Altitude, 0.0001)
+	test.InDelta(67.890, nodeState.Position.X, 0.0001)
+	test.InDelta(12.345, nodeState.Position.Y, 0.0001)
+	test.InDelta(10.0, nodeState.Position.Z, 0.0001)
 }
 
 func (test *nodeControllerTest) TestSetPosition() {
-	test.NoError(test.impl.SetPosition(34.345, 88.890, 11.0))
+	test.NoError(test.impl.SetPosition(&core.Vector3{
+		X: 88.890,
+		Y: 34.345,
+		Z: 11.0,
+	}))
 	test.InDelta(88.890*math.Pi/180, test.col.PositionX, 0.0001)
 	test.InDelta(34.345*math.Pi/180, test.col.PositionY, 0.0001)
 
 	nodeState := test.impl.GetNodeState()
-	test.InDelta(34.345, nodeState.Latitude, 0.0001)
-	test.InDelta(88.890, nodeState.Longitude, 0.0001)
-	test.InDelta(11.0, nodeState.Altitude, 0.0001)
+	test.InDelta(88.890, nodeState.Position.X, 0.0001)
+	test.InDelta(34.345, nodeState.Position.Y, 0.0001)
+	test.InDelta(11.0, nodeState.Position.Z, 0.0001)
 }
 
 // TODO add tests

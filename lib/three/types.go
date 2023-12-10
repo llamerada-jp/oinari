@@ -30,5 +30,6 @@ type ThreeAPI interface {
 
 	CreateObject(name string, spec *api.ObjectSpec) (string, error)
 	UpdateObject(uuid string, spec *api.ObjectSpec) error
+	GetObject(uuid string) (*api.Object, error)
 	DeleteObject(uuid string) error
 }

@@ -18,9 +18,7 @@ package core
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"math"
 
 	"golang.org/x/exp/slices"
 )
@@ -66,73 +64,7 @@ type AccountNodeState struct {
 	Name      string   `json:"name"`
 	Timestamp string   `json:"timestamp"`
 	NodeType  NodeType `json:"nodeType"`
-	// To deal with NaN, use custom marshaller. Empty value is NaN instead of zero.
-	Latitude  float64 `json:"-"`
-	Longitude float64 `json:"-"`
-	Altitude  float64 `json:"-"`
-}
-
-func (ns AccountNodeState) MarshalJSON() ([]byte, error) {
-	type Alias AccountNodeState
-
-	var lat *float64
-	var lon *float64
-	var alt *float64
-
-	if !math.IsNaN(ns.Latitude) {
-		lat = &ns.Latitude
-	}
-	if !math.IsNaN(ns.Longitude) {
-		lon = &ns.Longitude
-	}
-	if !math.IsNaN(ns.Altitude) {
-		alt = &ns.Altitude
-	}
-
-	return json.Marshal(&struct {
-		Alias
-		AliasLatitude  *float64 `json:"latitude,omitempty"`
-		AliasLongitude *float64 `json:"longitude,omitempty"`
-		AliasAltitude  *float64 `json:"altitude,omitempty"`
-	}{
-		Alias:          (Alias)(ns),
-		AliasLatitude:  lat,
-		AliasLongitude: lon,
-		AliasAltitude:  alt,
-	})
-}
-
-func (ns *AccountNodeState) UnmarshalJSON(b []byte) error {
-	type Alias AccountNodeState
-
-	aux := &struct {
-		*Alias
-		AliasLatitude  *float64 `json:"latitude,omitempty"`
-		AliasLongitude *float64 `json:"longitude,omitempty"`
-		AliasAltitude  *float64 `json:"altitude,omitempty"`
-	}{
-		Alias: (*Alias)(ns),
-	}
-	if err := json.Unmarshal(b, &aux); err != nil {
-		return err
-	}
-
-	if aux.AliasLatitude != nil {
-		ns.Latitude = *aux.AliasLatitude
-	} else {
-		ns.Latitude = math.NaN()
-	}
-	if aux.AliasLongitude != nil {
-		ns.Longitude = *aux.AliasLongitude
-	} else {
-		ns.Longitude = math.NaN()
-	}
-	if aux.AliasAltitude != nil {
-		ns.Altitude = *aux.AliasAltitude
-	} else {
-		ns.Altitude = math.NaN()
-	}
-	return nil
+	Position  *Vector3 `json:"position,omitempty"`
 }
 
 // use sha256 hash as account's uuid

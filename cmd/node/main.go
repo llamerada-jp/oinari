@@ -176,7 +176,7 @@ func (na *nodeAgent) OnConnect(nodeName string, nodeType api.NodeType) error {
 	tmh.InitMessagingHandler(na.col, objectCtrl)
 	fh.InitResourceHandler(na.nodeMpx, accountCtrl, containerCtrl, nodeCtrl, podCtrl)
 	ch.InitHandler(na.apiMpx, coreDriverManager, cri, podKvs, recordKVS)
-	th.InitHandler(na.apiMpx, objectCtrl)
+	th.InitHandler(na.apiMpx, nodeCtrl, objectCtrl)
 
 	return nil
 }

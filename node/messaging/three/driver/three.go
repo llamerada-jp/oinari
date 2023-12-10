@@ -21,11 +21,12 @@ import (
 	"math"
 
 	"github.com/llamerada-jp/colonio/go/colonio"
+	threeAPI "github.com/llamerada-jp/oinari/api/three"
 	messaging "github.com/llamerada-jp/oinari/node/messaging/three"
 )
 
 type ThreeMessagingDriver interface {
-	SpreadObject(uuid string, r, latitude, longitude float64) error
+	SpreadObject(uuid string, position *threeAPI.Vector3, r float64) error
 }
 
 type threeMessagingDriverImpl struct {
@@ -38,7 +39,7 @@ func NewThreeMessagingDriver(col colonio.Colonio) ThreeMessagingDriver {
 	}
 }
 
-func (impl *threeMessagingDriverImpl) SpreadObject(uuid string, r, latitude, longitude float64) error {
+func (impl *threeMessagingDriverImpl) SpreadObject(uuid string, position *threeAPI.Vector3, r float64) error {
 	raw, err := json.Marshal(messaging.SpreadObject{
 		UUID: uuid,
 	})
@@ -46,7 +47,7 @@ func (impl *threeMessagingDriverImpl) SpreadObject(uuid string, r, latitude, lon
 		return fmt.Errorf("failed to marshal: %w", err)
 	}
 
-	err = impl.col.SpreadPost(math.Pi*longitude/180.0, math.Pi*latitude/180.0, r, messaging.MessageNameSpreadObject, raw, 0)
+	err = impl.col.SpreadPost(math.Pi*position.X/180.0, math.Pi*position.Y/180.0, r, messaging.MessageNameSpreadObject, raw, 0)
 	if err != nil {
 		return fmt.Errorf("failed to spread %s message: %w", messaging.MessageNameSpreadObject, err)
 	}

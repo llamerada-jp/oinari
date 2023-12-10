@@ -63,9 +63,15 @@ async function reload(): Promise<void> {
     content.set(".nodeName", node.name);
     content.set(".nodeID", node.id);
     content.set(".nodeType", node.nodeType);
-    content.set(".nodeLatitude", (node.latitude == null ? "-" : node.latitude.toString()));
-    content.set(".nodeLongitude", (node.longitude == null ? "-" : node.longitude.toString()));
-    content.set(".nodeAltitude", (node.altitude == null ? "-" : node.altitude.toString()));
+    if (node.position) {
+      content.set(".nodeLatitude", node.position.y.toString());
+      content.set(".nodeLongitude", node.position.x.toString());
+      content.set(".nodeAltitude", node.position.z.toString());
+    } else {
+      content.set(".nodeLatitude", "-");
+      content.set(".nodeLongitude", "-");
+      content.set(".nodeAltitude", "-");
+    }
     if (node.id === runningNode) {
       content.set(".nodeMemo", "The application is running on this node.");
     } else {

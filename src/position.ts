@@ -42,7 +42,11 @@ export class Position {
   }
 
   applyPosition(): void {
-    this.cmd.setPosition(this._coordinate.latitude, this._coordinate.longitude, 0);
+    this.cmd.setPosition({
+      x: this._coordinate.longitude,
+      y: this._coordinate.latitude,
+      z: this._coordinate.altitude,
+    });
     for (let listener of this.listeners) {
       listener(this._coordinate);
     }
