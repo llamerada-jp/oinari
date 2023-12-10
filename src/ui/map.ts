@@ -56,7 +56,11 @@ interface PartSpec {
 }
 
 interface PartBaseSpec {
-  scale: Vec3;
+  scale: {
+    default: Vec3;
+    portrait: Vec3;
+    landscape: Vec3;
+  };
 }
 
 interface SpriteSpec extends PartBaseSpec {
@@ -350,7 +354,13 @@ class ObjectWrapper extends THREE.Group {
     }
 
     if (part.sprite.scale !== undefined) {
-      sprite.scale.set(part.sprite.scale.x, part.sprite.scale.y, part.sprite.scale.z);
+      let scale = part.sprite.scale.landscape;
+      if (!scale) {
+        scale = part.sprite.scale.default;
+      }
+      if (scale && scale.x !== 0 && scale.y !== 0 && scale.z !== 0) {
+        sprite.scale.set(scale.x, scale.y, scale.z);
+      }
     }
   }
 

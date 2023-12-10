@@ -23,6 +23,9 @@ import (
 const (
 	ResourceTypeThreeObject = core.ResourceType("object")
 
+	ScaleDefault   = "default"
+	ScaleLandscape = "landscape"
+
 	// constant values for three.js
 	// see: https://github.com/mrdoob/three.js/blob/master/src/constants.js
 
@@ -56,7 +59,7 @@ type PartSpec struct {
 }
 
 type PartBaseSpec struct {
-	Scale *Vector3 `json:"scale,omitempty"`
+	Scale map[string]*Vector3 `json:"scale"`
 }
 
 /*

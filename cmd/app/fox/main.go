@@ -68,10 +68,12 @@ func (f *fox) initObject() error {
 				Name: "sprite",
 				Sprite: &threeAPI.SpriteSpec{
 					PartBaseSpec: threeAPI.PartBaseSpec{
-						Scale: &threeAPI.Vector3{
-							X: 100 / 3,
-							Y: 100,
-							Z: 1,
+						Scale: map[string]*threeAPI.Vector3{
+							threeAPI.ScaleDefault: {
+								X: 100 / 3,
+								Y: 100,
+								Z: 1,
+							},
 						},
 					},
 					Material: "matFox",
