@@ -54,8 +54,7 @@ type SeedInfo struct {
 }
 
 func Init(mux *http.ServeMux, secret map[string]string,
-	templatePath string, withoutLogin bool, seedInfo *SeedInfo,
-	termsURL, privacyURL string) error {
+	templatePath string, withoutLogin bool, seedInfo *SeedInfo) error {
 
 	templateRoot = templatePath
 
@@ -94,10 +93,7 @@ func Init(mux *http.ServeMux, secret map[string]string,
 				return
 			}
 
-			embed := map[string]any{
-				"terms_url":   termsURL,
-				"privacy_url": privacyURL,
-			}
+			embed := map[string]any{}
 
 			if session.IsNew {
 				writePage(w, "entry.html", embed)

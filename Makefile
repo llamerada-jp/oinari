@@ -4,7 +4,7 @@ COLONIO_BRANCH := main
 COLONIO_FILES := dist/colonio.js dist/colonio_go.js dist/colonio.wasm
 GO_FILES := $(shell find . -name *.go | grep -v ./build/)
 TS_FILES := $(shell find ./src/ -name *.ts) src/colonio.d.ts src/colonio_go.d.ts src/keys.ts
-OINARI_FILES := dist/wasm_exec.js dist/404.html dist/error.html
+OINARI_FILES := dist/wasm_exec.js
 MAP_FILES := dist/colonio.wasm.map dist/colonio_go.js.map
 
 .PHONY: build
@@ -52,9 +52,6 @@ test: build generate-cert
 	sudo sysctl -w net.core.rmem_max=2500000
 	npm t
 	go run ./cmd/seed --test
-
-dist/404.html: src/404.html secrets.json
-	go run ./cmd/tool template -i src/404.html -v secrets.json > $@
   
 dist/colonio.js: build/colonio/output/colonio.js
 	cp $< $@
@@ -70,9 +67,6 @@ dist/colonio_go.js: build/colonio/src/js/colonio_go.js
 
 dist/colonio_go.js.map: build/colonio/src/js/colonio_go.js.map
 	cp $< $@
-
-dist/error.html: src/error.html secrets.json
-	go run ./cmd/tool template -i src/error.html -v secrets.json > $@
 
 dist/wasm_exec.js: $(shell go env GOROOT)/misc/wasm/wasm_exec.js
 	cp $< $@

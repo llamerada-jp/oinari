@@ -48,9 +48,6 @@ type oinariConfig struct {
 
 	TemplateRoot    string `json:"templateRoot"`
 	SecretParameter string `json:"secretParameter"`
-
-	TermsURL   string `json:"termsURL"`
-	PrivacyURL string `json:"privacyURL"`
 }
 
 var cmd = &cobra.Command{
@@ -85,8 +82,7 @@ var cmd = &cobra.Command{
 			CommitHash: string(commitHash),
 			Utime:      time.Now().Format(time.RFC3339),
 		}
-		if err := seed.Init(sv.Mux, secret, config.TemplateRoot, withoutLogin, seedInfo,
-			config.TermsURL, config.PrivacyURL); err != nil {
+		if err := seed.Init(sv.Mux, secret, config.TemplateRoot, withoutLogin, seedInfo); err != nil {
 
 			return err
 		}

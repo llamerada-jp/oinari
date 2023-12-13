@@ -6,12 +6,10 @@
 /coverage
 /dist/*.map
 /dist/*.wasm
-/dist/404.html
 /dist/colonio_go.js
 /dist/colonio.js
 /dist/container.js
 /dist/controller.js
-/dist/error.html
 /dist/oinari.js
 /dist/test/*.map
 /dist/test/*.wasm
