@@ -1,5 +1,6 @@
 SHELL := /bin/bash -o pipefail
 
+BUILD_TYPE ?= Debug
 COLONIO_BRANCH := main
 COLONIO_FILES := dist/colonio.js dist/colonio_go.js dist/colonio.wasm
 GO_FILES := $(shell find . -name *.go | grep -v ./build/)
@@ -39,7 +40,7 @@ setup:
 	then git clone -b $(COLONIO_BRANCH) --depth=1 https://github.com/llamerada-jp/colonio.git build/colonio; \
 	else ln -s $${COLONIO_DEV_PATH} build/colonio; \
 	fi
-	$(MAKE) -C build/colonio build BUILD_TYPE=Debug
+	$(MAKE) -C build/colonio build BUILD_TYPE=$(BUILD_TYPE)
 	npm install	
 
 .PHONY: s

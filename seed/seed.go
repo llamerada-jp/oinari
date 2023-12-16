@@ -53,7 +53,7 @@ type SeedInfo struct {
 	CommitHash string `json:"commitHash"`
 }
 
-func Init(mux *http.ServeMux, secret map[string]string,
+func Init(mux *http.ServeMux, secret map[string]string, homeURL,
 	templatePath string, withoutLogin bool, seedInfo *SeedInfo) error {
 
 	templateRoot = templatePath
@@ -142,7 +142,7 @@ func Init(mux *http.ServeMux, secret map[string]string,
 		}
 
 		if session.IsNew {
-			http.Redirect(w, r, "https://localhost:8080/index.html", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, homeURL, http.StatusTemporaryRedirect)
 			return
 		}
 
@@ -187,19 +187,19 @@ func Init(mux *http.ServeMux, secret map[string]string,
 
 		log.Printf("sign-in success GitHub:%s from:%s", *user.Login, r.RemoteAddr)
 
-		http.Redirect(w, r, "./index.html", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, homeURL, http.StatusTemporaryRedirect)
 	})
 
 	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 		session, err := store.Get(r, SESSION_KEY)
 		if err != nil {
 			log.Printf("failed to get session: %v", err)
-			http.Redirect(w, r, "./index.html", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, homeURL, http.StatusTemporaryRedirect)
 			return
 		}
 
 		if session.IsNew {
-			http.Redirect(w, r, "./index.html", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, homeURL, http.StatusTemporaryRedirect)
 			return
 		}
 
@@ -213,7 +213,7 @@ func Init(mux *http.ServeMux, secret map[string]string,
 		session.Options.MaxAge = -1
 		session.Save(r, w)
 
-		http.Redirect(w, r, "./index.html", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, homeURL, http.StatusTemporaryRedirect)
 	})
 
 	return nil

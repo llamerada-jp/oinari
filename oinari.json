@@ -1,5 +1,6 @@
 {
   "documentRoot": "./dist",
+  "homeURL": "./index.html",
   "templateRoot": "./templates",
   "secretParameter": "./secrets.json",
   "headers": {
