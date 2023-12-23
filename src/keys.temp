@@ -1,0 +1,4 @@
+export const Keys = {
+  googleApiKey: "{{.google_api_key}}",
+  googleMapID: "{{.google_map_id}}",
+};

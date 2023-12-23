@@ -1,0 +1,22 @@
+[
+  {
+    "name": "test: exit",
+    "description": "This application will be exit immediately.",
+    "url": "/test/exit.json"
+  },
+  {
+    "name": "test: sleep",
+    "description": "Wait process infinity.",
+    "url": "/test/sleep.json"
+  },
+  {
+    "name": "demo: sleep using core API",
+    "description": "Wait process infinity.",
+    "url": "/test/sleep_core.json"
+  },
+  {
+    "name": "demo: running fox",
+    "description": "born fox around you",
+    "url": "/test/fox.json"
+  }
+]

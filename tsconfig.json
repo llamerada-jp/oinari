@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "strict": true,
+    "lib": [
+      "ES2020",
+      "ES2021.WeakRef",
+      "DOM",
+      "webworker"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ]
+}

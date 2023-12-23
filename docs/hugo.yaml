@@ -1,0 +1,19 @@
+baseURL: 'https://www.oinari.app/'
+title: 'Oinari'
+theme: 'hugo-book'
+
+enableGitInfo: true
+
+languageCode: 'en-us'
+
+menu:
+  after:
+  - name: 'Github'
+    url: 'https://github.com/llamerada-jp/oinari'
+    weight: 10
+
+params:
+  BookTheme: 'auto'
+  BookMenuBundle: '/menu'
+  BookRepo: https://github.com/llamerada-jp/oinari/docs
+  customCss: 'css/custom.css'
