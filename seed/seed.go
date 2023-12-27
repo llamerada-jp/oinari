@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 
 	"net/http"
+	"net/url"
 
 	"html/template"
 
@@ -53,7 +54,7 @@ type SeedInfo struct {
 	CommitHash string `json:"commitHash"`
 }
 
-func Init(mux *http.ServeMux, secret map[string]string, homeURL,
+func Init(mux *http.ServeMux, secret map[string]string, rootURL, homeURL,
 	templatePath string, withoutLogin bool, seedInfo *SeedInfo) error {
 
 	templateRoot = templatePath
@@ -66,12 +67,16 @@ func Init(mux *http.ServeMux, secret map[string]string, homeURL,
 	store := sessions.NewCookieStore(cookieKeyPair)
 	store.Options.HttpOnly = true
 
+	redirectURL, err := url.JoinPath(rootURL, "callback_github")
+	if err != nil {
+		return fmt.Errorf("failed to generate oauth callback url: %w", err)
+	}
 	// setup oauth
 	oauth2Github = &oauth2.Config{
 		ClientID:     secret[SECRET_KEY_GITHUB_CLIENT_ID],
 		ClientSecret: secret[SECRET_KEY_GITHUB_CLIENT_SECRET],
 		Endpoint:     endpoints.GitHub,
-		RedirectURL:  "https://localhost:8080/callback_github",
+		RedirectURL:  redirectURL,
 		Scopes:       []string{"user"},
 	}
 
@@ -163,7 +168,7 @@ func Init(mux *http.ServeMux, secret map[string]string, homeURL,
 		code := r.URL.Query().Get("code")
 		tok, err := oauth2Github.Exchange(context.Background(), code)
 		if err != nil {
-			log.Printf("unable to exchange code for token")
+			log.Printf("unable to exchange code for token: %v", err)
 			writeErrorPage(w, http.StatusInternalServerError)
 			return
 		}

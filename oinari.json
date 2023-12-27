@@ -1,6 +1,7 @@
 {
   "documentRoot": "./dist",
-  "homeURL": "./index.html",
+  "rootURL": "https://localhost:8080/",
+  "homeURL": "https://localhost:8080/index.html",
   "templateRoot": "./templates",
   "secretParameter": "./secrets.json",
   "headers": {

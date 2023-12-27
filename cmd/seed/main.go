@@ -46,6 +46,7 @@ var (
 type oinariConfig struct {
 	service.Config
 
+	RootURL         string `json:"rootURL"`
 	HomeURL         string `json:"homeURL"`
 	TemplateRoot    string `json:"templateRoot"`
 	SecretParameter string `json:"secretParameter"`
@@ -83,7 +84,8 @@ var cmd = &cobra.Command{
 			CommitHash: string(commitHash),
 			Utime:      time.Now().Format(time.RFC3339),
 		}
-		if err := seed.Init(sv.Mux, secret, config.HomeURL, config.TemplateRoot, withoutLogin, seedInfo); err != nil {
+		if err := seed.Init(sv.Mux, secret, config.RootURL, config.HomeURL,
+			filepath.Join(path, config.TemplateRoot), withoutLogin, seedInfo); err != nil {
 
 			return err
 		}
