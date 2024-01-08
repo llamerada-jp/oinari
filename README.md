@@ -10,7 +10,9 @@ Prepare keys for embedding and build this project.
 $ cat secrets.json
 {
     "cookie_key_pair": "<random base64 encoded key for cookie>",
-    "google_api_key": "<google api key>",
+    "github_client_id": "<client id of github oauth>",
+    "github_client_secret": "<client secret of GitHub application>",
+    "google_api_key": "<google api key of GitHub application>",
     "google_map_id": "<ID of google map>"
 }
 

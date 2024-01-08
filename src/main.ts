@@ -139,7 +139,7 @@ async function connect(): Promise<void> {
 
   try {
     let connectInfo = await command.connect(
-      "https://localhost:8080/seed",
+      location.protocol + "//" + location.host + "/seed",
       localSettings.account,
       "",
       localSettings.deviceName,
