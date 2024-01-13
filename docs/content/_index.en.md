@@ -1,3 +1,8 @@
+---
+title: Welcome
+type: docs
+---
+
 # Oinari(オイナリ)
 
 ## Overview
@@ -7,13 +12,11 @@ Applications running on Oinari run on the Nodes that are part of the system, i.e
 
 Applications on Oinari can continue to run on other Nodes even if some Nodes are down. Applications developed using the specialized API will have migration capabilities and will continue to run regardless of whether the Node is alive or dead. Applications are WebAssembly and language-independent (although currently only APIs for the Go language is only available).
 
+For a more detailed description and technical background, please refer to the [concept]({{< relref "posts/concept.md" >}}) page.
+
 ## Getting Started
 
-You can try Oinari working as a web service by accessing [www.oinari.io](https://www.oinari.io). Please refer to the [User's Guide]() for login and simple usage. To develop and run an application using Oinari's features, please refer to the [Development Guide]().
-
-## Documentation
-
-Documentation can be browsed online [here](https://www.oinari.io/docs/).
+You can try Oinari working as a web service by accessing [www.oinari.io](https://www.oinari.io). Please refer to the [User tutorial]({{< relref "posts/user_tutorial.md" >}}) for login and simple usage. To develop and run an application using Oinari's features, please refer to the [Developer tutorial]({{< relref "posts/developer_tutorial.md" >}}).
 
 ## License
 
