@@ -94,8 +94,13 @@ func Init(mux *http.ServeMux, secret map[string]string, rootURL, homeURL,
 			session, err := store.Get(r, SESSION_KEY)
 			if err != nil {
 				log.Printf("failed to get session: %v", err)
-				writeErrorPage(w, http.StatusInternalServerError)
-				return
+
+				session, err = store.New(r, SESSION_KEY)
+				if err != nil {
+					log.Printf("failed to renew session: %v", err)
+					writeErrorPage(w, 500)
+					return
+				}
 			}
 
 			embed := map[string]any{}
