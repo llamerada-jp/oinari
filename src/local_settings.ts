@@ -15,11 +15,9 @@
  */
 
 import * as CMD from "./command";
+import * as DEF from "./definitions"
 
 const LOCAL_STORAGE_KEY_PREFIX = "localSettings";
-
-const VIEW_TYPE_LANDSCAPE = "landscape";
-const VIEW_TYPES = [VIEW_TYPE_LANDSCAPE];
 
 const ALLOW_APPLICATIONS_SAMPLES = "samples";
 const ALLOW_APPLICATIONS_MYSELF = "myself";
@@ -113,7 +111,7 @@ export class LocalSettings {
     }
 
     if (this.settings.viewType === undefined) {
-      this.settings.viewType = VIEW_TYPE_LANDSCAPE;
+      this.settings.viewType = DEF.VIEW_TYPE_LANDSCAPE;
     }
   }
 
@@ -165,13 +163,13 @@ export class LocalSettings {
   set position(pos: string) {
     this.settings.position = pos;
   }
-  
+
   get viewType(): string {
     return this.settings.viewType;
   }
 
   set viewType(type: string) {
-    if (!VIEW_TYPES.includes(type)) {
+    if (!DEF.VIEW_TYPES.includes(type)) {
       throw new Error("invalid view type");
     }
 

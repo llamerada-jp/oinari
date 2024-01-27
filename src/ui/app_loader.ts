@@ -92,9 +92,9 @@ function setupList(): void {
   }
 
   // add applications
-  let temp = document.querySelector("#loadAppLibraryListItem") as HTMLTemplateElement;
+  let temp = document.querySelector("#loadAppLibraryListItem") as HTMLElement;
   for (const entry of applications) {
-    let item = <HTMLElement>temp.content.cloneNode(true);
+    let item = <HTMLElement>(temp as HTMLTemplateElement).content.cloneNode(true);
     (<HTMLElement>item.querySelector(".appName")).innerText = entry.name;
     (<HTMLElement>item.querySelector(".appDescription")).innerText = entry.description;
     (<HTMLElement>item.querySelector(".list-group-item")).addEventListener("click", () => {
