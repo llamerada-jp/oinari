@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^8.3.1",
+    "@types/aframe": "^1.2.5",
     "@types/emscripten": "^1.39.6",
     "@types/golang-wasm-exec": "^1.15.0",
     "@types/google.maps": "^3.53.4",

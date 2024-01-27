@@ -61,33 +61,46 @@ export class Position {
       throw new Error("This device does not support GNSS.");
     }
     this._enableGNSS = enable;
+  }
 
-    if (this._enableGNSS) {
-      this.watchID = navigator.geolocation.watchPosition((position) => {
-        let altitude = 0;
-        if (position.coords.altitude) {
-          altitude = position.coords.altitude;
-        }
-        this._coordinate = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          altitude: altitude,
-        };
-        this.applyPosition();
-
-      }, (error) => {
-        console.error(error);
-
-      }, {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 10000,
-      });
-
-    } else {
-      navigator.geolocation.clearWatch(this.watchID);
-      this.watchID = 0;
+  watchGNSS() {
+    if (!this._enableGNSS) {
+      throw new Error("GNSS is not enabled.");
     }
+    // watching GNSS yet.
+    if (this.watchID !== 0) {
+      return;
+    }
+
+    this.watchID = navigator.geolocation.watchPosition((position) => {
+      let altitude = 0;
+      if (position.coords.altitude) {
+        altitude = position.coords.altitude;
+      }
+      this._coordinate = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        altitude: altitude,
+      };
+      this.applyPosition();
+
+    }, (error) => {
+      console.error(error);
+
+    }, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000,
+    });
+  }
+
+  unwatchGNSS() {
+    if (this.watchID === 0) {
+      return;
+    }
+
+    navigator.geolocation.clearWatch(this.watchID);
+    this.watchID = 0;
   }
 
   get coordinate(): Coordinate {

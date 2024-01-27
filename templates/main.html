@@ -14,6 +14,15 @@
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.4.1/mdb.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
   <link rel="stylesheet" type="text/css" href="./style.css" />
+
+  <!-- for landscape view-->
+  <script crossorigin="anonymous"
+    src="https://maps.googleapis.com/maps/api/js?key={{.google_api_key}}&callback=readyMap&v=beta" defer></script>
+
+  <!-- for XR view-->
+  <script crossorigin="anonymous" src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script crossorigin="anonymous"
+    src="https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar-nft.js"></script>
 </head>
 
 <body>
@@ -58,6 +67,7 @@
           <div class="col-md-6 col-12">
             <select class="form-select" id="initSettingsViewType">
               <option value="landscape" selected>landscape</option>
+              <option value="xr">XR</option>
             </select>
           </div>
         </div>
@@ -546,10 +556,9 @@
     </div>
   </div>
 
-  <div id="map" class="d-none">
-  </div>
 
-  <script src="https://maps.googleapis.com/maps/api/js?key={{.google_api_key}}&callback=readyMap&v=beta" defer></script>
+  <div id="mainView" class="d-none">
+  </div>
 
   <script>
     // to use mdb forms

@@ -27,6 +27,7 @@ import * as UI_MAP from "./ui/map";
 import * as UI_MI from "./ui/migrate";
 import * as UI_PL from "./ui/proc_list";
 import * as UI_SE from "./ui/settings";
+import * as UI_XR from "./ui/xr";
 
 declare function ColonioModule(): Promise<any>;
 
@@ -170,6 +171,11 @@ function start(connectInfo: CM.ConnectInfo): void {
     case "landscape":
       startLandscape(connectInfo);
       break;
+
+    case "xr":
+      startXR(connectInfo);
+      break;
+
     default:
       throw new Error("Unknown view type: " + localSettings.viewType);
   }
@@ -182,8 +188,11 @@ function startLandscape(connectInfo: CM.ConnectInfo): void {
   UI_SE.init(localSettings, () => {
     localSettings.apply();
 
-    position.enableGNSS = localSettings.enableGNSS;
-    if (!localSettings.enableGNSS) {
+    position.enableGNSS = localSettings.enableGNSS
+    if (localSettings.enableGNSS) {
+      position.watchGNSS();
+    } else {
+      position.unwatchGNSS();
       position.setCoordinateByStr(localSettings.position);
     }
     position.applyPosition();
@@ -197,6 +206,28 @@ function startLandscape(connectInfo: CM.ConnectInfo): void {
     let menuEl = document.getElementById("menu") as HTMLDivElement;
     menuEl.classList.remove("d-none");
   });
+}
+
+function startXR(connectInfo: CM.ConnectInfo): void {
+  UI_AL.init(command);
+  UI_MI.init(command);
+  UI_PL.init(command, localSettings, connectInfo.nodeID);
+  UI_SE.init(localSettings, () => {
+    localSettings.apply();
+
+    position.enableGNSS = localSettings.enableGNSS;
+    position.unwatchGNSS();
+    if (!localSettings.enableGNSS) {
+      position.setCoordinateByStr(localSettings.position);
+    }
+    position.applyPosition();
+  });
+  UI_INFO.init(localSettings, position);
+  UI_INFO.show();
+
+  UI_XR.init(frontendMpx, position);
+  let menuEl = document.getElementById("menu") as HTMLDivElement;
+  menuEl.classList.remove("d-none");
 }
 
 async function terminate(): Promise<void> {

@@ -16,6 +16,7 @@
 
 import * as LS from "../local_settings";
 import * as UTIL from "./util";
+import * as DEF from "../definitions"
 
 const settingsLinkID = "settingsLink";
 const settingsSubmitButtonID = "settingsSubmit";
@@ -71,7 +72,15 @@ function loadSettings(): void {
   deviceNameEl!.innerText = localSettings.deviceName;
 
   let viewTypeEl = document.getElementById(viewTypeElID) as HTMLSelectElement;
-  viewTypeEl!.innerText = localSettings.viewType;
+  switch (localSettings.viewType) {
+    case DEF.VIEW_TYPE_LANDSCAPE:
+      viewTypeEl!.innerText = "landscape";
+      break;
+
+    case DEF.VIEW_TYPE_XR:
+      viewTypeEl!.innerText = "XR";
+      break;
+  }
 
   let localStoreInput = document.getElementById(localStoreInputID) as HTMLInputElement;
   localStoreInput!.checked = localSettings.enableLocalStore;
