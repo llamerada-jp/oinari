@@ -95,12 +95,7 @@ func Init(mux *http.ServeMux, secret map[string]string, rootURL, homeURL,
 			if err != nil {
 				log.Printf("failed to get session: %v", err)
 
-				session, err = store.New(r, SESSION_KEY)
-				if err != nil {
-					log.Printf("failed to renew session: %v", err)
-					writeErrorPage(w, 500)
-					return
-				}
+				session = sessions.NewSession(store, SESSION_KEY)
 			}
 
 			embed := map[string]any{}
@@ -118,6 +113,9 @@ func Init(mux *http.ServeMux, secret map[string]string, rootURL, homeURL,
 
 			account = session.Values["auth_type"].(string) + ":" + session.Values["user"].(string)
 			accountID = session.Values["user"].(string)
+
+			session.Options.MaxAge = store.Options.MaxAge
+			session.Save(r, w)
 		}
 
 		writePage(w, "main.html", map[string]any{
@@ -133,10 +131,11 @@ func Init(mux *http.ServeMux, secret map[string]string, rootURL, homeURL,
 		// create new state string
 		binaryData := make([]byte, 32)
 		if _, err := rand.Read(binaryData); err != nil {
-
+			log.Fatalf("failed to generate random string: %v", err)
 		}
 		state := base64.StdEncoding.EncodeToString(binaryData)
 		session.Values["login_github_state"] = state
+		session.Options.MaxAge = store.Options.MaxAge
 		session.Save(r, w)
 
 		url := oauth2Github.AuthCodeURL(state)
@@ -188,8 +187,8 @@ func Init(mux *http.ServeMux, secret map[string]string, rootURL, homeURL,
 		}
 
 		// recreate session
-		session.Options.MaxAge = -1
 		session = sessions.NewSession(store, SESSION_KEY)
+		session.Options.MaxAge = store.Options.MaxAge
 		session.Values["auth_type"] = "github"
 		session.Values["user"] = *user.Login
 		// session.Values["github_token"] = tok
