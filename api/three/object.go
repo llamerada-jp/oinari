@@ -25,6 +25,7 @@ const (
 
 	ScaleDefault   = "default"
 	ScaleLandscape = "landscape"
+	ScaleXR        = "xr"
 
 	// constant values for three.js
 	// see: https://github.com/mrdoob/three.js/blob/master/src/constants.js

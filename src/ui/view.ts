@@ -51,11 +51,13 @@ interface PartSpec {
 }
 
 interface PartBaseSpec {
-  scale: {
-    default: Vec3;
-    portrait: Vec3;
-    landscape: Vec3;
-  };
+  scale: Scale;
+}
+
+interface Scale {
+  default: Vec3;
+  xr: Vec3;
+  landscape: Vec3;
 }
 
 interface SpriteSpec extends PartBaseSpec {
@@ -115,20 +117,26 @@ interface TextureEntry {
   url: string
 }
 
+export const ScaleModeLandScape = "landscape";
+export const ScaleModeXR = "xr";
+export type ScaleMode = typeof ScaleModeLandScape | typeof ScaleModeXR;
+
 export class ObjectWrapper extends THREE.Group {
   sprites: Map<string, THREE.Sprite>;
   materials: Map<string, THREE.Material>;
   textures: Map<string, TextureEntry>;
   objPosition: Vec3;
   position!: THREE.Vector3;
+  scaleMode: ScaleMode;
 
-  constructor() {
+  constructor(scaleMode: ScaleMode) {
     super();
 
     this.sprites = new Map<string, THREE.Sprite>();
     this.materials = new Map<string, THREE.Material>();
     this.textures = new Map<string, TextureEntry>();
     this.objPosition = { x: 0, y: 0, z: 0 } as Vec3;
+    this.scaleMode = scaleMode;
   }
 
   applyObject(obj: Object): void {
@@ -190,10 +198,7 @@ export class ObjectWrapper extends THREE.Group {
     }
 
     if (part.sprite.scale !== undefined) {
-      let scale = part.sprite.scale.landscape;
-      if (!scale) {
-        scale = part.sprite.scale.default;
-      }
+      let scale = this.selectScale(part.sprite.scale);
       if (scale && scale.x !== 0 && scale.y !== 0 && scale.z !== 0) {
         sprite.scale.set(scale.x, scale.y, scale.z);
       }
@@ -302,6 +307,16 @@ export class ObjectWrapper extends THREE.Group {
       if (!using) {
         this.textures.delete(name);
       }
+    }
+  }
+
+  selectScale(scale: Scale): Vec3 {
+    if (this.scaleMode === ScaleModeLandScape && scale.landscape !== undefined) {
+      return scale.landscape;
+    } else if (this.scaleMode === ScaleModeXR && scale.xr !== undefined) {
+      return scale.xr;
+    } else {
+      return scale.default;
     }
   }
 }
