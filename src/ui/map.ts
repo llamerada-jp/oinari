@@ -148,7 +148,7 @@ class OinariOverlayView extends ThreeJSOverlayView {
     for (const [uuid, obj] of this.applyingObjects) {
       let wrapper = this.objects.get(uuid);
       if (wrapper === undefined) {
-        wrapper = new V.ObjectWrapper();
+        wrapper = new V.ObjectWrapper(V.ScaleModeLandScape);
         this.objects.set(uuid, wrapper);
         this.scene.add(wrapper);
       }

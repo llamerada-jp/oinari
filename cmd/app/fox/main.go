@@ -74,6 +74,11 @@ func (f *fox) initObject() error {
 								Y: 100,
 								Z: 1,
 							},
+							threeAPI.ScaleXR: {
+								X: 1.0 / 3,
+								Y: 1.0,
+								Z: 1,
+							},
 						},
 					},
 					Material: "matFox",

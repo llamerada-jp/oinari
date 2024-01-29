@@ -87,7 +87,7 @@ class XrView {
         this.entities.set(uuid, entity);
         entity.setAttribute("scale", "1 1 1");
 
-        wrapper = new V.ObjectWrapper();
+        wrapper = new V.ObjectWrapper(V.ScaleModeXR);
         this.objects.set(uuid, wrapper);
 
         entity.object3D.add(wrapper);
