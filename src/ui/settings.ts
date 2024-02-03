@@ -74,7 +74,7 @@ function loadSettings(): void {
   let viewTypeEl = document.getElementById(viewTypeElID) as HTMLSelectElement;
   switch (localSettings.viewType) {
     case DEF.VIEW_TYPE_LANDSCAPE:
-      viewTypeEl!.innerText = "landscape";
+      viewTypeEl!.innerText = "Landscape";
       break;
 
     case DEF.VIEW_TYPE_XR:
