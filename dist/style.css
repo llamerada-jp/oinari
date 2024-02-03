@@ -5,8 +5,12 @@
 
 html,
 body {
-  height: 100%;
-  width: 100%;
+  /* Added 'important' flag to suppress body size rewriting by AR.js.
+   * This change makes the MDB UI display correctly, but the size of
+   * the video element has changed from the original AR.js created.
+   * Therefore, the size of the AR space may not be correct. */
+  height: 100%!important;
+  width: 100%!important;
   margin: 0;
   padding: 0;
 }
