@@ -132,7 +132,7 @@ export class Position {
   }
 
   private generateRandomNumByRange(range: string): number {
-    let rangeArr = range.split("-");
+    let rangeArr = range.split("~");
     if (rangeArr.length === 1) {
       return parseFloat(rangeArr[0]);
     }
@@ -143,7 +143,7 @@ export class Position {
 
     let min = parseFloat(rangeArr[0]);
     let max = parseFloat(rangeArr[1]);
-    if (max > min) {
+    if (max < min) {
       throw new Error("invalid range parameter: " + range);
     }
     return Math.random() * (max - min) + min;
