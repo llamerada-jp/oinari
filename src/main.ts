@@ -226,8 +226,11 @@ function startXR(connectInfo: CM.ConnectInfo): void {
   UI_INFO.show();
 
   UI_XR.init(frontendMpx, position);
-  let menuEl = document.getElementById("menu") as HTMLDivElement;
-  menuEl.classList.remove("d-none");
+  /*
+    TODO: MDB UI does not display correctly when XR is enabled. It seems that it requires special handling.
+    let menuEl = document.getElementById("menu") as HTMLDivElement;
+    menuEl.classList.remove("d-none");
+  */
 }
 
 async function terminate(): Promise<void> {
