@@ -560,7 +560,7 @@
     around</button>
   <div class="modal fade" id="checkSeed" data-mdb-backdrop="static" data-mdb-keyboard="false" tabindex="-1"
     aria-labelledby="checkSeedLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="checkSeedLabel">Please reload your browser</h5>
@@ -570,6 +570,25 @@
           program.
           If the dialog still appears after reloading the page, there may be a remaining cache. Please try clearing the
           cache.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading spinner -->
+  <button type="button" class="d-none" id="loadingModalOpen" data-mdb-toggle="modal"
+    data-mdb-target="#loadingModal"></button>
+  <div class="modal fade" id="loadingModal" data-mdb-backdrop="static" data-mdb-keyboard="false" tabindex="-1"
+    aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-body">
+          <div class="d-flex justify-content-center">
+            <div class="spinner-border me-2" role="status"></div>
+            <div class=" align-self-center">Connecting to the network...</div>
+            <button type="button" class="d-none" id="loadingModalClose" data-mdb-dismiss="modal"
+              aria-label="Close">_</button>
+          </div>
         </div>
       </div>
     </div>

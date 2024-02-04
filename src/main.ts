@@ -28,6 +28,7 @@ import * as UI_MI from "./ui/migrate";
 import * as UI_PL from "./ui/proc_list";
 import * as UI_SE from "./ui/settings";
 import * as UI_XR from "./ui/xr";
+import * as Util from "./ui/util";
 
 declare function ColonioModule(): Promise<any>;
 
@@ -138,6 +139,9 @@ async function connect(): Promise<void> {
     command.disconnect();
   });
 
+  // show loading spinner
+  document.getElementById("loadingModalOpen")!.dispatchEvent(new Event("click"));
+
   try {
     let connectInfo = await command.connect(
       location.protocol + "//" + location.host + "/seed",
@@ -158,7 +162,14 @@ async function connect(): Promise<void> {
     // publish node info
     await command.setPublicity(10.0);
 
-    start(connectInfo);
+    await start(connectInfo);
+
+    // hide loading spinner
+    // The timeout is used because the modal will not close
+    // if the time between showing the modal and closing is too short.
+    setTimeout(() => {
+      Util.closeModal("loadingModalClose");
+    }, 1000);
 
   } catch (error) {
     console.error(error);
@@ -166,22 +177,23 @@ async function connect(): Promise<void> {
   }
 }
 
-function start(connectInfo: CM.ConnectInfo): void {
+function start(connectInfo: CM.ConnectInfo): Promise<void> {
   switch (localSettings.viewType) {
     case "landscape":
-      startLandscape(connectInfo);
-      break;
+      return startLandscape(connectInfo);
 
     case "xr":
       startXR(connectInfo);
-      break;
+      return new Promise<void>((resolve) => {
+        resolve();
+      });
 
     default:
       throw new Error("Unknown view type: " + localSettings.viewType);
   }
 }
 
-function startLandscape(connectInfo: CM.ConnectInfo): void {
+function startLandscape(connectInfo: CM.ConnectInfo): Promise<void> {
   UI_AL.init(command);
   UI_MI.init(command);
   UI_PL.init(command, localSettings, connectInfo.nodeID);
@@ -199,12 +211,15 @@ function startLandscape(connectInfo: CM.ConnectInfo): void {
   });
   UI_INFO.init(localSettings, position);
 
-  UI_MAP.init(frontendMpx, position, () => {
-    // show
-    UI_INFO.show();
-    UI_MAP.show();
-    let menuEl = document.getElementById("menu") as HTMLDivElement;
-    menuEl.classList.remove("d-none");
+  return new Promise<void>((resolve) => {
+    UI_MAP.init(frontendMpx, position, () => {
+      // show
+      UI_INFO.show();
+      UI_MAP.show();
+      let menuEl = document.getElementById("menu") as HTMLDivElement;
+      menuEl.classList.remove("d-none");
+      resolve();
+    });
   });
 }
 
