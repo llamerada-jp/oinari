@@ -26,6 +26,7 @@ let xrView: XrView;
 
 export function init(frontendMpx: CL.MultiPlexer, pos: POS.Position): void {
   xrView = new XrView(pos);
+  document.body.style.overflow = "hidden";
   initHandler(frontendMpx);
 }
 
@@ -54,7 +55,13 @@ class XrView {
     viewEl!.classList.remove("d-none");
 
     this.scene = document.createElement("a-scene") as AFRAME.Scene;
-    this.scene.setAttribute("arjs", "trackingMethod: best; sourceType: webcam;debugUIEnabled: false;");
+    /* Added sourceWidth and sourceHeight parameter to suppress body size rewriting by AR.js.
+     * This change makes the MDB UI display correctly, but the size of the video element has
+     * changed from the original AR.js created.
+     * Therefore, the size of the AR space may not be correct. */
+    let sourceWidth = window.innerWidth;
+    let sourceHeight = window.innerHeight;
+    this.scene.setAttribute("arjs", `trackingMethod: best; sourceType: webcam; debugUIEnabled: false; sourceWidth: ${sourceWidth}; sourceHeight: ${sourceHeight};`);
     this.scene.setAttribute("embedded", "");
     this.scene.setAttribute("renderer", "logarithmicDepthBuffer: true;");
     this.scene.setAttribute("vr-mode-ui", "enabled: false;");

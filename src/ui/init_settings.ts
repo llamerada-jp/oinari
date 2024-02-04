@@ -171,15 +171,11 @@ export function init(ls: LS.LocalSettings, submit: () => void): void {
 function initElements(): void {
   let deviceNameGenButton = document.getElementById(deviceNameGenButtonID);
   let deviceNameInput = document.getElementById(deviceNameInputID) as HTMLInputElement;
-  let viewTypeInput = document.getElementById(viewTypeInputID) as HTMLSelectElement;
   let syncGNSSInput = document.getElementById(syncGNSSInputID) as HTMLInputElement;
   let spawnPositionInput = document.getElementById(spawnPositionInputID) as HTMLInputElement;
   let submitButton = document.getElementById(submitButtonID) as HTMLButtonElement;
 
   deviceNameInput?.addEventListener("change", () => {
-    updateInputs();
-  });
-  viewTypeInput?.addEventListener("change", () => {
     updateInputs();
   });
 
@@ -224,15 +220,6 @@ export function hide(): void {
 }
 
 function updateInputs(): void {
-  let viewTypeInput = document.getElementById(viewTypeInputID) as HTMLSelectElement;
-  let localStoreInput = document.getElementById(localStoreInputID) as HTMLInputElement;
-  if (viewTypeInput!.value === "xr") {
-    localStoreInput!.disabled = true;
-    localStoreInput!.checked = false;
-  } else {
-    localStoreInput!.disabled = false;
-  }
-
   let submitButton = document.getElementById(submitButtonID) as HTMLButtonElement;
   if (validateInputs()) {
     submitButton!.disabled = false;
@@ -242,12 +229,6 @@ function updateInputs(): void {
 }
 
 function validateInputs(): boolean {
-  let viewTypeInput = document.getElementById(viewTypeInputID) as HTMLSelectElement;
-  let localStoreInput = document.getElementById(localStoreInputID) as HTMLInputElement;
-  if (viewTypeInput!.value === "xr" && localStoreInput!.checked) {
-    return false;
-  }
-
   let deviceNameInput = document.getElementById(deviceNameInputID) as HTMLInputElement;
   if (deviceNameInput!.value.length === 0) {
     return false;
