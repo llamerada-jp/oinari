@@ -59,9 +59,9 @@ class XrView {
      * This change makes the MDB UI display correctly, but the size of the video element has
      * changed from the original AR.js created.
      * Therefore, the size of the AR space may not be correct. */
-    let sourceWidth = window.innerWidth;
-    let sourceHeight = window.innerHeight;
-    this.scene.setAttribute("arjs", `trackingMethod: best; sourceType: webcam; debugUIEnabled: false; sourceWidth: ${sourceWidth}; sourceHeight: ${sourceHeight};`);
+    let innerWidth = window.innerWidth;
+    let innerHeight = window.innerHeight;
+    this.scene.setAttribute("arjs", `trackingMethod: best; sourceType: webcam; debugUIEnabled: false; displayWidth: ${innerWidth}; displayHeight: ${innerHeight}; sourceWidth: ${innerWidth}; sourceHeight: ${innerHeight};`);
     this.scene.setAttribute("embedded", "");
     this.scene.setAttribute("renderer", "logarithmicDepthBuffer: true;");
     this.scene.setAttribute("vr-mode-ui", "enabled: false;");

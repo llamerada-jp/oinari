@@ -1,9 +1,8 @@
-#mainView {
+html {
   height: 100%;
   width: 100%;
 }
 
-html,
 body {
   /* Added 'important' flag to suppress body size rewriting by AR.js.
    * This change makes the MDB UI display correctly, but the size of
@@ -11,10 +10,24 @@ body {
    * Therefore, the size of the AR space may not be correct. */
   height: 100%!important;
   width: 100%!important;
-  margin: 0;
-  padding: 0;
+  margin: 0!important;
+  padding: 0!important;
+  position: absolute;
+}
+
+#mainView {
+  height: 100%;
+  width: 100%;
 }
 
 a#subMenuButton:after {
   content: none;
+}
+
+.navbar,
+.modal,
+.modal-backdrop,
+#deviceInfo {
+  padding: 0!important;
+  position: absolute;
 }
