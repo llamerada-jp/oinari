@@ -79,7 +79,7 @@ func (impl *objectControllerImpl) Create(name string, podUUID string, spec *thre
 		return "", fmt.Errorf("failed to create object: %w", err)
 	}
 
-	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, spec.Position, 100); err != nil {
+	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, spec.Position, 1000); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", name, obj.Meta.Uuid, err.Error())
 	}
 	// colonio spread post is not send event to myself currently, so call ReceiveSpreadEvent directly.
@@ -108,7 +108,7 @@ func (impl *objectControllerImpl) Update(uuid string, podUUID string, spec *thre
 		return fmt.Errorf("failed to update object: %w", err)
 	}
 
-	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, spec.Position, 100); err != nil {
+	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, spec.Position, 1000); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", obj.Meta.Name, obj.Meta.Uuid, err.Error())
 	}
 	// colonio spread post is not send event to myself currently, so call ReceiveSpreadEvent directly.
@@ -154,7 +154,7 @@ func (impl *objectControllerImpl) Delete(uuid string, podUUID string) error {
 		return fmt.Errorf("failed to delete object: %w", err)
 	}
 
-	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, obj.Spec.Position, 100*2); err != nil {
+	if err := impl.messagingDriver.SpreadObject(obj.Meta.Uuid, obj.Spec.Position, 1000*2); err != nil {
 		log.Printf("failed to spread object: name=%s, uuid=%s: %s\n", obj.Meta.Name, obj.Meta.Uuid, err.Error())
 	}
 	// colonio spread post is not send event to myself currently, so call ReceiveSpreadEvent directly.
