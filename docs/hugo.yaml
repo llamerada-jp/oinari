@@ -1,10 +1,8 @@
-baseURL: 'https://www.oinari.app/'
+baseURL: 'https://www.oinari.io/docs/'
 title: 'Oinari'
 theme: 'hugo-book'
 
 enableGitInfo: true
-
-languageCode: 'en-us'
 
 menu:
   after:
@@ -15,5 +13,21 @@ menu:
 params:
   BookTheme: 'auto'
   BookMenuBundle: '/menu'
+  BookLogo: 'logo.png'
   BookRepo: https://github.com/llamerada-jp/oinari/docs
   customCss: 'css/custom.css'
+
+defaultContentLanguage: en
+defaultContentLanguageInSubdir: false
+
+languages:
+  en:
+    languageName: English
+    disabled: false
+    languageCode: 'en'
+    weight: 1
+  ja:
+    languageName: 日本語
+    disabled: false
+    languageCode: 'ja'
+    weight: 2
