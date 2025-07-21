@@ -1,7 +1,7 @@
 SHELL := /bin/bash -o pipefail
 
 BUILD_TYPE ?= Debug
-COLONIO_BRANCH := main
+COLONIO_BRANCH := cpp-implement
 COLONIO_FILES := dist/colonio.js dist/colonio_go.js dist/colonio.wasm
 GO_FILES := $(shell find . -name *.go | grep -v ./build/)
 TS_FILES := $(shell find ./src/ -name *.ts) src/colonio.d.ts src/colonio_go.d.ts src/keys.ts
