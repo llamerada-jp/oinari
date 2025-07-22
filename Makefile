@@ -69,7 +69,7 @@ dist/colonio_go.js: build/colonio/src/js/colonio_go.js
 dist/colonio_go.js.map: build/colonio/src/js/colonio_go.js.map
 	cp $< $@
 
-dist/wasm_exec.js: $(shell go env GOROOT)/misc/wasm/wasm_exec.js
+dist/wasm_exec.js: $(shell go env GOROOT)/lib/wasm/wasm_exec.js
 	cp $< $@
 
 src/colonio.d.ts: build/colonio/src/js/core.d.ts
