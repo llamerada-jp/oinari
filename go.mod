@@ -1,6 +1,6 @@
 module github.com/llamerada-jp/oinari
 
-go 1.21
+go 1.23.0
 
 require (
 	github.com/chromedp/cdproto v0.0.0-20240421230201-ab917191657d
@@ -14,7 +14,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
-	golang.org/x/oauth2 v0.19.0
+	golang.org/x/oauth2 v0.27.0
 )
 
 require (
